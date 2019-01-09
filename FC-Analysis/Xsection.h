@@ -14,6 +14,8 @@ public:
     void DeadTimeCorrection();
     void CalculateNPu();
     void CalculateCrossSection();
+    void Fit2(TH1I *pH, Double_t xmin, Double_t xmax);
+    static Double_t f2(Double_t *x, Double_t *p);
     Int_t GetMinBin(TH1I *pH, Int_t low, Int_t up);
 
     Hist *pHNIF;
@@ -30,6 +32,8 @@ public:
     TH1I *pHAnaQDCl[NumHist];
     TCanvas *pNIFNPu;
     TCanvas *pSBNPu;
+    static Double_t xmin;
+    static Double_t xmax;
 private:
     Bool_t CommentFlag;
     // analysis parameters

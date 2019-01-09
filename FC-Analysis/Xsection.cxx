@@ -1,5 +1,7 @@
 #include "Xsection.h"
 #include "Hist.h"
+#include "TH1.h"
+#include "TF1.h"
 using namespace std;
 
 Xsection::Xsection()
@@ -40,7 +42,7 @@ Xsection::Xsection()
 
 void Xsection::DoAnalyze()
 {
-    /// 1. Divide QDC-gated TimeDiff into peak and underground
+    /*// 1. Divide QDC-gated TimeDiff into peak and underground
     char sname[32] = "";
     for(int i_ch = 0; i_ch < NumHist; i_ch++)
     {
@@ -58,12 +60,10 @@ void Xsection::DoAnalyze()
     CalculateNPu();
     /// 5. Calculate Cross Section
     CalculateCrossSection();
-
+//*/
     /// Test
-//    cout << pHRawQDCl[0]->GetBinWidth(0) << endl;
-//    Int_t i_min;
-//    i_min = GetMinBin(pHRawQDCl[0], 700, 800);
-//    cout << i_min << endl;
+    Fit2(pHAnaQDCl[0], 800, 1100);
+    Fit2(pHAnaQDCl[0], 1550, 1700);
 //    i_min = GetMinBin(pHRawQDCl[0], 700, 1300);
 //    cout << i_min << endl;
 }
@@ -200,6 +200,29 @@ void Xsection::CalculateCrossSection()
         CrossSection[i_ch] = NIFRate / ( NPu[i_ch] * Neutron_flux );
         DCrossSection[i_ch] = 0;
         cout << NIFRate << "  " << NPu[i_ch] << "  " << CrossSection[i_ch] << endl;
+    }
+}
+
+void Xsection::Fit2(TH1I *pH, Double_t xmin, Double_t xmax)
+{
+    TF1 *fit2 = new TF1("fit2", Xsection::f2, xmin, xmax, 5);
+    fit2->SetParameter(0, 0.05);
+    fit2->SetParameter(1, (xmin+xmax)/2);
+    fit2->SetParameter(2, 1);
+    fit2->FixParameter(3, xmin);
+    fit2->FixParameter(4, xmax);
+    TFitResultPtr r = pH->Fit(fit2,"S");
+    cout << (Int_t)r << endl;
+}
+
+Double_t Xsection::f2(Double_t *x, Double_t *par)
+{   // x: variable, p[0] spread, p[1] xmin/xmax, p[2] min/max value, p[3]-p[4] fit range.
+    if(x[0] > par[3] && x[0] < par[4])
+        return par[0] * pow(x[0]-par[1], 2) + par[2];
+    else
+    {
+        TF1::RejectPoint();
+        return 0;
     }
 }
 

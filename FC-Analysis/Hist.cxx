@@ -34,7 +34,7 @@ TH1I* Hist::GetTH1I(const char* hname)
         return 0;
     }
     else
-    {   TH1I* histo = (TH1I*) f->Get(hname)->Clone();
+    {   TH1I* histo = (TH1I*) f->Get(hname);
         if (histo==0)
         {   cerr << "Histogram not found!" << endl;
             return 0;
