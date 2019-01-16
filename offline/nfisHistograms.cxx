@@ -335,7 +335,7 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
 
     for (int i_ch=0; i_ch<NumHist; i_ch++)
     {
-        /*///Hits
+        ////Hits
         sprintf(obj_name,"%s/Hits/H1AnaHZDRHit_%i", path_name, i_ch+1);
         sprintf(obj_title,"Number of hits per event Channel %i", i_ch+1);
 
@@ -380,6 +380,14 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
         sprintf(obj_title,"QDC (low gain, ToF gated, spontaneous), channel %i", i_ch+1);
 
         pH1AnaQDCl_SF[i_ch]   = (TH1I *) MakeTH1('I',obj_name,obj_title,
+                                            NumQDCReg,0,NumQDCReg,"#font[12]{Q} / ch",
+                                           "counts");
+
+        ////QDC (low gain, ungated, self triggered )
+        sprintf(obj_name,"%s/QDC/low/trig/H1AnaQDCl_trig_%i", path_name, i_ch+1);
+        sprintf(obj_title,"QDC (low gain, ungated, self triggered), channel %i", i_ch+1);
+
+        pH1AnaQDCl_trig[i_ch]   = (TH1I *) MakeTH1('I',obj_name,obj_title,
                                             NumQDCReg,0,NumQDCReg,"#font[12]{Q} / ch",
                                            "counts");
         //*/

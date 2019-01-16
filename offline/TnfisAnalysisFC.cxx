@@ -123,8 +123,8 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                     cout << "<I>: increment HIT y=" << 9
                          << " x=" << AccHitCounter
                          << endl;
-//                pHistFC->pH1AnaHitAcc->Fill(AccHitCounter);
-//                pHistFC->pH2AnaHit->Fill(AccHitCounter, 9);
+                pHistFC->pH1AnaHitAcc->Fill(AccHitCounter);
+                pHistFC->pH2AnaHit->Fill(AccHitCounter, 9);
 
                 // search for the first accelerator hit
                 pAccInput->SetFirstHit(event, pAccInput->GetHit(event,0));
@@ -152,8 +152,8 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                   cout << "<I>: increment HIT y=" << channel
                        << " x="<< pHZDRPreAmp[channel]->GetHitCounter(event)
                         << endl;
-                //pHistFC->pH1AnaHitHZDR[channel]->Fill(pHZDRPreAmp[channel]->GetHitCounter(event));
-                //pHistFC->pH2AnaHit->Fill(pHZDRPreAmp[channel]->GetHitCounter(event), channel);
+                pHistFC->pH1AnaHitHZDR[channel]->Fill(pHZDRPreAmp[channel]->GetHitCounter(event));
+                pHistFC->pH2AnaHit->Fill(pHZDRPreAmp[channel]->GetHitCounter(event), channel);
 
                 //set hit no. 0 to first hit
                 Long_t FirstHit = pHZDRPreAmp[channel]->GetHit(event,0);
@@ -188,6 +188,8 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                         Long_t QDCl = pHZDRPreAmp[channel]->GetQDCl(event);
                         Long_t QDCh = pHZDRPreAmp[channel]->GetQDCh(event);
 
+                        pHistFC->pH1AnaQDCl_trig[channel]->Fill(QDCl);
+
                         //fill qdc and time diff to the output event
                         TnfisAnaPreAmp *pPreAmpOut =
                                 dynamic_cast<TnfisAnaPreAmp*>(
@@ -200,7 +202,7 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                         pHistFC->pH1AnaDtHZDR[channel]->Fill(TimeDiff);
 
                         //fill time diff and channel into 2D histo
-                        //pHistFC->pH2AnaDt->Fill(TimeDiff, channel);
+                        pHistFC->pH2AnaDt->Fill(TimeDiff, channel);
 
                         //fill in time difference with qdc gate on fission frag
                         if (pConQDC[channel]->Test(QDCl))  // Test if the measured energy fits better as alpha or as fission fragment
@@ -222,10 +224,14 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                         // else cout << "QDC pulse height " << QDCl << " refused." << endl; //*/
 
                     } //if (pPreAmp[channel]->GetFirstHit(event) != 0)
+//                    else
+//                        cout << "No Fission Chamber hit!" << endl;
 
                 } // for (int i_preAmp=0; i_preAmp<mult.fchzdr.cnt; i_preAmp++)
 
             } // if (pAccInput->GetFirstHit(event) != 0)
+//            else
+//                cout << "No Accalerator hit!" << endl;
 
         } //if (HitCounter == 1)
 

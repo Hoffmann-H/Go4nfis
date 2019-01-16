@@ -441,7 +441,7 @@ void TnfisMakeUnp::AnalyzeQDCRange(ULong_t *data, TnfisUnpackEvent *pTarget,
             pHist->pH1RawQDCl[ch]->Fill(Value);
             pHist->pH2RawQDCl->Fill(Value, ch);
 
-            //pHist->pH2QDCTime[ch]->Fill(Value, AbsTime->GetSec());
+            pHist->pH2QDCTime[ch]->Fill(Value, AbsTime->GetSec());
 
             if ((ch >= 0) && (ch < NumHZDRFC))
             {   if (Underflow)
