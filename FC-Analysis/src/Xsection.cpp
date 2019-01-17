@@ -23,13 +23,13 @@ Xsection::Xsection()
     pHSB  = new Hist("/home/hoffma93/Go4nfis/offline/results/SB.root");
     pHSF  = new Hist("/home/hoffma93/Go4nfis/offline/results/SF.root");
     pHNIF->DoAnalyzeDt(kTRUE);
-    pHNIF->DoAnalyzeQDC();
+//    pHNIF->DoAnalyzeQDC();
     pHSB ->DoAnalyzeDt(kTRUE);
-    pHSB ->DoAnalyzeQDC();
+//    pHSB ->DoAnalyzeQDC();
     pHSF ->DoAnalyzeDt(kFALSE);
-    pHSF ->DoAnalyzeQDC();
-    CalculateNPu();
-    CalculateCrossSection();
+//    pHSF ->DoAnalyzeQDC();
+//    CalculateNPu();
+//    CalculateCrossSection();
 }
 
 Xsection::~Xsection()

@@ -1,4 +1,16 @@
 
+TGraph* HistToGraph(TH1I* pH)
+{
+    int n = pH->GetNbinsX();
+    Double_t x[n], y[n];
+    for (int i = 1; i <= n; i++)
+    {
+        x[i] = pH->GetBinCenter(i);
+        y[i] = pH->GetBinContent(i);
+    }
+    TGraph* pG = new TGraph(n, x, y);
+    return pG;
+}
 
 int TreatFile(string file_name)
 {
