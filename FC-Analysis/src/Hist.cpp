@@ -1,5 +1,5 @@
 // Class for loading and accessing histograms from a root file. 
-// This is meant to be created once for each exp. setup: NIF, SB. 
+// This is meant to be created once for each exp. setup: NIF, SB, SF.
 // Open histograms: Hist *pHist = new Hist("path/to/file.root")
 
 #include "Hist.h"
@@ -41,13 +41,14 @@ Hist::Hist(string file_path)   // Constructor
         cout << "Created instance Hist using " << file_path << endl;
 
 
-//    DoAnalyzeDt(kFALSE);
-//    for (int i_ch = 0; i_ch < NumHist; i_ch++)
+//    DoAnalyzeDt(kTRUE);
+//    DoAnalyzeQDC();
+
+//    for (int i = 0; i < NumHist; i++)
 //    {
 //        AnalyzeDtPeak(i_ch);
+//        cout << i << "  " << (int)PedQDC[i] << "  " << (int)CutQDC[i] << "  " << (int)MaxQDC[i] << " " << endl;
 //    }
-    cout << "Done." << endl;
-//    file->Close();
 }
 
 Hist::~Hist()    // Destructor
@@ -175,8 +176,12 @@ void Hist::SaveCanvas(TCanvas* pCtoSave, string cpath, string cname)
 void Hist::DoAnalyzeDt(Bool_t peak)
 {   // Analyze TimeDiff spectra for all channels: Determine underground and, if peak is set to kTRUE, peak content. Set peak = kFALSE for measurements without beam.
     char hname[64] = "";
+    if(CommentFlag)
+        cout << endl;
     for (int i_ch = 0; i_ch < NumHist; i_ch++)
     {
+        if(CommentFlag)
+            cout << "Channel " << i_ch+1 << endl;
         Double_t niveau;
         if(peak)
             niveau = AnalyzeDtPeak(i_ch, pHDtG[i_ch]);//, &nNIF_raw[i_ch], &DnNIF_raw[i_ch], &nSF_raw[i_ch], &DnSF_raw[i_ch]);
@@ -200,11 +205,11 @@ void Hist::DoAnalyzeDt(Bool_t peak)
         DSFRate[i] = DnSF[i] / t_real;
     }
 
-//    Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
-//    Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
-//    TGraphErrors* g1 = new TGraphErrors(NumHist, x, SFRate, xerr, DSFRate);
-//    g1->SetNameTitle("SF_Rate", "SF detection rate");
-//    SaveToFile("Analysis/TimeDiff", g1);
+    Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
+    TGraphErrors* g1 = new TGraphErrors(NumHist, x, SFRate, xerr, DSFRate);
+    g1->SetNameTitle("SF_Rate", "SF detection rate");
+    SaveToFile("Analysis/TimeDiff", g1);
 
     if(peak)
     {   // If measured with beam, draw NIF rates and NIF/SF rates ratio
@@ -218,13 +223,13 @@ void Hist::DoAnalyzeDt(Bool_t peak)
             DRatio[i] = sqrt( pow(DnNIF[i] / nSF[i], 2) +
                               pow(nNIF[i] * DnSF[i] / pow(nSF[i], 2), 2) );
         }
-//        TGraphErrors* g2 = new TGraphErrors(NumHist, x, NIFRate, xerr, DNIFRate);
-//        g2->SetNameTitle("NIF_Rate", "NIF detection rate");
-//        SaveToFile("Analysis/TimeDiff", g2);
+        TGraphErrors* g2 = new TGraphErrors(NumHist, x, NIFRate, xerr, DNIFRate);
+        g2->SetNameTitle("NIF_Rate", "NIF detection rate");
+        SaveToFile("Analysis/TimeDiff", g2);
 
-//        TGraphErrors* g3 = new TGraphErrors(NumHist, x, Ratio, xerr, DRatio);
-//        g2->SetNameTitle("NIF_SF_Ratio", "NIF to SF detection ratio");
-//        SaveToFile("Analysis/TimeDiff", g3);
+        TGraphErrors* g3 = new TGraphErrors(NumHist, x, Ratio, xerr, DRatio);
+        g3->SetNameTitle("NIF_SF_Ratio", "NIF to SF detection ratio");
+        SaveToFile("Analysis/TimeDiff", g3);
     }
     return;
 }
@@ -239,7 +244,7 @@ Double_t Hist::AnalyzeDtPeak(Int_t i_ch, TH1I *pH)//, Double_t *pNIF, Double_t *
     Double_t lim_1 = (ToF_low - BinOffset) / ChPerBin;
     Double_t lim_2 = (ToF_up - BinOffset) / ChPerBin;
     Double_t lim_3 = (Dt_max - BinOffset) / ChPerBin;
-    if(CommentFlag)
+//    if(CommentFlag)
         cout << "Analyzing Dt peak. Ch per bin: " << ChPerBin << ", Offset: " << BinOffset << endl <<
                 " Integration limits: Bin nr. " << lim_0 << " " << lim_1 << " " << lim_2 << " " << lim_3 << endl;
     // Integrations
@@ -248,15 +253,15 @@ Double_t Hist::AnalyzeDtPeak(Int_t i_ch, TH1I *pH)//, Double_t *pNIF, Double_t *
     Double_t DUgCount = sqrt(UgCount); // Underground deviation
     Double_t UgPerBin = 1.0 * UgCount / (lim_1 - lim_0 + lim_3 - lim_2);
     Double_t DUgPerBin = 1.0 * DUgCount / (lim_1 - lim_0 + lim_3 - lim_2);
-    nNIF_raw[i_ch] = PeakCount - (lim_2 - lim_1) * UgPerBin;
-    DnNIF_raw[i_ch] = (lim_2 - lim_1) * DUgPerBin;
+    nNIF_raw[i_ch] = PeakCount - (lim_2 - lim_1 + 1) * UgPerBin;
+    DnNIF_raw[i_ch] = (lim_2 - lim_1 + 1) * DUgPerBin;
     nSF_raw[i_ch] = pH->Integral() - nNIF_raw[i_ch]; // Calculate total underground
     DnSF_raw[i_ch] = sqrt(pow(DnNIF_raw[i_ch], 2) + pH->Integral()); // Error according to Gauss
     if(CommentFlag)
         cout << "NIF: " << nNIF_raw[i_ch] << " +- " << DnNIF_raw[i_ch] << endl <<
                 "SF:  " << nSF_raw[i_ch]  << " +- " << DnSF_raw[i_ch]  << endl;
     return UgPerBin;
-/*    Draw
+/*    // Draw
     pH->GetXaxis()->SetRangeUser(62000, 80000);
     pH->Draw();
     TLine *lH = new TLine(Dt_min, UgPerBin, Dt_max, UgPerBin);
@@ -296,68 +301,104 @@ Double_t Hist::AnalyzeDtUnderground(Int_t i_ch, TH1I *pH)
 
 void Hist::DoAnalyzeQDC()
 {
-    for (int i_ch = 0; i_ch < NumHist; i_ch++)
-    {
-        AnalyzeQDC(pHRawQDCl[i_ch], i_ch, 0);
-    }
     Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
 //    Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
+    Double_t relCutPos[NumHist];
+
+    ///Analyze raw QDC spectrum
+    for (int i = 0; i < NumHist; i++)
+    {
+        AnalyzeQDC(pHRawQDCl[i], i, "Raw");
+        relCutPos[i] = (CutQDC[i] - PedQDC[i]) / (MaxQDC[i] - PedQDC[i]);
+    }
+
+    TGraph* g4 = new TGraph(NumHist, x, CutQDC);
+    g4->SetMarkerStyle(20);
+    g4->SetNameTitle("gRawCut", "Absolute minimum position");
+    SaveToFile("Analysis/QDC/Raw", g4);
+
+    TGraph* g5 = new TGraph(NumHist, x, MaxQDC);
+    g5->SetMarkerStyle(20);
+    g5->SetNameTitle("gRawMax", "Absolute maximum position");
+    SaveToFile("Analysis/QDC/Raw", g5);
+
+    TGraph* g6 = new TGraph(NumHist, x, relCutPos);
+    g6->SetMarkerStyle(20);
+    g6->SetNameTitle("gRawRelCut", "Relative minimum position");
+    SaveToFile("Analysis/QDC/Raw", g6);
+
+    ///Analyze self-triggered  QDC spectrum
+    for (int i = 0; i < NumHist; i++)
+    {
+        AnalyzeQDC(pHAnaQDCl[i], i, "Trig");
+        relCutPos[i] = (CutQDC[i] - PedQDC[i]) / (MaxQDC[i] - PedQDC[i]);
+    }
+
     TGraph* g1 = new TGraph(NumHist, x, CutQDC);
     g1->SetMarkerStyle(20);
-    g1->SetNameTitle("relCut", "Relative minimum position vs channel");
-    SaveToFile("Analysis/QDC", g1);
+    g1->SetNameTitle("gTrigCut", "Absolute minimum position");
+    SaveToFile("Analysis/QDC/Trig", g1);
+
+    TGraph* g2 = new TGraph(NumHist, x, MaxQDC);
+    g2->SetMarkerStyle(20);
+    g2->SetNameTitle("gTrigMax", "Absolute maximum position");
+    SaveToFile("Analysis/QDC/Trig", g2);
+
+    TGraph* g3 = new TGraph(NumHist, x, relCutPos);
+    g3->SetMarkerStyle(20);
+    g3->SetNameTitle("gTrigRelCut", "Relative minimum position");
+    SaveToFile("Analysis/QDC/Trig", g3);
+
     return;
 }
 
-void Hist::AnalyzeQDC(TH1I *pH, Int_t channel, Double_t pedestal)
+void Hist::AnalyzeQDC(TH1I *pH, Int_t channel, string step)
 {   // Analyze single QDC spectrum. Use hard-coded fit positions acc. to channel. For self-triggered QDC spectra, use pedestal from before
     // rough peak positions   channel 0,    1,    2,    3,    4,    5,    6,    7
     Int_t RoughPeakPosition[3][8] = {{125,  75,   155,  90,   80,   80,   100,  60},
                                      {1000, 900,  950,  900,  1000, 950,  950,  900},
                                      {1600, 1500, 1550, 1500, 1600, 1550, 1550, 1600} };
     // 1. Fit pedestal
-//    TF1 *Fit = new TF1("fit", func2, 0.0, 1.0, 3);
     Double_t Pedestal;
     Double_t DPedestal;
     char fname[64] = "";
-//    char hname[64] = "";
+    char hname[64] = "";
+    sprintf(hname, "Analysis/QDC/%s/Fit", step.c_str());
     Int_t low, up;
-    if (pedestal == 0)
-    {
+    if (strcmp(step.c_str(), "Raw") == 0)
+    {   // If step equals "Raw", fit pedestal position
         Int_t PBin = pH->GetMaximumBin(); // bin number of maximum
         Int_t Max = pH->GetBinContent(PBin); // maximum value
-        sprintf(fname, "fPed_%i", channel + 1);
+        sprintf(fname, "f%sPed_%i", step.c_str(), channel + 1);
         // Bounds (low, up): FWHM
-        low = pH->GetBinCenter(PBin)-1;
-        up = pH->GetBinCenter(PBin)+1;
-        while(2 * pH->GetBinContent(low) > Max) {
+        low = PBin-1;
+        up = PBin+1;
+        while(2 * pH->GetBinContent(low-1) > Max) {
             low--;
         }
-        while(2 * pH->GetBinContent(up) > Max) {
+        while(2 * pH->GetBinContent(up+1) > Max) {
             up++;
         }
-        TF1* fP = new TF1(fname, func2, low, up+1, 3);
-        fP->SetRange(low, up+1);
+        TF1* fP = new TF1(fname, func2, pH->GetBinCenter(low), pH->GetBinCenter(up), 3);
+        fP->SetRange(pH->GetBinCenter(low), pH->GetBinCenter(up));
         fP->SetParameters(-100000.0, (Double_t)pH->GetBinCenter(PBin), (Double_t)Max);
         pH->Fit(fname, "RB");
         Pedestal = (Double_t)fP->GetParameter(1);
         DPedestal = (Double_t)fP->GetParError(1);
-        SaveToFile("Analysis/QDC", fP);
-//        SaveTF1(fP, "Histograms/Raw/QDC/low/fit", fname);
+        PedQDC[channel] = Pedestal;
+        SaveToFile(hname, fP);
     }
-    else
-        Pedestal = pedestal;
 
     // 2. Find (FF,alpha)-cut and underground level
     low = RoughPeakPosition[1][channel] - 200;
     up = RoughPeakPosition[1][channel] + 300;
-    sprintf(fname, "fCut_%i", channel + 1);
+    sprintf(fname, "f%sCut_%i", step.c_str(), channel + 1);
     TF1* fC = new TF1(fname, "pol4", low, up);
     fC->SetRange(low, up);
     fC->SetParameters(1.E3, -10.0, 0.01, -1.E-5, 1.E-8);
     pH->Fit(fname, "RB");
     Double_t Cut = fC->GetMinimumX();
-//    SaveTF1(fC, "Histograms/Raw/QDC/low/fit", fname);
+    SaveToFile(hname, fC);
     cout << "**** QDC cut for channel " << channel+1 << ": " << Cut << endl;
 
 /// Find underground level
@@ -372,24 +413,24 @@ void Hist::AnalyzeQDC(TH1I *pH, Int_t channel, Double_t pedestal)
     }
     low = xMax - 200;
     up = xMax + 300;
-    sprintf(fname, "fMax_%i", channel + 1);
+    // Fit fission fragment maximum
+    sprintf(fname, "f%sMax_%i", step.c_str(), channel + 1);
     TF1* fM = new TF1(fname, "pol4", low, up);
     fM->SetRange(low, up);
     fM->SetParameters(-1.E4, 40.0, -0.01, 1.E-7, -1.E-10);
     pH->Fit(fname, "RB");
     Double_t Max = fM->GetMaximumX();
-//    SaveTF1(fM, "Histograms/Raw/QDC/low/fit", fname);
+    SaveToFile(hname, fM);
     if(CommentFlag)
-        cout << "Pedestal " << Pedestal << ", Cut " << Cut << ", Max " << Max << endl;
+        cout << "Cut " << Cut << ", Max " << Max << endl;
 
-    // 4. Calculate relative cut position and efficiency
-    Double_t relCutPos = (Cut - Pedestal) / (Max - Pedestal);
-    PedQDC[channel] = Pedestal;
+    // 4. Write values for graphs. Calculate efficiency
 //    UgQDC[channel] = Ug;
 //    DUgQDC[channel] = DUg;
-    CutQDC[channel] = relCutPos;
-    Double_t Integral = pH->Integral(pH->GetBin(Cut), pH->GetSize() + 1);
-    Double_t DIntegral = sqrt(Integral);
+    CutQDC[channel] = Cut;
+    MaxQDC[channel] = Max;
+//    Double_t Integral = pH->Integral(pH->GetBin(Cut), pH->GetSize() + 1);
+//    Double_t DIntegral = sqrt(Integral);
 //    efficiency[channel] = Integral / ( (pH->GetBin(Cut) - pH->GetBin(Pedestal)) * Ug + Integral );
     //*/
     return;

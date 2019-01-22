@@ -43,8 +43,11 @@ private:
     Double_t DNIFRate[NumHist];
     Double_t nPu[NumHist];
     Double_t DnPu[NumHist];
+    Double_t XSec[NumHist];
+    Double_t DXSec[NumHist];
     Double_t CrossSection;
     Double_t DCrossSection;
+    void PrintInScat();
 };
 
 #endif // XSECTION_H

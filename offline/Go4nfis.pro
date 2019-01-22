@@ -34,4 +34,6 @@ OTHER_FILES += \
                 nfisLinkDef.h \
     File-Lists/nfis2014_NIF.lml \
     File-Lists/nfis2014_SF.lml \
-    File-Lists/nfis2014_SB.lml
+    File-Lists/nfis2014_SB.lml \
+    File-Lists/nfis2014_UFC_NIF.lml \
+    File-Lists/nfis2014_UFC_SB.lml

@@ -27,7 +27,7 @@ using namespace std;
 class Hist
 {
 public:
-    Hist(string file_path);  // Constructor
+    Hist(std::string file_path);  // Constructor
 //     Hist(); // Standard constructor, needed for object i/o
     ~Hist(); // Destructor
 
@@ -59,10 +59,11 @@ private:
     Double_t DnNIF[NumHist];
     Double_t nSF[NumHist];
     Double_t DnSF[NumHist];
-    Double_t PedQDC[NumHist];
     Double_t UgQDC[NumHist];
     Double_t DUgQDC[NumHist];
+    Double_t PedQDC[NumHist];
     Double_t CutQDC[NumHist];
+    Double_t MaxQDC[NumHist];
 //    Double_t efficiency[NumHist]; // efficiency
     // Histograms
     TH1D *pHtLive;
@@ -84,7 +85,7 @@ private:
     void SaveCanvas(TCanvas* pCtoSave, string hpath, string hname);
     Double_t AnalyzeDtPeak(Int_t i_ch, TH1I *pH);//, Double_t *pNIF, Double_t *pDNIF, Double_t *pSF, Double_t *pDSF);
     Double_t AnalyzeDtUnderground(Int_t i_ch, TH1I *pH);//, Double_t *pSF, Double_t *pDSF);
-    void AnalyzeQDC(TH1I *pH, Int_t channel, Double_t pedestal = 0);
+    void AnalyzeQDC(TH1I *pH, Int_t channel, string step);
     Double_t Fit2(TH1I *pH, Double_t xmin, Double_t xmax);
     static Double_t func2(Double_t *x, Double_t *p);
     Int_t FindMax(TH1I *pH, Int_t rough_pos, Int_t range);

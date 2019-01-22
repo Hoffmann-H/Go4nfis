@@ -7,8 +7,8 @@ Xsection::Xsection()
     CommentFlag = kFALSE;
 
     // physics parameters
-    PuSFT2 = 6.77E10; // Pu-242 spontaneaus fission half-life period
-    DPuSFT2 = 7E8;
+    PuSFT2 = 6.77E10 * 365.24*24*60*60; // Pu-242 spontaneaus fission half-life period in s
+    DPuSFT2 = 7E8 * 365.24*24*60*60;
     Yield = 2.15882E4;
     DYield = 543.3;
     MonitorNIF = 27492079+33478370+30916955+54792679;
@@ -26,10 +26,12 @@ Xsection::Xsection()
 //    pHNIF->DoAnalyzeQDC();
     pHSB ->DoAnalyzeDt(kTRUE);
 //    pHSB ->DoAnalyzeQDC();
-    pHSF ->DoAnalyzeDt(kFALSE);
+    pHSF ->DoAnalyzeDt(kTRUE);
 //    pHSF ->DoAnalyzeQDC();
-//    CalculateNPu();
-//    CalculateCrossSection();
+
+    PrintInScat();
+    CalculateNPu();
+    CalculateCrossSection();
 }
 
 Xsection::~Xsection()
@@ -41,7 +43,7 @@ void Xsection::CalculateNPu()
 {
 //    Double_t SFRate, DSFRate;
     for(int i_ch = 0; i_ch < NumHist; i_ch++)
-    {   // Calculate SF rate and N(242Pu) for each plate.
+    {   // Calculate SF rate in 1/s and N(242Pu) for each plate.
         cout << "Spontaneaus fission rates in s^-1 for channel " << i_ch + 1 << endl;
         // NIF measurement:
         cout << "    NIF: " << pHNIF->SFRate[i_ch] << " +- " << pHNIF->DSFRate[i_ch] << endl;
@@ -61,7 +63,7 @@ void Xsection::CalculateNPu()
         cout << "    All: " << SFRate[i_ch] << " +- " << DSFRate[i_ch] << endl;
 
         // Calculate N(242Pu)
-        nPu[i_ch] = SFRate[i_ch] * PuSFT2 / log(2.0);
+        nPu[i_ch] = SFRate[i_ch] * PuSFT2 / log(2.0); // SFRate, PuSFT2: both in seconds!
         DnPu[i_ch] = sqrt( pow(DSFRate[i_ch] * PuSFT2 / log(2.0), 2) +
                            pow(SFRate[i_ch] * DPuSFT2 / log(2.0), 2) );
         cout << "    #Pu: " << nPu[i_ch] << " +- " << DnPu[i_ch] << " (efficiency=100%)" << endl;
@@ -128,6 +130,39 @@ void Xsection::CalculateCrossSection()
         Double_t DXs = sqrt( pow(DXsRaw, 2) + pow(DScat, 2) );
         cout << "cross section: " << Xs << " +- " << DXs << " mm^2" << endl;
         cout << "             = " << Xs * 1.E22 << " +- " << DXs * 1.E22 << " barn" << endl;
+        XSec[i_ch] = Xs;
+        DXSec[i_ch] = DXs;
+    }
+    Double_t sum = 0;
+    Double_t Dsum = 0;
+    for (int i = 0; i < NumHist; i++)
+    {
+        sum += XSec[i];
+        Dsum += pow(DXSec[i], 2);
+    }
+    CrossSection = sum / NumHist;
+    DCrossSection = sqrt(Dsum/NumHist);
+    cout << "Combined: " << CrossSection * 1.E22 << " +- " << DCrossSection * 1.E22 << " barn" << endl;
+}
+
+void Xsection::PrintInScat()
+{
+    cout << "=== In-scattering corrections ===" << endl;
+    cout << "Neutron-induced fissions per monitor count" << endl;
+    cout << "Channel nr, Free, Shadow bar, Ratio " << endl;
+    for(int i = 0; i < 8; i++)
+    {
+        cout << /*"  Channel " <<*/ i+1 /*<< endl*/;
+        cout << ",  " << pHNIF->NIFRate[i] / MonitorNIF * pHNIF->t_real/*
+             << " +- " << pHNIF->DNIFRate[i] / MonitorNIF * pHNIF->t_real << endl*/;
+        cout << ",  " << pHSB->NIFRate[i] / MonitorSB * pHSB->t_real/*
+             << " +- " << pHSB->DNIFRate[i] / MonitorSB * pHSB->t_real << endl*/;
+//        cout << ",  " << pHNIF->NIFRate[i] / MonitorNIF * pHNIF->t_real - pHSB->NIFRate[i] / MonitorSB * pHSB->t_real
+//             << " +- " << sqrt( pow(pHNIF->DNIFRate[i] / MonitorNIF * pHNIF->t_real, 2) +
+//                                pow(pHSB->DNIFRate[i] / MonitorSB * pHSB->t_real, 2) ) /*<< endl*/;
+        cout << ",  " << pHSB->NIFRate[i] / MonitorNIF * pHNIF->t_real / pHNIF->NIFRate[i] * MonitorSB / pHSB->t_real
+             << " +- " << sqrt( pow(pHSB->DNIFRate[i]/pHNIF->NIFRate[i], 2) +
+                                pow(pHNIF->DNIFRate[i]*pHSB->NIFRate[i]/pow(pHNIF->NIFRate[i], 2), 2) ) << endl;
     }
 }
 
