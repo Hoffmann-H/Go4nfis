@@ -107,6 +107,10 @@ Bool_t TnfisMakeUnp::BuildEvent(TGo4EventElement* output)
     {   //clear the event counter
         ResetEventStructure();
 
+//        time_t AbsTime = (time_t)raw->GetMbsBufferHeader()->l_time;
+
+
+
         if (CommentFlag[11] == true)
             cout << "Beginning another sub-event loop" << endl;
 
@@ -977,7 +981,7 @@ void TnfisMakeUnp::MakePictures()
 
     char TimeFormat[100];
 
-    sprintf(TimeFormat, "%%d.%%m./%%H:%%M%%F1970-01-01 00:00:00s0");
+    sprintf(TimeFormat, "#splitline{%%d.%%m.}{%%H:%%M}%%F1970-01-01 00:00:00s0");
 
     pPicRate->SetXAxisTimeDisplay(kTRUE);
     pPicRate->SetXAxisTimeFormat(TimeFormat);

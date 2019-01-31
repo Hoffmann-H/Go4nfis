@@ -27,12 +27,19 @@ TnfisParamGlobal::TnfisParamGlobal(const char* name) : TGo4Parameter(name)
     ExpStart = new TTimeStamp(s_year, s_month, s_day,
                               s_hour, s_min, s_sec, 0, false);
 
-    e_year    = 2014;   //year of exp. end
-    e_month   = 05;     //month of exp. end
-    e_day     = 28;     //day of exp. end
-    e_hour    = 22;     //hour of exp. end
-    e_min     = 0;      //minute of exp. end
-    e_sec     = 0;      //second of exp. end
+//    e_year    = 2014;   //year of exp. end
+//    e_month   = 05;     //month of exp. end
+//    e_day     = 28;     //day of exp. end
+//    e_hour    = 11;     //hour of exp. end
+//    e_min     = 0;      //minute of exp. end
+//    e_sec     = 0;      //second of exp. end
+
+//    e_year    = 2014;   //year of exp. end
+//    e_month   = 05;     //month of exp. end
+//    e_day     = 28;     //day of exp. end
+//    e_hour    = 22;     //hour of exp. end
+//    e_min     = 0;      //minute of exp. end
+//    e_sec     = 0;      //second of exp. end
 
 //    s_year    = 2014;   //year of exp. start
 //    s_month   = 05;     //month of exp. start
@@ -44,12 +51,12 @@ TnfisParamGlobal::TnfisParamGlobal(const char* name) : TGo4Parameter(name)
 //    ExpStart = new TTimeStamp(s_year, s_month, s_day,
 //                              s_hour, s_min, s_sec, 0, false);
 
-//    e_year    = 2014;   //year of exp. end
-//    e_month   = 06;     //month of exp. end
-//    e_day     = 02;     //day of exp. end
-//    e_hour    = 12;     //hour of exp. end
-//    e_min     = 0;      //minute of exp. end
-//    e_sec     = 0;      //second of exp. end
+    e_year    = 2014;   //year of exp. end
+    e_month   = 06;     //month of exp. end
+    e_day     = 02;     //day of exp. end
+    e_hour    = 12;     //hour of exp. end
+    e_min     = 0;      //minute of exp. end
+    e_sec     = 0;      //second of exp. end
 
 
     ReadoutPeriod = 15.;//scaler readout period

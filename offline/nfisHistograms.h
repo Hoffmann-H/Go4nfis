@@ -67,7 +67,8 @@ public:
     TH1I    *pH1AnaHitHZDR[NumHZDRFC],                              //Hit
             *pH1AnaHitAcc, *pH1AnaHitTrig;
     TH1I    *pH1AnaDtHZDR[NumHZDRFC],                               //TimeDiff
-            *pH1AnaDtHZDR_g[NumHZDRFC];                             //PH-gated
+            *pH1AnaDtHZDR_g[NumHZDRFC],                             //PH-gated
+            *pH1AnaDtHZDR_r[NumHZDRFC];                             //PH-refused
 
     TH1I    *pH1AnaQDCl[NumQDC], *pH1AnaQDCl_SF[NumQDC], *pH1AnaQDCl_NIF[NumQDC], *pH1AnaQDCl_trig[NumQDC];
 

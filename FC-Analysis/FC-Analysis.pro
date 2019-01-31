@@ -9,6 +9,7 @@ CONFIG -= qt
 
 INCLUDEPATH += $(ROOTSYS)/include \
                 include \
+                $(GO4SYS)/include \
                 src
 
 LIBS += $$system(root-config --libs) \

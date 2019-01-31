@@ -4,58 +4,59 @@ endif
 
 include $(GO4SYS)/Makefile.config
 
-## normally should be like this for every module, but can be specific
+## normally should be like this for every module, but can be specifnfis
 
 ifdef GO4PACKAGE
-NFISPTB_DIR         = Go4nfisPTB
+TUT_DIR         = Go4nfis
 else
-NFISPTB_DIR         = .
+TUT_DIR         = .
 endif
 
-NFISPTB_LINKDEF     = $(NFISPTB_DIR)/nfisLinkDef.$(HedSuf)
-NFISPTB_LIBNAME     = $(GO4_USERLIBNAME)
+TUT_LINKDEF     = $(TUT_DIR)/nfisLinkDef.$(HedSuf)
+TUT_LIBNAME     = $(GO4_USERLIBNAME)
 
 ## must be similar for every module
 
-NFISPTB_DICT        = $(NFISPTB_DIR)/$(DICT_PREFIX)nfis
-NFISPTB_DH          = $(NFISPTB_DICT).$(HedSuf)
-NFISPTB_DS          = $(NFISPTB_DICT).$(SrcSuf)
-NFISPTB_DO          = $(NFISPTB_DICT).$(ObjSuf)
+TUT_DICT        = $(TUT_DIR)/$(DICT_PREFIX)nfis
+TUT_DH          = $(TUT_DICT).$(HedSuf)
+TUT_DS          = $(TUT_DICT).$(SrcSuf)
+TUT_DO          = $(TUT_DICT).$(ObjSuf)
 
-NFISPTB_H           = $(filter-out $(NFISPTB_DH) $(NFISPTB_LINKDEF), $(wildcard $(NFISPTB_DIR)/*.$(HedSuf)))
-NFISPTB_S           = $(filter-out $(NFISPTB_DS), $(wildcard $(NFISPTB_DIR)/*.$(SrcSuf)))
-NFISPTB_O           = $(NFISPTB_S:.$(SrcSuf)=.$(ObjSuf))
+TUT_H           = $(filter-out $(TUT_DH) $(TUT_LINKDEF), $(wildcard $(TUT_DIR)/*.$(HedSuf)))
+TUT_S           = $(filter-out $(TUT_DS), $(wildcard $(TUT_DIR)/*.$(SrcSuf)))
+TUT_O           = $(TUT_S:.$(SrcSuf)=.$(ObjSuf))
 
-NFISPTB_DEP         =  $(NFISPTB_O:.$(ObjSuf)=.$(DepSuf))
-NFISPTB_DDEP        =  $(NFISPTB_DO:.$(ObjSuf)=.$(DepSuf))
+TUT_DEP         = $(TUT_O:.$(ObjSuf)=.$(DepSuf))
+TUT_DDEP        = $(TUT_DO:.$(ObjSuf)=.$(DepSuf))
 
-NFISPTB_LIB         =  $(NFISPTB_DIR)/$(NFISPTB_LIBNAME).$(DllSuf)
+TUT_LIB         = $(TUT_DIR)/$(TUT_LIBNAME).$(DllSuf)
 
 # used in the main Makefile
 
-EXAMPDEPENDENCS    += $(NFISPTB_DEP) $(NFISPTB_DDEP)
+OPTIONS += -g
+
+TUTDEPENDENCS    += $(TUT_DEP) $(TUT_DDEP) $(TUT_EDEP)
 
 ifdef DOPACKAGE
-DISTRFILES         += $(NFISPTB_S) $(NFISPTB_H) $(NFISPTB_LINKDEF)
-DISTRFILES         += $(NFISPTB_DIR)/Readme.txt
-DISTRFILES         += $(wildcard $(NFISPTB_DIR)/*.C)
+DISTRFILES         += $(TUT_S) $(TUT_H) $(TUT_LINKDEF)
+DISTRFILES         += $(TUT_DIR)/Readme.txt
 endif
 
 ##### local rules #####
 
-all::     $(NFISPTB_LIB)
+all::  $(TUT_LIB)
 
-$(NFISPTB_LIB):  $(NFISPTB_O) $(NFISPTB_DO) $(ANAL_LIB_DEP)
-	@$(MakeLibrary) $(NFISPTB_LIBNAME) "$(NFISPTB_O) $(NFISPTB_DO)" $(NFISPTB_DIR) $(NFISPTB_LINKDEF) "$(ANAL_LIB_DEP)" $(NFISPTB_DS) "$(NFISPTB_H)"
+$(TUT_LIB):   $(TUT_O) $(TUT_DO) $(ANAL_LIB_DEP)
+	@$(MakeLibrary) $(TUT_LIBNAME) "$(TUT_O) $(TUT_DO)" $(TUT_DIR) $(TUT_LINKDEF) "$(ANAL_LIB_DEP)" $(TUT_DS) "$(TUT_H)"
 
-$(NFISPTB_DS): $(NFISPTB_H)  $(NFISPTB_LINKDEF)
-	@$(ROOTCINTGO4) $(NFISPTB_LIB) $(NFISPTB_H) $(NFISPTB_LINKDEF)
+$(TUT_DS): $(TUT_H)  $(TUT_LINKDEF)
+	@$(ROOTCINTGO4) $(TUT_LIB) $(TUT_H) $(TUT_LINKDEF)
 
 clean-bin::
-	@rm -f $(NFISPTB_O) $(NFISPTB_DO)
-	@rm -f $(NFISPTB_DEP) $(NFISPTB_DDEP) $(NFISPTB_DS) $(NFISPTB_DH)
+	@rm -f $(TUT_O) $(TUT_DO)
+	@rm -f $(TUT_DEP) $(TUT_DDEP) $(TUT_DS) $(TUT_DH)
 
 clean:: clean-bin
-	@$(CleanLib) $(NFISPTB_LIBNAME) $(NFISPTB_DIR)
+	@$(CleanLib) $(TUT_LIBNAME) $(TUT_DIR)
 
 include $(GO4SYS)/Makefile.rules

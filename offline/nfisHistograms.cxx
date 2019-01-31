@@ -31,7 +31,7 @@ void nfisHistograms::DefineHistograms(const char* step_name, const char* det)
     {   DefineAnaCommon(step_name,  "Common");
         if (strcmp(det, "FC")==0)
         {   DefineAnaTrigAcc(step_name, "Acc&Trig");
-            DefineAnaHZDR(step_name,    "PuFC");
+            DefineAnaHZDR(step_name,    "FC");
         }
     }
 
@@ -276,7 +276,7 @@ void  nfisHistograms::DefineAnaCommon(const char* step_name,
                    "#font[12]{t} / ch","TDC channel");
 
     ////TimeDiff to acc 2D (pulse height gated)
-    sprintf(obj_name,"%s/H2AnaDtG", path_name, step_name);
+    sprintf(obj_name,"%s/H2AnaDtG", path_name/*, step_name*/);
     pH2AnaDt_g  = (TH2I *) MakeTH2(
                     'I',obj_name, "Time Diff to Acc (coarse bin, qdc gate on FF)",
                     107000,-535000.,535000.,
@@ -357,6 +357,14 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
                           " channel %i", i_ch+1);
         pH1AnaDtHZDR_g[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
                                             107000,-535000.,535000.,
+                                           "#font[12]{t} / ch", "counts");
+
+        ////TimeDiff to acc (pulse heigt refused)
+        sprintf(obj_name,"%s/TimeDiff/PH-Gated/H1AnaHZDRDtR_%i", path_name, i_ch+1);
+        sprintf(obj_title,"Time Diff to Acc (coarse bin, pulse height refused),"
+                          " channel %i", i_ch+1);
+        pH1AnaDtHZDR_r[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
+                                            107000,62000.,80000.,
                                            "#font[12]{t} / ch", "counts");
 
         ////QDC (low gain)

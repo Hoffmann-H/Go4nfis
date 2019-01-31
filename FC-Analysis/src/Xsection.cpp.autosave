@@ -181,8 +181,6 @@ void Xsection::ScatCorrNIF()
 
 void Xsection::CalculateNPu()
 {
-    Double_t nPuEff[NumHist];
-    Double_t DnPuEff[NumHist];
     for(int i_ch = 0; i_ch < NumHist; i_ch++)
     {   // Calculate SF rate in 1/s and N(242Pu) for each plate.
         cout << "Spontaneaus fission rates in s^-1 for channel " << i_ch + 1 << endl;
@@ -204,13 +202,13 @@ void Xsection::CalculateNPu()
         cout << "    All: " << SFRate[i_ch] << " +- " << DSFRate[i_ch] << endl;
 
         // Calculate effective N(242Pu)
-        nPuEff[i_ch] = SFRate[i_ch] * PuSFT2 / log(2.0); // SFRate, PuSFT2: both in seconds!
-        DnPuEff[i_ch] = sqrt( pow(DSFRate[i_ch] * PuSFT2 / log(2.0) / pHSF->eInt[i_ch], 2) +
+        nPuSF[i_ch] = SFRate[i_ch] * PuSFT2 / log(2.0); // SFRate, PuSFT2: both in seconds!
+        DnPuSF[i_ch] = sqrt( pow(DSFRate[i_ch] * PuSFT2 / log(2.0) / pHSF->eInt[i_ch], 2) +
                            pow(SFRate[i_ch] * DPuSFT2 / log(2.0) / pHSF->eInt[i_ch], 2) );
-        // Calculate N(242Pu)
-        nPu[i_ch] = nPuEff[i_ch] / pHSF->eInt[i_ch];
-        DnPu[i_ch] = sqrt( pow(DnPuEff[i_ch] / pHSF->eInt[i_ch], 2) +
-                           pow(nPuEff[i_ch] * pHSF->DeInt[i_ch] / pow(pHSF->eInt[i_ch], 2), 2) );
+        // Calculate N(242Pu) using internal efficiency from SF measurement
+        nPu[i_ch] = nPuSF[i_ch] / pHSF->eInt[i_ch];
+        DnPu[i_ch] = sqrt( pow(DnPuSF[i_ch] / pHSF->eInt[i_ch], 2) +
+                           pow(nPuSF[i_ch] * pHSF->DeInt[i_ch] / pow(pHSF->eInt[i_ch], 2), 2) );
         cout << "    #Pu: " << nPu[i_ch] << " +- " << DnPu[i_ch] << ", eff=" << pHSF->eInt[i_ch] << endl;
     }
 
@@ -222,7 +220,7 @@ void Xsection::CalculateNPu()
     g1->SetNameTitle("SF_Rate", "PuFC combined SF detection rate");
     SaveToFile("Analysis/SF", g1);
 
-    TGraphErrors* g2 = new TGraphErrors(NumHist, x, nPuEff, xerr, DnPuEff);
+    TGraphErrors* g2 = new TGraphErrors(NumHist, x, nPuSF, xerr, DnPuSF);
     g2->SetNameTitle("NPuEff", "Effective number of 242Pu atoms from SF");
     SaveToFile("Analysis/SF", g2);
 
@@ -233,8 +231,9 @@ void Xsection::CalculateNPu()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-////  Evaluation 1: #FF, neutron flux, #SF, T2_SF  -->  #Pu, sigma_nfis                         ////
+////  Evaluation 1: #FF, neutron flux, #SF, T2_SF  -->  #PuEff, sigma_nfis                      ////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+///   Assume SF and NIF efficiencies to be equal
 
 void Xsection::Evaluation1()
 {
@@ -246,20 +245,19 @@ void Xsection::Evaluation1()
 
 void Xsection::CalculateCrossSection()
 {
-    cout << "Cross section" << endl;
+    cout << "Cross section" << endl << " assuming equal efficiencies for NIF and SF" << endl;
     for(int i_ch = 0; i_ch < NumHist; i_ch ++)
     {
         Double_t FluxNIF = pHNIF->NeutronFlux[i_ch];
         Double_t DFluxNIF = pHNIF->DNeutronFlux[i_ch];
 
-        // cross section = reaction rate / (number of target atoms * flux)
+        // cross section = reaction rate / (effective number of target atoms * flux)
         Double_t Xs = NIFRate[i_ch] / (nPu[i_ch] * FluxNIF);
         Double_t DXs = sqrt( pow(DNIFRate[i_ch] / (nPu[i_ch] * FluxNIF), 2) +
                                pow(NIFRate[i_ch] * DnPu[i_ch] / (pow(nPu[i_ch], 2) * FluxNIF), 2) +
                                pow(NIFRate[i_ch] * DFluxNIF / (nPu[i_ch] * pow(FluxNIF, 2)), 2) );
 
-        cout << "XS(ch " << i_ch+1 << ") = " << Xs << " +- " << DXs << " mm^2" << endl;
-        cout << "         = " << Xs * 1.E22 << " +- " << DXs * 1.E22 << " barn" << endl;
+        cout << "XS(ch " << i_ch+1 << ") = " << Xs * 1.E22 << " +- " << DXs * 1.E22 << " barn" << endl;
         XSec[i_ch] = Xs;
         DXSec[i_ch] = DXs;
     }
@@ -289,29 +287,27 @@ void Xsection::CalculateCrossSection()
 void Xsection::Evaluation2()
 {
     cout << endl << "=== Evaluation 2 ===" << endl;
-    Double_t nPu[NumHist];
-    Double_t DnPu[NumHist];
     Double_t sum = 0;
     Double_t Dsum = 0;
     cout << "Effective number of Pu-242 atoms calculated with literature value" << endl <<
             "sigma_nfis = " << PuLit*1.E22 << " +- " << DPuLit*1.E22 << " barn" << endl;
     for (int i = 0; i < NumHist; i++)
     {
-        nPu[i] = NIFRate[i] / (pHNIF->NeutronFlux[i] * PuLit);
-        DnPu[i] = sqrt( pow(DNIFRate[i] / (pHNIF->NeutronFlux[i] * PuLit), 2) +
+        nPuNIF[i] = NIFRate[i] / (pHNIF->NeutronFlux[i] * PuLit);
+        DnPuNIF[i] = sqrt( pow(DNIFRate[i] / (pHNIF->NeutronFlux[i] * PuLit), 2) +
                         pow(NIFRate[i] * pHNIF->DNeutronFlux[i] / ( pow(pHNIF->NeutronFlux[i], 2) * PuLit ), 2) +
                         pow(NIFRate[i] * DPuLit / ( pHNIF->NeutronFlux[i] * pow(PuLit, 2) ), 2) );
-        cout << "N(ch " << i+1 << ") = " << nPu[i] << /*" +- " << DnPu[i] << */endl;
-        sum += nPu[i];
-        Dsum += pow(DnPu[i], 2);
+        cout << "N(ch " << i+1 << ") = " << nPuNIF[i] << /*" +- " << DnPu[i] << */endl;
+        sum += nPuNIF[i];
+        Dsum += pow(DnPuNIF[i], 2);
     }
     cout << "Sum = " << sum << " +- " << sqrt(Dsum) << endl;
 
     double x[] = {1, 2, 3, 4, 5, 6, 7, 8};
     double xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    TGraphErrors* g1 = new TGraphErrors(NumHist, x, nPu, xerr, DnPu);
-    g1->SetNameTitle("NPuLit", "Effective number of 242Pu atoms from given cross section");
+    TGraphErrors* g1 = new TGraphErrors(NumHist, x, nPuNIF, xerr, DnPuNIF);
+    g1->SetNameTitle("NPuLit", "Effective number of 242Pu atoms from NIF");
     SaveToFile("Analysis/Evaluation", g1);
 }
 

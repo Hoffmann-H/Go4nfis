@@ -80,6 +80,10 @@ private:
     Double_t DNIFRate[NumHist];
     Double_t UNIFRate[NumHist]; // In-scattering corrected NIF rate for UFC channels
     Double_t DUNIFRate[NumHist];
+    Double_t nPuSF[NumHist];
+    Double_t DnPuSF[NumHist];
+    Double_t nPuNIF[NumHist];
+    Double_t DnPuNIF[NumHist];
     Double_t nPu[NumHist];
     Double_t DnPu[NumHist];
     Double_t XSec[NumHist];
