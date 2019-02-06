@@ -46,7 +46,7 @@ public:
     Double_t DNeutronFlux[NumHist];
     Double_t eInt[NumHist]; // intrinsic detection efficiency
     Double_t DeInt[NumHist];
-    Double_t PedQDC[NumHist];
+    Double_t PedQDC[NumHist]; // extrema positions
     Double_t CutQDC[NumHist];
     Double_t MaxQDC[NumHist];
 private:

@@ -56,6 +56,7 @@ public:
     TH1I    *pH1RawVeto[NumVeto], *pH1RawVetoTot,
             *pH1RawTRGTime;
     TH1D    *pH1RawRate[NumScaler];
+    TH2D    *pH2RateVsTime;
     TH1I    *pH1RawTDC[NumTDC];
     TH1I    *pH1RawQDCh[NumQDC], *pH1RawQDCl[NumQDC];
 

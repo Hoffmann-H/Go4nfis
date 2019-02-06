@@ -14,6 +14,8 @@ Hist::Hist(string file_path, string setup, string FC)   // Constructor
     Setup = setup;
     UFC = strcmp(FC.c_str(), "PuFC");
 
+    if(CommentFlag)
+        cout << endl << "Creating instance Hist  " << (UFC?"UFC":"PuFC") << "  " << Setup << "  " << file_path << endl;
     //define surrounding peak limits
     Dt_min = 63500;
     Dt_max = 78500;
@@ -45,8 +47,6 @@ Hist::Hist(string file_path, string setup, string FC)   // Constructor
     }
     GetTimes();
 
-    if(CommentFlag)
-        cout << "Created instance Hist " << (UFC?"UFC":"PuFC") << " " << file_path << endl;
 }
 
 Hist::~Hist()    // Destructor
@@ -131,7 +131,8 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
     L = l;
     DL = Dl;
     Double_t r;
-    cout << "Neutron flux density" << endl;
+    if(CommentFlag)
+        cout << "Neutron flux density" << endl;
     for (int i = 0; i < NumHist; i++)
     {
         if (UFC)
@@ -142,7 +143,8 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
         DNeutronFlux[i] = sqrt( pow(DYield * Monitor / (r*r * t_real), 2) +
                                 pow(Yield * DMonitor / (r*r * t_real), 2) +
                                 pow(Yield * Monitor * 2*DL / (r*r*r * t_real), 2) );
-        cout << "ch " << i+1 << ": " << NeutronFlux[i] << " +- " << DNeutronFlux[i] << endl;
+        if(CommentFlag)
+            cout << "ch " << i+1 << ": " << NeutronFlux[i] << " +- " << DNeutronFlux[i] << endl;
     }
 }
 
@@ -187,14 +189,14 @@ void Hist::DoAnalyzeDt()
     DeadTimeCorrection(peak);
 
     if (CommentFlag)
-        cout << "Times: " << t_real << ", " << t_live << endl;
-    cout << "SF rate" << endl << "t_real=" << t_real << ", t_live=" << t_live << endl << "  ch  NIF  SF  SFRate" << endl;
+        cout << "Times: " << t_real << ", " << t_live << endl
+             << "ch   NIF   SF   SF rate" << endl;
     for (int i = 0; i < NumHist; i++)
     {
         SFRate[i] = nSF[i] / t_real;
         DSFRate[i] = DnSF[i] / t_real;
-
-        cout << "  " << i+1 << "  " << nNIF[i] << "  " << nSF[i] << "  " << SFRate[i] << endl;
+        if(CommentFlag)
+            cout << " " << i+1 << "  " << nNIF[i] << "+-" << DnNIF[i] << "  " << nSF[i] << "+-" << DnSF[i] << "  " << SFRate[i] << "+-" << DSFRate[i] << endl;
     }
 
     Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -202,6 +204,10 @@ void Hist::DoAnalyzeDt()
     TGraphErrors* g0 = new TGraphErrors(NumHist, x, SFRate, xerr, DSFRate);
     g0->SetNameTitle("SF_Rate", "SF detection rate");
     SaveToFile("Analysis/TimeDiff", g0);
+
+    TGraphErrors* g5 = new TGraphErrors(NumHist, x, nSF, xerr, DnSF);
+    g5->SetNameTitle("SF", "SF count");
+    SaveToFile("Analysis/TimeDiff", g5);
 
     if(peak)
     {   // If measured with beam, draw NIF rates, NIF/SF rates ratio and NIF/Flux ratio
@@ -282,6 +288,8 @@ Double_t Hist::AnalyzeDtUnderground(Int_t i_ch, TH1I *pH)
     Double_t DSF = sqrt(SF);
     nSF_raw[i_ch] = SF;
     DnSF_raw[i_ch] = DSF;
+    if(CommentFlag)
+        cout << "SF raw " << nSF_raw[i_ch] << " +- " << DnSF_raw[i_ch] << endl;
     return pH->Integral(lim_0, lim_3) / (lim_3 - lim_0);
 }
 
@@ -298,7 +306,7 @@ void Hist::DoAnalyzeQDC()
         relCutPos[i] = (CutQDC[i] - PedQDC[i]) / (MaxQDC[i] - PedQDC[i]);
     }
     // print minima
-    cout << "Minima: ";
+    cout << (UFC?"UFC":"PuFC") << "  " << Setup << "  " << "Minima: ";
     for (int i = 0; i < 8; i++)
         cout << CutQDC[i] << "  ";
     cout << endl;
@@ -318,9 +326,14 @@ void Hist::DoAnalyzeQDC()
     g6->SetNameTitle("gRelCut", "Relative minimum position");
     SaveToFile("Analysis/QDC", g6);
 
-    TGraphErrors* g7 = new TGraphErrors(NumHist, x, eInt, xerr, DeInt);
-    g7->SetNameTitle("eInt", "Internal efficiency");
+    TGraph* g7 = new TGraph(NumHist, x, PedQDC);
+    g6->SetMarkerStyle(20);
+    g7->SetNameTitle("gPed", "Absolute pedestal position");
     SaveToFile("Analysis/QDC", g7);
+
+    TGraphErrors* g8 = new TGraphErrors(NumHist, x, eInt, xerr, DeInt);
+    g8->SetNameTitle("eInt", "Internal efficiency");
+    SaveToFile("Analysis/QDC", g8);
 
     return;
 }
@@ -333,7 +346,7 @@ void Hist::AnalyzeQDC(TH1I *pH, Int_t channel)
                             { 100,  350,  100,  100,  100,   50,  100,   50}, // UFC cut min
                             { 400,  900,  400,  400,  400,  350,  400,  350} }; // UFC cut max
 
-    /// 1. Fit pedestal
+    /// 1. Find pedestal
     Double_t Pedestal;
     Double_t DPedestal;
     char fname[64] = "";

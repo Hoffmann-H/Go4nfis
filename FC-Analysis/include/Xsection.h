@@ -37,10 +37,12 @@ public:
     Hist *pHUNIF; // UFC
     Hist *pHUSB;
 private:
+    void SetParam();
     void CalculateThresholds();
     void PrintInScat();
     void ScatCorrNIF();
     void CalculateNPu();
+    void CalculateEfficiency();
     void CalculateCrossSection();
     void SaveToFile(string path, TObject *pObj);
     void CompareFiles(string path, Int_t start, Int_t stop);
@@ -64,6 +66,10 @@ private:
     Double_t DmPu;
     Double_t mU;
     Double_t DmU;
+    Double_t eSimGayther; // simulated efficiencies
+    Double_t DeSimGayther;
+    Double_t eSimMinimum;
+    Double_t DeSimMinimum;
 
     // physics variables
     Double_t MonitorNIF;
@@ -80,18 +86,32 @@ private:
     Double_t DNIFRate[NumHist];
     Double_t UNIFRate[NumHist]; // In-scattering corrected NIF rate for UFC channels
     Double_t DUNIFRate[NumHist];
+    Double_t USFRate[NumHist];
+    Double_t DUSFRate[NumHist];
+    Double_t nUNIF[NumHist]; // number of U atoms
+    Double_t DnUNIF[NumHist];
+    Double_t nU[NumHist];
+    Double_t DnU[NumHist];
+    Double_t UXSec[NumHist];
+    Double_t DUXSec[NumHist];
+    Double_t nPuSF[NumHist]; // number of Pu atoms
+    Double_t DnPuSF[NumHist];
+    Double_t nPuNIF[NumHist];
+    Double_t DnPuNIF[NumHist];
     Double_t nPu[NumHist];
     Double_t DnPu[NumHist];
     Double_t XSec[NumHist];
     Double_t DXSec[NumHist];
-    Double_t CrossSection;
-    Double_t DCrossSection;
+//    Double_t CrossSection;
+//    Double_t DCrossSection;
     Double_t eNIF[NumHist]; // efficiency
     Double_t DeNIF[NumHist];
-    Double_t eSF;
-    Double_t DeSF;
+    Double_t eSF[NumHist];
+    Double_t DeSF[NumHist];
     Double_t eRel[NumHist]; // relative efficiency NIF:SF
     Double_t DeRel[NumHist];
+    Double_t eU[NumHist]; // simplified UFC efficiency
+    Double_t DeU[NumHist];
 };
 
 #endif // XSECTION_H

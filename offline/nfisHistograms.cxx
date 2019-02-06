@@ -93,6 +93,7 @@ for (int i_ch=0; i_ch<NumHist; i_ch++)
 //                                          32500,0.,32500.,
                                             tbins,t_start, t_end,
                                             "", "scaler rate / 1/s");
+
     ////Veto
     if (i_ch<NumVeto){
         sprintf(obj_name,"%s/Veto/H1%sVeto_%i", path_name, step_name, i_ch+1);
@@ -123,11 +124,11 @@ for (int i_ch=0; i_ch<NumHist; i_ch++)
 
     ////Rates 2D
     sprintf(obj_name,"%s/Rates/H2%sRate", path_name, step_name);
-    pH2RawRate         = (TH2D *) MakeTH2('D',obj_name,"Scaler rate",
-                                        32500,0.,32500,
-                                        2*NumScaler,0.,NumScaler,
-                                        "#font[12]{t} / readout intervall",
-                                        "scaler channel");
+    pH2RawRate         = (TH2D *) MakeTH2('D', obj_name, "Scaler rates",
+                                        tbins, t_start, t_end,
+                                        64, 0., 64.,
+                                        "#font[12]{t}", "scaler channel");
+
     ////Veto 2D
     sprintf(obj_name,"%s/Veto/H2%sVeto", path_name, step_name);
     pH2RawVeto         = (TH2I *) MakeTH2('I',obj_name,"Veto length",

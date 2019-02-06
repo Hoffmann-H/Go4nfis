@@ -989,6 +989,23 @@ void TnfisMakeUnp::MakePictures()
     //add picture to frame work
     AddPicture(pPicRate, "Raw");
 
+    ////picture of scaler rates
+    pPicScalerRate = new TGo4Picture("PicScalerRate","Picture of count-rates of "
+                               " all scaler channels");
+
+    //add rate histogram
+    pPicScalerRate->AddObject((TObject*)pHist->pH2RawRate);
+
+//    char TimeFormat[100];
+
+    sprintf(TimeFormat, "#splitline{%%d.%%m.}{%%H:%%M}%%F1970-01-01 00:00:00s0");
+
+    pPicScalerRate->SetXAxisTimeDisplay(kTRUE);
+    pPicScalerRate->SetXAxisTimeFormat(TimeFormat);
+
+    //add picture to frame work
+    AddPicture(pPicScalerRate, "Raw");
+
 }
 
 //----------------------------END OF GO4 SOURCE FILE ---------------------

@@ -49,7 +49,8 @@ class TnfisMakeUnp : public TGo4EventProcessor {
 
       //pictures
       TGo4Picture       *pPicQDCvsTime[NumHZDRFC], *pPicQDCvsTimeAll,
-                        *pPicQDCl, *pPicQDCh, *pPicRate;
+                        *pPicQDCl, *pPicQDCh, *pPicRate,
+                        *pPicScalerRate;
 
       Bool_t            CommentFlag[10];
 

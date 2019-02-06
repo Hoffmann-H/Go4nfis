@@ -19,8 +19,8 @@ TnfisParamGlobal::TnfisParamGlobal(const char* name) : TGo4Parameter(name)
 
     s_year    = 2014;   //year of exp. start
     s_month   = 05;     //month of exp. start
-    s_day     = 22;     //day of exp. start
-    s_hour    = 12;     //hour of exp. start
+    s_day     = 20;     //day of exp. start
+    s_hour    = 9;     //hour of exp. start
     s_min     = 0;      //minute of exp. start
     s_sec     = 0;      //second of exp. start
 
