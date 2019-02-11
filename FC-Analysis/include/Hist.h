@@ -31,9 +31,11 @@ public:
 //     Hist(); // Standard constructor, needed for object i/o
     ~Hist(); // Destructor
 
-    void DoAnalyzeDt();
+//    void DoAnalyzeDt();
     void DoAnalyzeQDC();
     void SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Double_t Dmonitor, Double_t l, Double_t Dl);
+    Double_t GetPeakLow(Int_t i_ch);
+    Double_t GetPeakUp(Int_t i_ch);
     Double_t GetNumberEvents(int i);
 
     Double_t SFRate[NumHist]; // SF rates assuming efficiency==100%
@@ -42,6 +44,7 @@ public:
     Double_t DNIFRate[NumHist];
     Double_t t_live; // times
     Double_t t_real;
+    TH1I *pHDtG[NumHist];
     Double_t NeutronFlux[NumHist];
     Double_t DNeutronFlux[NumHist];
     Double_t eInt[NumHist]; // intrinsic detection efficiency
@@ -82,11 +85,10 @@ private:
     // Histograms
     TH1D *pHtLive;
     TH1D *pHtReal;
-    TH1I *pHDtG[NumHist];
     TH1I *pHRawQDCl[NumHist];
     TH1I *pHAnaQDCl[NumHist];
-    TCanvas *pCQDClFit;
-    TCanvas *pCQDClCut;
+//    TCanvas *pCQDClFit;
+//    TCanvas *pCQDClCut;
     // Methods
     TH1I* GetTH1I(const char *hname);
     TH1D* GetTH1D(const char *hname);
@@ -103,7 +105,7 @@ private:
     void AnalyzeQDC(TH1I *pH, Int_t channel);
     Double_t Fit2(TH1I *pH, Double_t xmin, Double_t xmax);
     static Double_t func2(Double_t *x, Double_t *p);
-    Int_t FindMax(TH1I *pH, Int_t rough_pos, Int_t range);
+//    Int_t FindMax(TH1I *pH, Int_t rough_pos, Int_t range);
     void GetTimes();
     void DeadTimeCorrection(Bool_t peak);
 /*    TH1F* GetTH1F(const char *hname);

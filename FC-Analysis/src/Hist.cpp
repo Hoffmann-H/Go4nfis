@@ -17,7 +17,7 @@ Hist::Hist(string file_path, string setup, string FC)   // Constructor
     if(CommentFlag)
         cout << endl << "Creating instance Hist  " << (UFC?"UFC":"PuFC") << "  " << Setup << "  " << file_path << endl;
     //define surrounding peak limits
-    Dt_min = 63500;
+    Dt_min = 63600;
     Dt_max = 78500;
     //define time window for underground integration
     if(!UFC)
@@ -143,11 +143,30 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
         DNeutronFlux[i] = sqrt( pow(DYield * Monitor / (r*r * t_real), 2) +
                                 pow(Yield * DMonitor / (r*r * t_real), 2) +
                                 pow(Yield * Monitor * 2*DL / (r*r*r * t_real), 2) );
-        if(CommentFlag)
+//        if(CommentFlag)
             cout << "ch " << i+1 << ": " << NeutronFlux[i] << " +- " << DNeutronFlux[i] << endl;
     }
 }
 
+
+Double_t Hist::GetPeakLow(Int_t i_ch)
+{
+    char name[64] = "";
+    sprintf(name, "/Conditions/Analysis/ToF/ToF_Thr_Ch%i", i_ch + 1);
+    TGo4WinCond* con = GetWinCond(name);
+    return con->GetXLow();
+}
+
+
+Double_t Hist::GetPeakUp(Int_t i_ch)
+{
+    char name[64] = "";
+    sprintf(name, "/Conditions/Analysis/ToF/ToF_Thr_Ch%i", i_ch + 1);
+    TGo4WinCond* con = GetWinCond(name);
+    return con->GetXUp();
+}
+
+/*
 void Hist::DoAnalyzeDt()
 {   // Analyze TimeDiff spectra for all channels: Determine underground and, if the beam was on, peak content. Setup == "SF" for measurements without beam.
     Bool_t peak;
@@ -245,7 +264,7 @@ void Hist::DoAnalyzeDt()
     return;
 }
 
-Double_t Hist::AnalyzeDtPeak(Int_t i_ch, TH1I *pH)//, Double_t *pNIF, Double_t *pDNIF, Double_t *pSF, Double_t *pDSF)
+Double_t Hist::AnalyzeDtPeak(Int_t i_ch, TH1I *pH)
 {
 //    TH1I* pH = (TH1I*)pHDtG[i_ch]->Clone();
     Double_t ChPerBin = pH->GetBinWidth(0);
@@ -292,7 +311,7 @@ Double_t Hist::AnalyzeDtUnderground(Int_t i_ch, TH1I *pH)
         cout << "SF raw " << nSF_raw[i_ch] << " +- " << DnSF_raw[i_ch] << endl;
     return pH->Integral(lim_0, lim_3) / (lim_3 - lim_0);
 }
-
+*/
 void Hist::DoAnalyzeQDC()
 {
     Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};

@@ -289,10 +289,24 @@ void TnfisFCAnalysis::MakeConditions()
     char CondNameDummy[50] ="";
     char HistNameDummy[20] ="";
 
-    // define qdc conditions
-    // Channel                  1     2     3     4     5     6     7     8
-//    Double_t qdc_min[]      = { 907,  853,  896,  849,  979,  892,  904,  837}; // PuFC
-    Double_t qdc_min[]      = { 212,  470,  207,  206,  199,  152,  184,  124}; // UFC
+    // define qdc and ToF conditions
+    // ToF conditions estimated per Gaussian fit with constant background applied to H1AnaHZDRDtG[Channel]
+
+    //// Hard-Code selection of FC ///
+    Bool_t PuFC = 1; /////////////////
+    //////////////////////////////////
+
+//    if(PuFC) {
+        // Channel              1      2      3      4      5      6      7      8
+//        Double_t qdc_min[]   = {907,   853,   896,   849,   979,   892,   904,   837}; // PuFC
+//        Double_t tof_mean[]  = {67725, 67252, 67156, 67311, 67307, 67267, 67221, 67222}; // PuFC
+//        Double_t tof_width[] = {115,   94,    90,    84,    90,    96,    86,    94};
+//    } else {
+//        // Channel              1      2      3      4      5      6      7      8
+        Double_t qdc_min[]   = {212,   470,   207,   206,   199,   152,   184,   124}; // UFC
+        Double_t tof_mean[]  = {73202, 73016, 72674, 72864, 72863, 72828, 72793, 72776}; // UFC
+        Double_t tof_width[] = {134,   119,   117,   118,   118,   116,   115,   116};
+//    }
     Double_t qdc_max[]      = {4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096};
 
     //make qdc conditions for each pre-Amp
@@ -308,14 +322,9 @@ void TnfisFCAnalysis::MakeConditions()
         pConQDC[i_PMT]->Enable();
     }
 
-    //define ToF conditions
-    //Estimated per Gaussian fit assuming constant background applied to H1AnaHZDRDtG[Channel]
-    //Channel                  1      2      3      4      5      6      7      8
-    Double_t tof_mean[]      = {67725, 67252, 67156, 67412, 67307, 67267, 67221, 67222};
-    Double_t tof_width[]      = {115,  94,    90,    84,    90,    96,    86,    94};
     //define time window for underground estimation
-    Double_t Dt_min = 6320;
-    Double_t Dt_max = 7860;
+    Double_t Dt_min = 63600;
+    Double_t Dt_max = 78500;
 
     //make qdc conditions for each pre-Amp
     for (int i_PMT=0; i_PMT<NumHZDRFC; i_PMT++)
@@ -323,7 +332,7 @@ void TnfisFCAnalysis::MakeConditions()
         sprintf(HistNameDummy, "H1AnaHZDRDtG_%i", i_PMT+1);
 
         pConToF[i_PMT] = MakeWinCond(CondNameDummy,
-                                     tof_mean[i_PMT] - tof_width[i_PMT], tof_mean[i_PMT] + tof_width[i_PMT],
+                                     tof_mean[i_PMT] - 3 * tof_width[i_PMT], tof_mean[i_PMT] + 3 * tof_width[i_PMT],
                                      HistNameDummy);
 
         sprintf(CondNameDummy, "Analysis/ToF/ToF_Dt_Ch%i", i_PMT+1);

@@ -33,19 +33,22 @@ public:
 
     Hist *pHNIF; // PuFC
     Hist *pHSB;
-    Hist *pHSF;
+    Hist *pHUG;
     Hist *pHUNIF; // UFC
     Hist *pHUSB;
 private:
     void SetParam();
     void CalculateThresholds();
-    void PrintInScat();
+    void DoAnalyzeDt();
     void ScatCorrNIF();
+    void PrintInScat();
     void CalculateNPu();
     void CalculateEfficiency();
     void CalculateCrossSection();
+    void UFC_AnalyzeDt();
     void SaveToFile(string path, TObject *pObj);
-    void CompareFiles(string path, Int_t start, Int_t stop);
+    static Double_t func_peak(Double_t *x, Double_t *p);
+//    void CompareFiles(string path, Int_t start, Int_t stop);
     Bool_t CommentFlag;
 
     // physics parameters

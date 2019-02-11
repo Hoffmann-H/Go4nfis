@@ -31,11 +31,13 @@ unix {
 
 # Input
 HEADERS += include/Hist.h \
+           include/PuFC.h \
            include/Xsection.h
 
 SOURCES += \
     main.cpp \
     src/Xsection.cpp \
+    src/PuFC.cpp \
     src/Hist.cpp
 
 !exists ($(ROOTSYS)/include/rootcintrule.pri):message ("The rootcintrules.pri was not found")

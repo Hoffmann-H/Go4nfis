@@ -1,4 +1,5 @@
 #define lw 2
+//#define a 0.25 // alpha
 using namespace std;
 TGraph* HistToGraph(TH1I* pH)
 {
@@ -44,7 +45,7 @@ void DrawQDCfit(TFile* f, string FC, string Setup)
 
         sprintf(hname, "/Analysis/QDC/Fit/f%s%sMax_%i", FC.c_str(), Setup.c_str(), i+1);
         TF1* fMax = (TF1*)f->Get(hname);
-        fMax->SetLineWidth(lw);
+        fMax->SetLineWidth(lw);//CanvasPreferGL
         fMax->SetLineColor(kGreen);
         legend->AddEntry(fMax, "pol4 Maximum fit");
         fMax->Draw("same");
@@ -94,14 +95,13 @@ void DrawQDCeff(TFile* f, string FC, string Setup)
         gPad->SetLogy(1);
 //        pH1->SetAxisRange(0, 7096, "X");
         pH1->Draw();
-        pH2->SetFillColor(kBlue);
-//        pH2->SetFillColorAlpha(kBlue, 0.25); // possible if flagOpenGL.CanvasPreferGL is set to 1 in $ROOTSYS/etc/system.rootrc
-        pH2->SetFillStyle(3001);
+        pH2->SetFillColorAlpha(kBlue, 0.25);
+//        pH2->SetFillStyle(3001);
         pH2->Draw("same");
         fUg->SetLineColor(kRed);
         fUg->SetLineWidth(lw);
         fUg->SetFillColor(kRed);
-        fUg->SetFillStyle(3001);
+//        fUg->SetFillStyle(3001);
 //        legend->AddEntry(fUg, "FF constant extrapolation");
         fUg->Draw("fsame");
     }
@@ -250,24 +250,18 @@ void DrawDtUg(TFile* f, string FC, string Setup)
         pH->SetLineColor(kBlue);
         pH->SetAxisRange(62000, 80000, "X");
         pH->SetAxisRange(0, pH->GetMaximum(), "Y");
-        TH1I* pH1 = (TH1I*)pH->Clone();
-        TH1I* pH2 = (TH1I*)pH->Clone();
-        pH2->SetFillColor(kBlue);
-        pH2->SetFillStyle(3001);
         Double_t x0 = 0, x1 = 0, level = 0; // extract peak integration limits from underground graph
         fUgP->GetPoint(0, x0, level);
         fUgP->GetPoint(1, x1, level);
         cout << x0 << " " << x1 << " " << level << endl;
         for(Int_t bin = 0; bin < pH->GetNbinsX(); bin++)
         {
-            if(pH->GetBinCenter(bin) > x0 && pH->GetBinCenter(bin) < x1)
-            {
-//                pH2->SetBinContent(bin, pH->GetBinContent(bin) - level);
-                pH1->SetBinContent(bin, 0);
-            }
-            else
-                pH2->SetBinContent(bin, 0);
+            pH->SetBinContent(bin, pH->GetBinContent(bin) - level);
         }
+        TH1I* pH1 = (TH1I*)pH->Clone();
+        TH1I* pH2 = (TH1I*)pH->Clone();
+        pH2->SetFillColor(kBlue);
+        pH2->SetFillStyle(3001);//Alpha(kBlue, 0.25);
 
         // draw histogram and graphs together
         pH2->Draw();
@@ -275,14 +269,14 @@ void DrawDtUg(TFile* f, string FC, string Setup)
         fUg->SetLineColor(kRed);
         fUg->SetLineWidth(lw);
         fUg->Draw("same");
-        fUgP->SetLineColor(kOrange);
-        fUgP->SetLineWidth(lw);
-        fUgP->Draw("same");
+//        fUgP->SetLineColor(kOrange);
+//        fUgP->SetLineWidth(lw);
+//        fUgP->Draw("same");
         TGraphErrors* gSF = (TGraphErrors*)f->Get("/Analysis/TimeDiff/SF"); // get SF counts
         Double_t x = 0, SF = 0, NIF = 0;
         gSF->GetPoint(i, x, SF);
         char message[32] = "";
-        sprintf(message, "SF events: %i", (int)(SF+0.5));
+        sprintf(message, "Underground events: %i", (int)(SF+0.5));
         TText* tSF = new TText();
         tSF->SetNDC();
         tSF->DrawText(0.2, 0.2, message);
@@ -585,20 +579,20 @@ void DrawEval(TFile* fCom)
     mg3->SetTitle("Efficiencies; Deposit; Ratio");
     TLegend* l3 = new TLegend(0.6, 0.2, 0.85, 0.70, "Fission fragments");
 
-    TGraphErrors* g7 = (TGraphErrors*)fCom->Get("/Analysis/Evaluation/eNIF");
+    TGraphErrors* g7 = (TGraphErrors*)fCom->Get("/Analysis/PuFC/Efficiency/eNIF");
     BiasX(g7, -0.1);
     g7->SetLineColor(kBlue);
     g7->SetLineWidth(lw);
     mg3->Add(g7);
     l3->AddEntry(g7, "Neutron-induced");
 
-    TGraphErrors* g8 = (TGraphErrors*)fCom->Get("/Analysis/Evaluation/eSF");
+    TGraphErrors* g8 = (TGraphErrors*)fCom->Get("/Analysis/PuFC/Efficiency/eSF");
     g8->SetLineColor(kGreen);
     g8->SetLineWidth(lw);
     mg3->Add(g8);
     l3->AddEntry(g8, "Spontaneaus (average)");
 
-    TGraphErrors* g9 = (TGraphErrors*)fCom->Get("/Analysis/Evaluation/eRel");
+    TGraphErrors* g9 = (TGraphErrors*)fCom->Get("/Analysis/PuFC/Efficiency/eRel");
     BiasX(g9, +0.1);
     g9->SetLineColor(kRed);
     g9->SetLineWidth(lw);
@@ -612,13 +606,57 @@ void DrawEval(TFile* fCom)
     c3->Update();
 }
 
+void DrawScaledDt(TFile* fNIF, TFile* fSB, TFile* fUG)
+{
+    char name[64] = "";
+    TCanvas* c[8];
+    TH1F* hTlNIF = (TH1F*)fNIF->Get("/Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    Double_t tNIF = hTlNIF->Integral();
+    TH1F* hTlSB = (TH1F*)fSB->Get("/Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    Double_t tSB = hTlSB->Integral();
+    TH1F* hTlUG = (TH1F*)fUG->Get("/Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    Double_t tUG = hTlUG->Integral();
+    cout << "Times: " << tNIF << ", " << tSB << ", " << tUG << endl;
+    for (int i = 0; i < 1; i++)
+    {
+        sprintf(name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+        TH1I* h;
+        h = (TH1I*)fNIF->Get(name);
+        TH1F* hNIF = (TH1F*)(h->Clone());
+        h = (TH1I*)fSB->Get(name);
+        TH1F* hSB = (TH1F*)(h->Clone());
+        h = (TH1I*)fUG->Get(name);
+        TH1F* hUG = (TH1F*)(h->Clone());
+        TLegend* l = new TLegend(0.6, 0.2, 0.85, 0.70, "Setup");
+        hNIF->Scale(sqrt(tUG*tSB/tNIF));
+        hSB->Scale(sqrt(tNIF*tUG/tSB));
+        hUG->Scale(sqrt(tNIF*tSB/tUG));
+        sprintf(name, "DtSc_%i", i+1);
+        c[i] = new TCanvas(name, "TimeDiff scaled by live time", 200, 10, 700, 500);
+        hNIF->SetLineColor(kRed);
+        l->AddEntry(hNIF, "Open beam", "lp");
+        hSB->SetLineColor(kGreen);
+        l->AddEntry(hSB, "Shadow bar", "lp");
+        hUG->SetLineColor(kBlue);
+        l->AddEntry(hUG, "Beam off", "lp");
+        hSB->SetAxisRange(62000, 80000, "X");
+        hSB->SetAxisRange(0, 130000, "Y");
+        hSB->Draw();
+        hNIF->Draw("same");
+        hUG->Draw("same");
+        l->Draw();
+        c[i]->Modified();
+        c[i]->Update();
+    }
+}
+
 int DrawSingle(TFile* f, string FC, string Setup)
 { // Draw all pictures concerning one single file
-    DrawQDCfit(f, FC, Setup);
-    DrawQDCeff(f, FC, Setup);
+//    DrawQDCfit(f, FC, Setup);
+//    DrawQDCeff(f, FC, Setup);
 //    DrawQDCres(f, FC, Setup);
 //    DrawDtInt(f, FC, Setup);
-//    DrawDtUg(f, FC, Setup);
+    DrawDtUg(f, FC, Setup);
 
     return 1;
 }
@@ -626,20 +664,24 @@ int DrawSingle(TFile* f, string FC, string Setup)
 
 int DrawPics()
 {
+
+//    gStyle->SetCanvasPreferGL();
+
     TFile* fNIF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/NIF.root");
     TFile* fSB = TFile::Open("/home/hoffma93/Go4nfis/offline/results/SB.root");
     TFile* fSF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/SF.root");
-    TFile* fUNIF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_NIF.root");
-    TFile* fUSB = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_SB.root");
+//    TFile* fUNIF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_NIF.root");
+//    TFile* fUSB = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_SB.root");
     /// single pics
 //    DrawSingle(fNIF, "PuFC", "NIF");
 //    DrawSingle(fSB, "PuFC", "SB");
 //    DrawSingle(fSF, "PuFC", "SF");
-    DrawSingle(fUNIF, "UFC", "NIF");
-    DrawSingle(fUSB, "UFC", "SB");
+//    DrawSingle(fUNIF, "UFC", "NIF");
+//    DrawSingle(fUSB, "UFC", "SB");
 
+    DrawScaledDt(fNIF, fSB, fSF);
     /// common pics
-    TFile* fCom = TFile::Open("/home/hoffma93/Go4nfis/offline/results/Evaluation.root");
+//    TFile* fCom = TFile::Open("/home/hoffma93/Go4nfis/offline/results/Evaluation.root");
     // SF
 //    DrawSFRate(fNIF, fSB, fSF, fCom);
 //    DrawNPu(fCom);
