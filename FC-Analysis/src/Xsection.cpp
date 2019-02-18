@@ -16,10 +16,11 @@ Xsection::Xsection()
     pHSB ->DoAnalyzeQDC();
     pHUG ->DoAnalyzeQDC();
     CalculateThresholds();
-    DoAnalyzeDt();
+    DoAnalyzeDt("PuFC");
     CalculateNPu();
     CalculateEfficiency();
     Evaluation1();
+
     Evaluation2();
     Evaluation3();
 
@@ -106,55 +107,85 @@ void Xsection::CalculateThresholds()
 
     TGraphErrors* g1 = new TGraphErrors(NumHist, x, PuFC_Cut, xerr, PuFC_DCut);
     g1->SetNameTitle("gCut", "PuFC combined QDC minimum position vs channel");
-    SaveToFile("Analysis/PuFC/QDC", g1);
+    SaveToFile("PuFC/QDC", g1);
 }
 
 
-void Xsection::DoAnalyzeDt()
+void Xsection::DoAnalyzeDt(string FC)
 {
     cout << "Analyzing TimeDiff spectra. " << endl;
+    Bool_t PuFC = strcmp(FC.c_str(), "UFC");
+    Hist *hNIF, *hSB;
+    if (PuFC)
+    {
+        hNIF = pHNIF;
+        hSB = pHSB;
+    } else {
+        hNIF = pHUNIF;
+        hSB = pHUSB;
+    }
     Double_t Dt_min = 63600;
     Double_t Dt_max = 78500;
     Double_t ToF_low, ToF_up, ChPerBin, BinOffset;
     Double_t TimePerCh = 25.E-12; // 25 ps in seconds
-    Double_t tNIF = pHNIF->t_live;
-    Double_t tSB = pHSB->t_live;
-    Double_t tUG = pHUG->t_live;
-    cout << "Times: " << tNIF << ", " << tSB << ", " << tUG << endl;
+    Double_t tNIF = hNIF->t_live;
+    Double_t tSB = hSB->t_live;
+    Double_t tUG; // only necessary for PuFC
+    Double_t MonNIF = PuFC ? MonitorNIF : MonitorUNIF;
+    Double_t DMonNIF = PuFC ? DMonitorNIF : DMonitorUNIF;
+    Double_t MonSB = PuFC ? MonitorSB : MonitorUSB;
+    Double_t DMonSB = PuFC ? DMonitorSB : DMonitorUSB;
+    cout << "Times: " << tNIF << ", " << tSB << endl;
+    cout << "Neutron monitor: " << MonNIF << ", " << MonSB << endl;
+    cout << "=== " << FC << " in-scattering correction ===" << endl;
     Int_t lim[4];
     Double_t nNIF[NumHist];
+    Double_t DnNIF[NumHist];
     Double_t D2nNIF[NumHist];
+    Double_t nNIFfit[NumHist];
+    Double_t DnNIFfit[NumHist];
+    Double_t D2nNIFfit[NumHist];
     Double_t nSBsub[NumHist];
     Double_t D2nSBsub[NumHist];
     Double_t nSBfit[NumHist];
+    Double_t DnSBfit[NumHist];
     Double_t D2nSBfit[NumHist];
     Double_t nSB[NumHist];
+    Double_t DnSB[NumHist];
     Double_t D2nSB[NumHist];
     Double_t nSignal[NumHist];
     Double_t DnSignal[NumHist];
+    Double_t NIF_Rate[NumHist];
+    Double_t DNIF_Rate[NumHist];
+    Double_t SF_Rate[NumHist];
+    Double_t DSF_Rate[NumHist];
     TH1I *pH1NIF, *pH1SB, *pH1UG;
     char name[64] = "";
+    Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 //    cout << "ch   average Ug   Ug-rate   nNIF   nSB   corrected NIF   in-scat ratio" << endl;
     for (int i = 0; i < NumHist; i++)
     {
         // get hand-made peak limits
-        ToF_low = pHNIF->GetPeakLow(i);
-        ToF_up = pHNIF->GetPeakUp(i);
+        ToF_low = hNIF->GetPeakLow(i);
+        ToF_up = hNIF->GetPeakUp(i);
 
         // set limits from 3 sigma to n sigma
-        Double_t n = 1;
+        Double_t n = 3;
         Double_t center = 0.5 * (ToF_low + ToF_up);
         Double_t width = (ToF_up - ToF_low) / 6.0;
         ToF_low = center - n * width;
         ToF_up = center + n * width;
 
-        pH1NIF = pHNIF->pHDtG[i];
-        pH1SB = pHSB->pHDtG[i];
-        pH1UG = pHUG->pHDtG[i];
+        // Get TimeDiff histograms
+        pH1NIF = hNIF->pHDtG[i];
+        pH1SB = hSB->pHDtG[i];
+        if (PuFC)
+            pH1UG = pHUG->pHDtG[i];
+        // Calculate integration limit bins
         ChPerBin = pH1NIF->GetBinWidth(0);
         BinOffset = pH1NIF->GetBinCenter(0);
-        // Calculate integration limit bins
         lim[0] = (Dt_min - BinOffset) / ChPerBin;
         lim[1] = (ToF_low - BinOffset) / ChPerBin;
         lim[2] = (ToF_up - BinOffset) / ChPerBin;
@@ -172,19 +203,69 @@ void Xsection::DoAnalyzeDt()
         Int_t SBPeakCount = pH1SB->Integral(lim[1], lim[2]);
 
         //// Fit constant underground
-        Double_t UgCount = pH1NIF->Integral(lim[0], lim[3]) - NIFPeakCount +
-                           pH1SB->Integral(lim[0], lim[3]) - SBPeakCount +
-                           pH1UG->Integral(lim[0], lim[3]);
-        Double_t DUgCount = sqrt(UgCount);
-        // avUg: average underground count per bin and t_live
-        Double_t avUg = UgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) + tUG * (lim[3] - lim[0] + 1) );
-        Double_t DavUg = DUgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) + tUG * (lim[3] - lim[0] + 1) );
+        Double_t UgCount, DUgCount, avUg, DavUg;
+        if (PuFC)
+        {
+            tUG = pHUG->t_live;
+            UgCount = pH1NIF->Integral(lim[0], lim[3]) - NIFPeakCount +
+                    pH1SB->Integral(lim[0], lim[3]) - SBPeakCount +
+                    pH1UG->Integral(lim[0], lim[3]);
+            DUgCount = sqrt(UgCount);
+            // avUg: average underground count per bin and t_live
+            avUg = UgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) + tUG * (lim[3] - lim[0] + 1) );
+            DavUg = DUgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) + tUG * (lim[3] - lim[0] + 1) );
+        } else {
+            UgCount = pH1NIF->Integral(lim[0], lim[3]) - NIFPeakCount +
+                               pH1SB->Integral(lim[0], lim[3]) - SBPeakCount;
+            DUgCount = sqrt(UgCount);
+            // avUg: average underground count per bin and t_live
+            avUg = UgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) );
+            DavUg = DUgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) );
+        }
         if(CommentFlag)
             cout << " Underground per bin: " << avUg << "+-" << DavUg << endl;
+
+        //// save underground to file
+        // NIF
+        Double_t x[] = {Dt_min, Dt_max};
+        Double_t y[] = {avUg * tNIF, avUg * tNIF};
+        TGraph* g0 = new TGraph(2, x, y);
+        sprintf(name, "f%sNIFUg_%i", FC.c_str(), i+1);
+        g0->SetNameTitle(name, "Pulse-heigt gated TimeDiff Underground Fit");
+        sprintf(name, "%s/TimeDiff/Underground/NIF", FC.c_str());
+        SaveToFile(name, g0);
+        x[0] = ToF_low; x[1] = ToF_up;
+        TGraph* g1 = new TGraph(2, x, y);
+        sprintf(name, "f%sNIFUgPeak_%i", FC.c_str(), i+1);
+        g1->SetNameTitle(name, "TimeDiff Peak area Underground");
+        sprintf(name, "%s/TimeDiff/Underground/NIF", FC.c_str());
+        SaveToFile(name, g1);
+        // SB
+        y[0] = avUg * tSB; y[1] = avUg * tSB;
+        TGraph* g2 = new TGraph(2, x, y);
+        sprintf(name, "f%sSBUgPeak_%i", FC.c_str(), i+1);
+        g2->SetNameTitle(name, "TimeDiff Peak area Underground");
+        sprintf(name, "%s/TimeDiff/Underground/SB", FC.c_str());
+        SaveToFile(name, g2);
+        x[0] = Dt_min; x[1] = Dt_max;
+        TGraph* g3 = new TGraph(2, x, y);
+        sprintf(name, "fPuFCSBUg_%i", i+1);
+        g3->SetNameTitle(name, "Pulse-heigt gated TimeDiff Underground Fit");
+        sprintf(name, "%s/TimeDiff/Underground/SB", FC.c_str());
+        SaveToFile(name, g3);
+        if (PuFC)
+        { // UG
+            y[0] = avUg * tUG; y[1] = avUg * tUG;
+            TGraph* g4 = new TGraph(2, x, y);
+            sprintf(name, "fPuFCUGUg_%i", i+1);
+            g4->SetNameTitle(name, "Pulse-heigt gated TimeDiff Underground Fit");
+            SaveToFile("PuFC/TimeDiff/Underground/UG", g4);
+        }
 
         // number of time-correlated FF events in NIF measurement
         nNIF[i] = NIFPeakCount - (lim[2] - lim[1] + 1) * tNIF * avUg;
         D2nNIF[i] = NIFPeakCount + pow((lim[2] - lim[1] + 1) * tNIF * DavUg, 2);
+        DnNIF[i] = sqrt(D2nNIF[i]);
 
         //// number of time-correlated FF events in SB measurement
         //// 1st method: subtraction of time-independent underground
@@ -203,147 +284,130 @@ void Xsection::DoAnalyzeDt()
 
         //// 2nd method: Fit the peaks
         Double_t Dwidth, ampl, Dampl;
-        sprintf(name, "fNIFDtPeak_%i", i+1);
+        Double_t pi = 3.1415926535898;
+        sprintf(name, "f%sNIFDtPeak_%i", FC.c_str(), i+1);
         TF1* fNIF = new TF1(name, func_peak, Dt_min, Dt_max, 4);
-        fNIF->SetRange(Dt_min, Dt_max);
+        fNIF->SetNpx(1000);
+//        TF1* fNIF = new TF1(name, "gaus", Dt_min, Dt_max, 4);
+//        fNIF->SetRange(Dt_min, Dt_max);
         fNIF->SetParameters(100, center, width, tNIF * avUg);
         pH1NIF->Fit(name, "RQ");
+        sprintf(name, "%s/TimeDiff/Signal/NIF/Fit", FC.c_str());
+        SaveToFile(name, fNIF);
+        ampl = (Double_t)fNIF->GetParameter(0);
+        Dampl = (Double_t)fNIF->GetParError(0);
         center = (Double_t)fNIF->GetParameter(1);
         width = (Double_t)fNIF->GetParameter(2);
         Dwidth = (Double_t)fNIF->GetParError(2);
+        nNIFfit[i] = sqrt(pi) / ChPerBin * ampl * width;
+        D2nNIFfit[i] = pi / pow(ChPerBin, 2) * (pow(Dampl * width, 2) + pow(ampl * Dwidth, 2));
+        DnNIFfit[i] = sqrt(D2nNIFfit[i]);
 
-        sprintf(name, "fSBDtPeak_%i", i+1);
+        sprintf(name, "f%sSBDtPeak_%i", FC.c_str(), i+1);
         TF1* fSB = new TF1(name, func_peak, Dt_min, Dt_max, 4);
+        fSB->SetNpx(1000);
         fSB->SetRange(Dt_min, Dt_max);
         fSB->SetParameters(100, center, width, tSB * avUg);
         fSB->FixParameter(1, center);
         fSB->FixParameter(2, 3*width);
         pH1SB->Fit(name, "RBQ");
+        sprintf(name, "%s/TimeDiff/Signal/SB/Fit", FC.c_str());
+        SaveToFile(name, fSB);
         ampl = (Double_t)fSB->GetParameter(0);
         Dampl = (Double_t)fSB->GetParError(0);
-        Double_t pi = 3.1415926535898;
-        nSBfit[i] = sqrt(pi) / ChPerBin * ampl * width;
+        nSBfit[i] = sqrt(pi) / ChPerBin * ampl * width; // using width from NIF fit
         D2nSBfit[i] = pi / pow(ChPerBin, 2) * (pow(Dampl * width, 2) + pow(ampl * Dwidth, 2));
+        DnSBfit[i] = sqrt(D2nSBfit[i]);
         if(CommentFlag)
             cout << " SB peak content (2nd method): " << nSBfit[i] << "+-" << sqrt(D2nSBfit[i]) << endl;
-        nSB[i] = nSBsub[i]; // choose method
-        D2nSB[i] = D2nSBsub[i];
+
+        nSB[i] = nSBfit[i]; // choose method
+        D2nSB[i] = D2nSBfit[i];
+        DnSB[i] = sqrt(D2nSB[i]);
 
         //// In-Scattering correction
-        nSignal[i] = nNIF[i] - nSB[i] * (tNIF / tSB) * (pHNIF->NeutronFlux[i] / pHSB->NeutronFlux[i]);
+        nSignal[i] = nNIF[i] - nSB[i] * (tNIF / tSB) * (hNIF->NeutronFlux[i] / hSB->NeutronFlux[i]);
         DnSignal[i] = sqrt( D2nNIF[i] +
-                            D2nSB[i] * pow((tNIF / tSB) * (pHNIF->NeutronFlux[i] / pHSB->NeutronFlux[i]), 2) +
-                            pow(nSB[i] * (tNIF / tSB) * (pHNIF->DNeutronFlux[i] / pHSB->NeutronFlux[i]), 2) +
-                            pow(nSB[i] * (tNIF / tSB) * (pHNIF->NeutronFlux[i] * pHSB->DNeutronFlux[i] / pow(pHSB->NeutronFlux[i], 2)), 2) );
-        NIFRate[i] = nSignal[i] / tNIF;
-        DNIFRate[i] = DnSignal[i] / tNIF;
+                            D2nSB[i] * pow((tNIF / tSB) * (hNIF->NeutronFlux[i] / hSB->NeutronFlux[i]), 2) +
+                            pow(nSB[i] * (tNIF / tSB) * (hNIF->DNeutronFlux[i] / hSB->NeutronFlux[i]), 2) +
+                            pow(nSB[i] * (tNIF / tSB) * (hNIF->NeutronFlux[i] * hSB->DNeutronFlux[i] / pow(hSB->NeutronFlux[i], 2)), 2) );
 
-        SFRate[i] = (pH1NIF->Integral() + pH1SB->Integral() + pH1UG->Integral() - nNIF[i] - nSB[i]) / (tNIF + tSB + tUG);
-        DSFRate[i] = sqrt( pH1NIF->Integral() + pH1SB->Integral() + pH1UG->Integral() + D2nNIF[i] + D2nSB[i] ) / (tNIF + tSB + tUG);
+        Double_t InScatPart = nSB[i] / nNIF[i] * MonNIF / MonSB;
+        Double_t DInScatPart = InScatPart * sqrt( D2nSB[i] / pow(nSB[i], 2) +
+                                                  D2nNIF[i] / pow(nNIF[i], 2) +
+                                                  pow(DMonNIF / MonNIF, 2) +
+                                                  pow(DMonSB / MonSB, 2) );
+        Double_t scaledSB = nSB[i] * MonNIF / MonSB;
+        Double_t DscaledSB = scaledSB * sqrt( D2nSB[i] / pow(nSB[i], 2) +
+                                              pow(DMonNIF / MonNIF, 2) +
+                                              pow(DMonSB / MonSB, 2) );
+        if (PuFC)
+        {
+            NIFRate[i] = nSignal[i] / tNIF;
+            DNIFRate[i] = DnSignal[i] / tNIF;
 
-        cout << "PuFC ch " << i+1 << ", NIF " << nSignal[i] << "+-" << DnSignal[i] <<
-                ", rate " << NIFRate[i] << "+-" << DNIFRate[i] << " / s, Underground " << SFRate[i] << "+-" << DSFRate[i] << endl;
+            SFRate[i] = (pH1NIF->Integral() + pH1SB->Integral() + pH1UG->Integral() - nNIF[i] - nSBsub[i]) / (tNIF + tSB + tUG);
+            DSFRate[i] = sqrt( pH1NIF->Integral() + pH1SB->Integral() + pH1UG->Integral() + D2nNIF[i] + D2nSBsub[i] ) / (tNIF + tSB + tUG);
+
+            TGraphErrors* g6 = new TGraphErrors(NumHist, x, SFRate, xerr, DSFRate);
+            g6->SetNameTitle("SF_Rate", "SF detection rate");
+            sprintf(name, "%s/TimeDiff/Underground", FC.c_str());
+            SaveToFile(name, g6);
+
+            TGraphErrors* g7 = new TGraphErrors(NumHist, x, NIFRate, xerr, DNIFRate);
+            g7->SetNameTitle("NIF_Rate", "In-scattering corrected NIF detection rate");
+            sprintf(name, "%s/TimeDiff/Signal", FC.c_str());
+            SaveToFile(name, g7);
+        } else {
+            UNIFRate[i] = nSignal[i] / tNIF;
+            DUNIFRate[i] = DnSignal[i] / tNIF;
+
+            USFRate[i] = (pH1NIF->Integral() + pH1SB->Integral() - nNIF[i] - nSBsub[i]) / (tNIF + tSB);
+            DUSFRate[i] = sqrt( pH1NIF->Integral() + pH1SB->Integral() + D2nNIF[i] + D2nSBsub[i] ) / (tNIF + tSB);
+
+            TGraphErrors* g6 = new TGraphErrors(NumHist, x, USFRate, xerr, DUSFRate);
+            g6->SetNameTitle("SF_Rate", "SF detection rate");
+            sprintf(name, "%s/TimeDiff/Underground", FC.c_str());
+            SaveToFile(name, g6);
+
+            TGraphErrors* g7 = new TGraphErrors(NumHist, x, UNIFRate, xerr, DUNIFRate);
+            g7->SetNameTitle("NIF_Rate", "In-scattering corrected NIF detection rate");
+            sprintf(name, "%s/TimeDiff/Signal", FC.c_str());
+            SaveToFile(name, g7);
+        }
+        cout << " ch " << i+1 << "   FG " << nNIF[i] << "+-" << sqrt(D2nNIF[i]) <<
+                "   SB " << nSB[i] << "+-" << sqrt(D2nSB[i]) <<
+                "   scaled SB " << scaledSB << "+-" << DscaledSB <<
+                "   Signal " << nSignal[i] << "+-" << DnSignal[i] <<
+                "   In-scat " << 100 * InScatPart << "+-" << 100 * DInScatPart << " %" << endl;
     }
+
+    TGraphErrors* g8 = new TGraphErrors(NumHist, x, nSignal, xerr, DnSignal);
+    g8->SetNameTitle("cNIF", "In-scattering corrected NIF count");
+    sprintf(name, "%s/TimeDiff/Signal", FC.c_str());
+    SaveToFile(name, g8);
+
+    TGraphErrors* g9 = new TGraphErrors(NumHist, x, nNIF, xerr, DnNIF);
+    g9->SetNameTitle("nNIF", "number of detected time-correlated fission events");
+    sprintf(name, "%s/TimeDiff/Signal/NIF", FC.c_str());
+    SaveToFile(name, g9);
+
+    TGraphErrors* g10 = new TGraphErrors(NumHist, x, nSB, xerr, DnSB);
+    g10->SetNameTitle("nNIF", "number of detected time-correlated fission events");
+    sprintf(name, "%s/TimeDiff/Signal/SB", FC.c_str());
+    SaveToFile(name, g10);
+
+    TGraphErrors* g11 = new TGraphErrors(NumHist, x, nNIFfit, xerr, DnNIFfit);
+    g11->SetNameTitle("nNIFfit", "number of detected time-correlated fission events; method: fit");
+    sprintf(name, "%s/TimeDiff/Signal/NIF", FC.c_str());
+    SaveToFile(name, g11);
+
+    TGraphErrors* g12 = new TGraphErrors(NumHist, x, nSBfit, xerr, DnSBfit);
+    g12->SetNameTitle("nNIFfit", "number of detected time-correlated fission events; method: fit");
+    sprintf(name, "%s/TimeDiff/Signal/SB", FC.c_str());
+    SaveToFile(name, g12);
 }
 
-void Xsection::UFC_AnalyzeDt()
-{
-    cout << "Analyzing TimeDiff spectra. " << endl;
-    Double_t Dt_min = 63600;
-    Double_t Dt_max = 78500;
-    Double_t ToF_low, ToF_up, ChPerBin, BinOffset;
-    Double_t TimePerCh = 25.E-12; // 25 ps in seconds
-    Double_t tNIF = pHUNIF->t_live;
-    Double_t tSB = pHUSB->t_live;
-    cout << "Times: " << tNIF << ", " << tSB << endl;
-    Int_t lim[4];
-    Double_t nNIF[NumHist];
-    Double_t D2nNIF[NumHist];
-    Double_t nSB[NumHist];
-    Double_t D2nSB[NumHist];
-    Double_t nSignal[NumHist];
-    Double_t DnSignal[NumHist];
-    TH1I *pH1NIF, *pH1SB;
-    char name[64] = "";
-
-    for (int i = 0; i < NumHist; i++)
-    {
-        // get hand-made peak limits
-        ToF_low = pHUNIF->GetPeakLow(i);
-        ToF_up = pHUNIF->GetPeakUp(i);
-
-        // set limits from 3 sigma to n sigma
-        Double_t n = 3;
-        Double_t center = 0.5 * (ToF_low + ToF_up);
-        Double_t width = (ToF_up - ToF_low) / 6.0;
-        ToF_low = center - n * width;
-        ToF_up = center + n * width;
-
-        pH1NIF = pHUNIF->pHDtG[i];
-        pH1SB = pHUSB->pHDtG[i];
-        ChPerBin = pH1NIF->GetBinWidth(0);
-        BinOffset = pH1NIF->GetBinCenter(0);
-        // Calculate integration limit bins
-        lim[0] = (Dt_min - BinOffset) / ChPerBin;
-        lim[1] = (ToF_low - BinOffset) / ChPerBin;
-        lim[2] = (ToF_up - BinOffset) / ChPerBin;
-        lim[3] = (Dt_max - BinOffset) / ChPerBin;
-        if(CommentFlag)
-        {
-            cout << "Channel " << i+1 << endl << " Limits: ";
-            for(int j = 0; j<4;j++)
-                cout << pH1NIF->GetBinCenter(lim[j]) << " ";
-            cout << endl;
-        }
-
-        //// Peak integration
-        Int_t NIFPeakCount = pH1NIF->Integral(lim[1], lim[2]); // D2PeakCount = PeakCount
-        Int_t SBPeakCount = pH1SB->Integral(lim[1], lim[2]);
-
-        //// Fit constant underground
-        Double_t UgCount = pH1NIF->Integral(lim[0], lim[3]) - NIFPeakCount +
-                           pH1SB->Integral(lim[0], lim[3]) - SBPeakCount;
-        Double_t DUgCount = sqrt(UgCount);
-        // avUg: average underground count per bin and t_live
-        Double_t avUg = UgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) );
-        Double_t DavUg = DUgCount / ( (tNIF + tSB) * (lim[1] - lim[0] + lim[3] - lim[2]) );
-        if(CommentFlag)
-            cout << " Underground per bin: " << avUg << "+-" << DavUg << endl;
-
-        // number of time-correlated FF events in NIF measurement
-        nNIF[i] = NIFPeakCount - (lim[2] - lim[1] + 1) * tNIF * avUg;
-        D2nNIF[i] = NIFPeakCount + pow((lim[2] - lim[1] + 1) * tNIF * DavUg, 2);
-
-        // number of time-correlated FF events in SB measurement
-        nSB[i] = SBPeakCount - (lim[2] - lim[1] + 1) * tSB * avUg;
-        D2nSB[i] = SBPeakCount + pow((lim[2] - lim[1] + 1) * tSB * DavUg, 2);
-        if(CommentFlag)
-        {
-            cout << " NIF peak integral: " << NIFPeakCount << "+-" << sqrt(NIFPeakCount) << endl <<
-                    " NIF peak underground: " << (lim[2] - lim[1] + 1) * tNIF * avUg << "+-" << (lim[2] - lim[1] + 1) * tNIF * DavUg << endl <<
-                    " NIF peak content: " << nNIF << "+-" << sqrt(D2nNIF[i]) << endl;
-            cout << " SB peak integral: " << SBPeakCount << "+-" << sqrt(SBPeakCount) << endl <<
-                    " SB peak underground: " << (lim[2] - lim[1] + 1) * tSB * avUg << "+-" << (lim[2] - lim[1] + 1) * tSB * DavUg << endl <<
-                    " SB peak content (1st method): " << nSB << "+-" << sqrt(D2nSB[i]) << endl;
-        }
-
-        //// In-Scattering correction
-        nSignal[i] = nNIF[i] - nSB[i] * (tNIF / tSB) * (pHUNIF->NeutronFlux[i] / pHUSB->NeutronFlux[i]);
-        DnSignal[i] = sqrt( D2nNIF[i] +
-                            D2nSB[i] * pow((tNIF / tSB) * (pHUNIF->NeutronFlux[i] / pHUSB->NeutronFlux[i]), 2) +
-                            pow(nSB[i] * (tNIF / tSB) * (pHUNIF->DNeutronFlux[i] / pHUSB->NeutronFlux[i]), 2) +
-                            pow(nSB[i] * (tNIF / tSB) * (pHUNIF->NeutronFlux[i] * pHUSB->DNeutronFlux[i] / pow(pHUSB->NeutronFlux[i], 2)), 2) );
-        UNIFRate[i] = nSignal[i] / tNIF;
-        DUNIFRate[i] = DnSignal[i] / tNIF;
-
-        USFRate[i] = TimePerCh * ChPerBin * avUg;
-        DUSFRate[i] = TimePerCh * ChPerBin * DavUg;
-
-        cout << "UFC ch " << i+1 << ", NIF " << nSignal[i] << "+-" << DnSignal[i] <<
-                ", rate " << UNIFRate[i] << "+-" << DUNIFRate[i] << " / s, Underground " << USFRate[i] << "+-" << DUSFRate[i] << " / s" << endl;
-    }
-    return;
-}
 
 Xsection::~Xsection()
 {
@@ -388,41 +452,13 @@ void Xsection::CalculateNPu()
 //    Double_t sum;
     for(int i_ch = 0; i_ch < NumHist; i_ch++)
     {   // Calculate N(242Pu) from SF rate for each plate.
-//        cout << "Spontaneaus fission rates in s^-1 for channel " << i_ch + 1 << endl;
-//        // NIF measurement:
-//        cout << "    NIF: " << pHNIF->SFRate[i_ch] << " +- " << pHNIF->DSFRate[i_ch] << endl;
-//        cout << "    SB:  " << pHSB->SFRate[i_ch] << " +- " << pHSB->DSFRate[i_ch] << endl;
-//        cout << "    SF:  " << pHUG->SFRate[i_ch] << " +- " << pHUG->DSFRate[i_ch] << endl;
-//        // Combine 3 measurements
-//        sum = 1/pHNIF->DSFRate[i_ch] + 1/pHSB->DSFRate[i_ch] + 1/pHUG->DSFRate[i_ch];
-//        w[0] = 1/pHNIF->DSFRate[i_ch]/sum; // weighting rates according to inverse uncertainty
-//        w[1] = 1/pHSB->DSFRate[i_ch]/sum;
-//        w[2] = 1/pHUG->DSFRate[i_ch]/sum;
-//        if(CommentFlag)
-//            cout << "    Weighting  " << w[0] << "  " << w[1] << "  " << w[2] << endl;
-//        SFRate[i_ch] = w[0] * pHNIF->SFRate[i_ch] +
-//                       w[1] * pHSB->SFRate[i_ch] +
-//                       w[2] * pHUG->SFRate[i_ch];
-//        DSFRate[i_ch] = sqrt( pow(w[0] * pHNIF->DSFRate[i_ch], 2) +
-//                              pow(w[1] * pHSB->DSFRate[i_ch], 2) +
-//                              pow(w[2] * pHUG->DSFRate[i_ch], 2) );
-
         // Calculate effective N(242Pu)
         nPuSF[i_ch] = SFRate[i_ch] * PuSFT2 / log(2.0); // SFRate, PuSFT2: both in seconds!
         DnPuSF[i_ch] = sqrt( pow(DSFRate[i_ch] * PuSFT2 / (log(2.0)/* * pHUG->eInt[i_ch]*/), 2) +
                              pow(SFRate[i_ch] * DPuSFT2 / (log(2.0)/* * pHUG->eInt[i_ch]*/), 2) );
 
-//        cout << "Test: pHNIF->DSFRate[3-7]" << endl;
-//        for (int i = 0; i < NumHist; i++)
-//            cout << i+1 << "  " << pHNIF->SFRate[i] << "+-" << pHNIF->DSFRate[i] << endl;
-
         // Calculate N(242Pu) using internal efficiency from SF measurement
         nPu[i_ch] = nPuSF[i_ch] / pHUG->eInt[i_ch];
-
-//        cout << "Test: pHNIF->DSFRate[3-7]" << endl;
-//        for (int i = 0; i < NumHist; i++)
-//            cout << i+1 << "  " << pHNIF->SFRate[i] << "+-" << pHNIF->DSFRate[i] << endl;
-
         DnPu[i_ch] = sqrt( pow(DnPuSF[i_ch] / pHUG->eInt[i_ch], 2) +
                            pow(nPuSF[i_ch] * pHUG->DeInt[i_ch] / pow(pHUG->eInt[i_ch], 2), 2) );
 
@@ -433,22 +469,23 @@ void Xsection::CalculateNPu()
     double x[] = {1, 2, 3, 4, 5, 6, 7, 8};
     double xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    TGraphErrors* g1 = new TGraphErrors(NumHist, x, SFRate, xerr, DSFRate);
-    g1->SetNameTitle("SF_Rate", "PuFC combined SF detection rate");
-    SaveToFile("Analysis/PuFC/SF", g1);
+//    TGraphErrors* g1 = new TGraphErrors(NumHist, x, SFRate, xerr, DSFRate);
+//    g1->SetNameTitle("SF_Rate", "PuFC combined SF detection rate");
+//    SaveToFile("PuFC/N_atoms", g1);
 
     TGraphErrors* g2 = new TGraphErrors(NumHist, x, nPuSF, xerr, DnPuSF);
     g2->SetNameTitle("NPuEff", "Effective number of 242Pu atoms from SF");
-    SaveToFile("Analysis/PuFC/SF", g2);
+    SaveToFile("PuFC/N_atoms", g2);
 
     TGraphErrors* g3 = new TGraphErrors(NumHist, x, nPu, xerr, DnPu);
     g3->SetNameTitle("NPu", "Number of 242Pu atoms from spontaneaus fission");
-    SaveToFile("Analysis/PuFC/SF", g3);
+    SaveToFile("PuFC/N_atoms", g3);
 //*/
 }
 
 void Xsection::CalculateEfficiency()
 { // calculate the PuFC neutron-induced detection efficiency via comparing internal efficiencies of NIF and SB setup
+    //// note: method not successful, too large uncertainty.
     Double_t NIFcSFRate, D2NIFcSFRate; // efficiency-corrected SF rate of NIF setup, squared error
     Double_t NIFcNIFRate, D2NIFcNIFRate;
     Double_t eNIF[NumHist], DeNIF[NumHist];
@@ -475,7 +512,7 @@ void Xsection::CalculateEfficiency()
 
     TGraphErrors* g1 = new TGraphErrors(NumHist, x, eNIF, xerr, DeNIF);
     g1->SetNameTitle("eNIFdiff", "PuFC neutron-induced detection efficiency");
-    SaveToFile("Analysis/PuFC/Efficiency", g1);
+    SaveToFile("PuFC/Efficiency", g1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -528,7 +565,7 @@ void Xsection::CalculateCrossSection()
     Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
     TGraphErrors* g3 = new TGraphErrors(NumHist, x, XSec, xerr, DXSec);
     g3->SetNameTitle("XS_SF", "Cross section (PuFC alone)");
-    SaveToFile("Analysis/Evaluation", g3);
+    SaveToFile("PuFC/Evaluation", g3);
 }
 
 
@@ -560,7 +597,7 @@ void Xsection::Evaluation2()
 
     TGraphErrors* g1 = new TGraphErrors(NumHist, x, nPuNIF, xerr, DnPuNIF);
     g1->SetNameTitle("NPuLit", "Effective number of 242Pu atoms from NIF");
-    SaveToFile("Analysis/Evaluation", g1);
+    SaveToFile("PuFC/N_atoms", g1);
 }
 
 
@@ -571,20 +608,6 @@ void Xsection::Evaluation3()
 {
     cout << endl << "=== Evaluation 3 ===" << endl;
     cout << "Detection efficiencies' relation" << endl;
-
-//    Double_t sumSF = 0;
-//    Double_t D2sumSF = 0;
-//    for (int i = 0; i < NumHist; i++)
-//    {
-//        sumSF += SFRate[i];
-//        D2sumSF += pow(DSFRate[i], 2);
-//    }
-
-//    eSF = sumSF * PuSFT2 / (N * log(2.0));
-//    DeSF = sqrt( D2sumSF*pow(PuSFT2 / (N * log(2.0)), 2) +
-//                         pow(sumSF * DPuSFT2 / (N * log(2.0)), 2) +
-//                         pow(sumSF * PuSFT2 * DN / (N * N * log(2.0)), 2) );
-//    cout << "average SF eff.: " << eSF << " +- " << DeSF << endl;
 
     cout << "ch  NIF  NIF/SF" << endl;
     for (int i = 0; i < NumHist; i++)
@@ -603,28 +626,28 @@ void Xsection::Evaluation3()
     Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     TGraphErrors* g1 = new TGraphErrors(NumHist, x, eNIF, xerr, DeNIF);
-    g1->SetNameTitle("eNIF", "Neutron-induced fission detection efficiency");
-    SaveToFile("Analysis/PuFC/Efficiency", g1);
+    g1->SetNameTitle("eNIF", "Neutron-induced fission detection efficiency, determined from efficiency ratio");
+    SaveToFile("PuFC/Efficiency", g1);
 
     TGraphErrors* g2 = new TGraphErrors(NumHist, x, eSF, xerr, DeSF);
     g2->SetNameTitle("eSF", "Spontaneaus fission detection efficiency");
-    SaveToFile("Analysis/PuFC/Efficiency", g2);
+    SaveToFile("PuFC/Efficiency", g2);
 
     TGraphErrors* g3 = new TGraphErrors(NumHist, x, eRel, xerr, DeRel);
-    g3->SetNameTitle("eRel", "NIF to SF detection efficiency ratio");
-    SaveToFile("Analysis/PuFC/Efficiency", g3);
+    g3->SetNameTitle("eRel", "NIF to SF detection efficiency ratio, determined with given cross section");
+    SaveToFile("PuFC/Efficiency", g3);
 
     Double_t eSimG[] = {eSimGayther, eSimGayther, eSimGayther, eSimGayther, eSimGayther, eSimGayther, eSimGayther, eSimGayther};
     Double_t DeSimG[] = {DeSimGayther, DeSimGayther, DeSimGayther, DeSimGayther, DeSimGayther, DeSimGayther, DeSimGayther, DeSimGayther};
     TGraphErrors* g4 = new TGraphErrors(NumHist, x, eSimG, xerr, DeSimG);
     g4->SetNameTitle("eSimG", "Simulated efficiency (Gayther)");
-    SaveToFile("Analysis/PuFC/Efficiency", g4);
+    SaveToFile("PuFC/Efficiency", g4);
 
     Double_t eSimM[] = {eSimMinimum, eSimMinimum, eSimMinimum, eSimMinimum, eSimMinimum, eSimMinimum, eSimMinimum, eSimMinimum};
     Double_t DeSimM[] = {DeSimMinimum, DeSimMinimum, DeSimMinimum, DeSimMinimum, DeSimMinimum, DeSimMinimum, DeSimMinimum, DeSimMinimum};
     TGraphErrors* g5 = new TGraphErrors(NumHist, x, eSimM, xerr, DeSimM);
     g5->SetNameTitle("eSimM", "Simulated efficiency (Minimum)");
-    SaveToFile("Analysis/PuFC/Efficiency", g5);
+    SaveToFile("PuFC/Efficiency", g5);
 }
 
 
@@ -633,87 +656,115 @@ void Xsection::Evaluation3()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void Xsection::Evaluation4()
 {
-    cout << endl << "=== Evaluation 4 ===" << endl << "UFC vs PuFC" << endl;
+//    cout << endl << "=== Evaluation 4 ===" << endl << "UFC vs PuFC" << endl;
     Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
     Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     //// UFC In-scattering correction
-    UFC_AnalyzeDt();
+    DoAnalyzeDt("UFC");
 
     TGraphErrors* g0 = new TGraphErrors(NumHist, x, UNIFRate, xerr, DUNIFRate);
     g0->SetNameTitle("cNIF", "UFC in-scattering corrected NIF detection rate");
-    SaveToFile("Analysis/UFC", g0);
+    SaveToFile("UFC/TimeDiff/Signal", g0);
 
     //// UFC internal efficiency
-    cout << "Internal efficiencies" << endl
+    cout << "=== Internal efficiencies ===" << endl
          << "ch  eff" << endl;
     for ( int i = 0; i < NumHist; i++)
     { // i: UFC channel
+        // use efficiencies from NIF only, SB too inaccurate
         eU[i] = pHUNIF->eInt[i];
         DeU[i] = pHUNIF->DeInt[i];
         cout << " " << i+1 << "  " << eU[i] << "+-" << DeU[i] << endl;
     }
     TGraphErrors* g1 = new TGraphErrors(NumHist, x, eU, xerr, DeU);
     g1->SetNameTitle("eNIF", "UFC efficiency for NIF setup");
-    SaveToFile("Analysis/UFC/Efficiency", g1);
+    SaveToFile("UFC/Efficiency", g1);
 
     TGraphErrors* g2 = new TGraphErrors(NumHist, x, pHUSB->eInt, xerr, pHUSB->DeInt);
     g2->SetNameTitle("eSB", "UFC efficiency for SB setup");
-    SaveToFile("Analysis/UFC/Efficiency", g2);
+    SaveToFile("UFC/Efficiency", g2);
 
     //// Number of U atoms
-    cout << "Number of 235U atoms" << endl;
+    cout << "=== Number of 235U atoms ===" << endl;
     Double_t N235 = 3.64247102724592E+020;  // rel. unc. 0.0074856945
     Double_t DN235 = 2.72664253120661E+018;
-    cout << "Total number fixed to N=" << N235 << " +- " << DN235 << endl;
+    Double_t frac235 = 0.904; // isotope fractions
+    Double_t Dfrac235 = 0.005;
+    Double_t frac238 = 0.0912;
+    Double_t Dfrac238 = 0.0006;
     Double_t emA[] = {365.2, 396.2, 400.4, 393, 403.9, 403.7, 406.6, 397.1}; // deposits' average efficient Areal mass density. Unit: 10^-6 g / cm^2
     Double_t DemA[] = {1.7, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8};
-    cout << "ch  <N>  N_eff" << endl;
+    Double_t nUeff[NumHist], DnUeff[NumHist];
+    cout << "ch   n(U)   n(235U)eff" << endl;
     for (int i = 0; i < NumHist; i++)
     {
-        nU[i] = N235 / NumHist;
-        DnU[i] = DN235 / NumHist;
-        nUNIF[i] = AreaUFC * emA[i] / (235 * u) * 1.E-8;
-        DnUNIF[i] = nUNIF[i] * sqrt( pow(DAreaUFC / AreaUFC, 2) +
+        nUeff[i] = AreaUFC * emA[i] / (235 * u) * 1.E-8;
+        DnUeff[i] = nUeff[i] * sqrt( pow(DAreaUFC / AreaUFC, 2) +
                                      pow(DemA[i] / emA[i], 2) );
-        cout << " " << i+1 << "  " << nU[i] << "+-" << DnU[i] << "  " << nUNIF[i] << "+-" << DnUNIF[i] << endl;
+        nU235eff[i] = frac235 * nUeff[i];
+        DnU235eff[i] = sqrt( pow(Dfrac235 * nUeff[i], 2) +
+                             pow(frac235 * DnUeff[i], 2) );
+        nU238eff[i] = frac238 * nUeff[i];
+        DnU238eff[i] = sqrt( pow(Dfrac238 * nUeff[i], 2) +
+                             pow(frac238 * DnUeff[i], 2) );
+        nU[i] = nUeff[i] / eU[i];
+        DnU[i] = sqrt( pow(DnUeff[i] / eU[i], 2) +
+                       pow(nUeff[i] * DeU[i], 2) / pow(eU[i], 2) );
+        cout << " " << i+1 << "  " << nU[i] << "+-" << DnU[i] << "  " << nU235eff[i] << "+-" << DnU235eff[i] << endl;
     }
     if(CommentFlag)
-        cout << "Check: Sum = " << nUNIF[0] + nUNIF[1] + nUNIF[2] + nUNIF[3] + nUNIF[4] + nUNIF[5] + nUNIF[6] + nUNIF[7] << endl;
+        cout << "Check: Sum = " << nU[0] + nU[1] + nU[2] + nU[3] + nU[4] + nU[5] + nU[6] + nU[7] << endl;
 
 //    TGraphErrors* g4 = new TGraphErrors(NumHist, x, nUSF, xerr, DnUSF);
 //    g4->SetNameTitle("NUEff", "Effective number of 235U atoms from SF");
-//    SaveToFile("Analysis/UFC/SF", g4);
+//    SaveToFile("UFC/N_atoms", g4);
 
     TGraphErrors* g5 = new TGraphErrors(NumHist, x, nU, xerr, DnU);
-    g5->SetNameTitle("NU", "Number of 235U atoms from spontaneaus fission");
-    SaveToFile("Analysis/UFC/SF", g5);
+    g5->SetNameTitle("NU", "Number of Uranium atoms from H19 with internal efficiencies");
+    SaveToFile("UFC/N_atoms", g5);
 
     //// Cross section
-    cout << "Cross section" << endl
-         << "ch  sigma" << endl;
+    cout << "=== U235 Cross section ===" << endl
+         << "ch  nFlux  U238NIF  U235NIF  sigma" << endl;
+    Double_t CrossSection238 = 1.25; // neutron-induced fission cross section of 238U in barns
+    Double_t DCrossSection238 = 0.0307 * CrossSection238;
     Double_t nFlux, DnFlux;
+    Double_t U235NIFRate[NumHist];
+    Double_t DU235NIFRate[NumHist];
+    Double_t U238NIFRate[NumHist];
+    Double_t DU238NIFRate[NumHist];
     Double_t Sum = 0, D2Sum = 0;
     Double_t CrossSection, DCrossSection;
     for (int i = 0; i < NumHist; i++)
     {
         nFlux = pHUNIF->NeutronFlux[i];
         DnFlux = pHUNIF->DNeutronFlux[i];
-        UXSec[i] = UNIFRate[i] / (nUNIF[i] * nFlux);
-        DUXSec[i] = UXSec[i] * sqrt( pow(DUNIFRate[i] / UNIFRate[i], 2) +
-                                     pow(DnUNIF[i] / nUNIF[i], 2) +
+        U238NIFRate[i] = 1.E-22 * nU238eff[i] * nFlux * CrossSection238; // flux: 1/(s*mm^2), CS: barn, factor 1.E-22 -> unit 1/s
+        DU238NIFRate[i] = 1.E-22 * sqrt( pow(DnU238eff[i] * nFlux * CrossSection238, 2) +
+                                         pow(nU238eff[i] * DnFlux * CrossSection238, 2) +
+                                         pow(nU238eff[i] * nFlux * DCrossSection238, 2) );
+        U235NIFRate[i] = UNIFRate[i] - U238NIFRate[i];
+        DU235NIFRate[i] = sqrt( pow(DUNIFRate[i], 2) +
+                                pow(DU238NIFRate[i], 2) );
+        UXSec[i] = 1.E22 * U235NIFRate[i] / (nU235eff[i] * nFlux);
+        DUXSec[i] = UXSec[i] * sqrt( pow(DU235NIFRate[i] / U235NIFRate[i], 2) +
+                                     pow(DnU235eff[i] / nU235eff[i], 2) +
                                      pow(DnFlux / nFlux, 2) );
         Sum += UXSec[i];
         D2Sum += pow(DUXSec[i], 2);
-        cout << " " << i+1 << "  " << UXSec[i] * 1.E22 << "+-" << DUXSec[i] * 1.E22 << " barn" << endl;
+        cout << " " << i+1 << "  " << nFlux << "+-" << DnFlux << "/(s*mm^2)  "
+             << U238NIFRate[i] << "+-" << DU238NIFRate[i] << "/s  "
+             << U235NIFRate[i] << "+-" << DU235NIFRate[i] << "/s  "
+             << UXSec[i] << "+-" << DUXSec[i] << " barn" << endl;
     }
     CrossSection = Sum / NumHist;
     DCrossSection = sqrt(D2Sum) / NumHist;
-    cout << "Combined: " << CrossSection * 1.E22 << " barn +- " << 100 * DCrossSection / CrossSection << " %" << endl;
+    cout << "Combined: " << CrossSection << " barn +- " << 100 * DCrossSection / CrossSection << " %" << endl;
 
     TGraphErrors* g6 = new TGraphErrors(NumHist, x, UXSec, xerr, DUXSec);
     g6->SetNameTitle("XS_SF", "Cross section (UFC alone)");
-    SaveToFile("Analysis/UFC", g6);
+    SaveToFile("UFC/Evaluation", g6);
 }
 
 

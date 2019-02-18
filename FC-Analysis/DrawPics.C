@@ -19,7 +19,7 @@ void DrawQDCfit(TFile* f, string FC, string Setup)
     /// Draw QDC fits
     TCanvas* pCRawQDC[8];
     TCanvas* pCAnaQDC[8];
-    char hname[67] = "";
+    char hname[64] = "";
     char name[32] = "";
     for (int i = 0; i < 8; i++)
     {
@@ -100,7 +100,7 @@ void DrawQDCeff(TFile* f, string FC, string Setup)
         pH2->Draw("same");
         fUg->SetLineColor(kRed);
         fUg->SetLineWidth(lw);
-        fUg->SetFillColor(kRed);
+        fUg->SetFillColorAlpha(kRed, 0.25);
 //        fUg->SetFillStyle(3001);
 //        legend->AddEntry(fUg, "FF constant extrapolation");
         fUg->Draw("fsame");
@@ -158,7 +158,7 @@ void DrawQDCres(TFile* f, string FC, string Setup)
 
 void DrawDtInt(TFile* f, string FC, string Setup)
 { // Plot TimeDiff Integration results
-    char name[32] = "";
+    char name[64] = "";
     sprintf(name, "%s_%s_rSF", FC.c_str(), Setup.c_str());
     /// Draw counting results
     TCanvas* c3 = new TCanvas(name, name, 200, 10, 700, 500);
@@ -166,7 +166,8 @@ void DrawDtInt(TFile* f, string FC, string Setup)
     TMultiGraph* mg3 = new TMultiGraph();
     mg3->SetTitle("SF detection rate; Deposit; events per second");
 
-    TGraph* g6 = (TGraph*)f->Get("/Analysis/TimeDiff/SF_Rate");
+    sprintf(name, "/%s/TimeDiff/Underground/SF_Rate", FC.c_str());
+    TGraph* g6 = (TGraph*)f->Get(name);
     g6->SetLineWidth(lw);
     g6->SetMarkerColor(kBlue);
     mg3->Add(g6);
@@ -182,7 +183,8 @@ void DrawDtInt(TFile* f, string FC, string Setup)
         TMultiGraph* mg7 = new TMultiGraph();
         mg7->SetTitle("NIF detection rate; Deposit; events per second");
 
-        TGraph* g7 = (TGraph*)f->Get("/Analysis/TimeDiff/NIF_Rate");
+        sprintf(name, "/%s/TimeDiff/NIF_Rate", FC.c_str());
+        TGraph* g7 = (TGraph*)f->Get(name);
         g7->SetLineWidth(lw);
         g7->SetMarkerColor(kBlue);
         mg7->Add(g7);
@@ -197,7 +199,8 @@ void DrawDtInt(TFile* f, string FC, string Setup)
         TMultiGraph* mg5 = new TMultiGraph();
         mg5->SetTitle("NIF to SF detection ratio; Deposit; Ratio");
 
-        TGraph* g8 = (TGraph*)f->Get("/Analysis/TimeDiff/NIF_SF_Ratio");
+        sprintf(name, "/%s/TimeDiff/NIF_SF_Ratio", FC.c_str());
+        TGraph* g8 = (TGraph*)f->Get(name);
         g8->SetLineWidth(lw);
         g8->SetMarkerColor(kBlue);
         mg5->Add(g8);
@@ -212,7 +215,8 @@ void DrawDtInt(TFile* f, string FC, string Setup)
         TMultiGraph* mg6 = new TMultiGraph();
         mg6->SetTitle("NIF rate normed to neutron flux; Deposit; Ratio / mm^2 s");
 
-        TGraph* g9 = (TGraph*)f->Get("/Analysis/TimeDiff/NIF_Flux_Ratio");
+        sprintf(name, "/%s/TimeDiff/NIF_Flux_Ratio", FC.c_str());
+        TGraph* g9 = (TGraph*)f->Get(name);
         g9->SetLineWidth(lw);
         g9->SetMarkerColor(kBlue);
         mg6->Add(g9);
@@ -223,84 +227,219 @@ void DrawDtInt(TFile* f, string FC, string Setup)
     }
 }
 
-void DrawDtUg(TFile* f, string FC, string Setup)
+
+TH1F* CopyRange(TH1I* pH, char* name, Double_t x0, Double_t x1, Double_t yoffset)
+{
+    Double_t offset = pH->GetBinLowEdge(0);
+    Double_t ChPerBin = pH->GetBinWidth(0);
+    int b0 = (x0 - offset) / ChPerBin;
+    int b1 = (x1 - offset) / ChPerBin + 1;
+    TH1F* pH2 = new TH1F(name, name, b1 - b0, pH->GetBinLowEdge(b0), pH->GetBinLowEdge(b1));
+    for (int bin = 0; bin < pH2->GetNbinsX(); bin++)
+        pH2->SetBinContent(bin + 1, pH->GetBinContent(bin + b0) + yoffset);
+    return pH2;
+}
+
+
+void DrawUGDt(TFile* f, TFile* fCom, string FC, string Setup)
+{
+    TCanvas* pCDtUg[8];
+    char name[64] = "";
+    for (int i = 0; i < 8; i++)
+    {
+        // open Dt histogram nr i
+        sprintf(name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+        TH1I* pH = (TH1I*)f->Get(name);
+
+        // open underground fit nr i
+        sprintf(name, "/%s/TimeDiff/Underground/UG/f%sUGUg_%i", FC.c_str(), FC.c_str(), i+1);
+        TGraph* fUg = (TGraph*)fCom->Get(name);
+        fUg->SetLineColor(kRed);
+        fUg->SetLineWidth(lw);
+
+        // Draw together
+        sprintf(name, "%s_%s_DtUg_%i", FC.c_str(), Setup.c_str(), i+1);
+        pCDtUg[i] = new TCanvas(name, name, 200, 10, 700, 500);
+        gPad->SetTicks(1,1);
+        pH->GetXaxis()->SetRangeUser(62000, 80000);
+        pH->Draw();
+        fUg->Draw("same");
+    }
+}
+
+
+void BiasX(TH1I* pH, Double_t dx)
+{
+    Int_t offset = dx / pH->GetBinWidth(0);
+    Int_t underflow = 0;
+    for (int bin = 0; bin < offset+1; bin++)
+        underflow += pH->GetBinContent(bin);
+    pH->SetBinContent(0, underflow);
+    for (int bin = offset + 1; bin < pH->GetNbinsX() + 1; bin++)
+        pH->SetBinContent(bin - offset, pH->GetBinContent(bin));
+    for (int bin = pH->GetNbinsX() - offset + 1; bin < pH->GetNbinsX() + 1; bin++)
+        pH->SetBinContent(bin, 0);
+}
+
+
+void DrawDtUg(TFile* f, TFile* fCom, string FC, string Setup)
 { // Draw TimeDiff integration
-    char name[32] = "";
-    TCanvas* pCAnaDt[8];
+    if(!strcmp(Setup.c_str(), "SF"))
+    { // if beam off, call the corresponding function.
+        DrawUGDt(f, fCom, FC, Setup);
+        return;
+    }
+    char name[64] = "";
+    TCanvas* pCDtPeak[8];
+    TCanvas* pCDtUg[8];
     TH1I* pHsum = new TH1I();
-    char hname[67] = "";
+    Double_t UgX[2];
+    Double_t UgY[2];
+    char hname[64] = "";
+    char message[64] = "";
     for (int i = 0; i < 8; i++)
     {
         // open Dt histogram nr i
         sprintf(hname, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
         TH1I* pH = (TH1I*)f->Get(hname);
-        // open underground fit
-        sprintf(hname, "/Analysis/TimeDiff/Ug/f%s%sUg_%i", FC.c_str(), Setup.c_str(), i+1);
-        TGraph* fUg = (TGraph*)f->Get(hname);
-        sprintf(hname, "/Analysis/TimeDiff/Ug/f%s%sUgPeak_%i", FC.c_str(), Setup.c_str(), i+1);
-        TGraph* fUgP = (TGraph*)f->Get(hname);
 
-        // create canvas
-        sprintf(name, "%s_%s_DtUg_%i", FC.c_str(), Setup.c_str(), i+1);
-        pCAnaDt[i] = new TCanvas(name, name, 200, 10, 700, 500);
-        gPad->SetTicks(1, 1);
+        // open underground fit nr i
+        sprintf(hname, "/%s/TimeDiff/Underground/%s/f%s%sUg_%i", FC.c_str(), Setup.c_str(), FC.c_str(), Setup.c_str(), i+1);
+        TGraph* fUg = (TGraph*)fCom->Get(hname);
+        sprintf(hname, "/%s/TimeDiff/Underground/%s/f%s%sUgPeak_%i", FC.c_str(), Setup.c_str(), FC.c_str(), Setup.c_str(), i+1);
+        TGraph* fUgP = (TGraph*)fCom->Get(hname);
 
-        // manipulate hists
-        pHsum->Add(pH);
-        pH->SetLineColor(kBlue);
-        pH->SetAxisRange(62000, 80000, "X");
-        pH->SetAxisRange(0, pH->GetMaximum(), "Y");
-        Double_t x0 = 0, x1 = 0, level = 0; // extract peak integration limits from underground graph
+        //// Draw peak integration
+        // extract peak integration limits from underground graph
+        Double_t x0 = 0, x1 = 0, level = 0; // prepare ug level loading
         fUgP->GetPoint(0, x0, level);
         fUgP->GetPoint(1, x1, level);
-        cout << x0 << " " << x1 << " " << level << endl;
-        for(Int_t bin = 0; bin < pH->GetNbinsX(); bin++)
-        {
-            pH->SetBinContent(bin, pH->GetBinContent(bin) - level);
-        }
-        TH1I* pH1 = (TH1I*)pH->Clone();
-        TH1I* pH2 = (TH1I*)pH->Clone();
-        pH2->SetFillColor(kBlue);
-        pH2->SetFillStyle(3001);//Alpha(kBlue, 0.25);
 
-        // draw histogram and graphs together
-        pH2->Draw();
+        // create full TH1F histogram
+        sprintf(name, "%s_%s_Dt_%i", FC.c_str(), Setup.c_str(), i+1);
+        TH1F* pH1 = CopyRange(pH, name, 62000, 80000, - level);
+
+        // create peak region TH1F histogram
+        sprintf(name, "%s_%s_DtInt_%i", FC.c_str(), Setup.c_str(), i+1);
+        TH1F* pH2 = CopyRange(pH, name, x0, x1, - level);
+
+        // manipulate histograms
+        TH1I* pH3 = (TH1I*)pH->Clone();
+        BiasX(pH3, 0.5*(x0 + x1));
+        pHsum->Add(pH3);
+        pH2->SetLineColor(kRed);
+        pH2->SetFillColorAlpha(kRed, 0.25);
+        pH2->SetLineColor(kWhite);
+
+        // draw histograms together
+        sprintf(name, "%s_%s_DtPeak_%i", FC.c_str(), Setup.c_str(), i+1);
+        pCDtPeak[i] = new TCanvas(name, name, 200, 10, 700, 500);
+        gPad->SetTicks(1, 1);
+        pH1->Draw();
+        pH2->Draw("same");
         pH1->Draw("same");
-        fUg->SetLineColor(kRed);
-        fUg->SetLineWidth(lw);
-        fUg->Draw("same");
-//        fUgP->SetLineColor(kOrange);
-//        fUgP->SetLineWidth(lw);
-//        fUgP->Draw("same");
-        TGraphErrors* gSF = (TGraphErrors*)f->Get("/Analysis/TimeDiff/SF"); // get SF counts
-        Double_t x = 0, SF = 0, NIF = 0;
-        gSF->GetPoint(i, x, SF);
-        char message[32] = "";
+
+        // draw number
+        Double_t x = 0, SF = 0, NIF = 0; // prepare number drawing
+        sprintf(name, "/%s/TimeDiff/Signal/%s/nNIF", FC.c_str(), Setup.c_str());
+        TGraphErrors* gNIF = (TGraphErrors*)fCom->Get(name); // get NIF counts
+        gNIF->GetPoint(i, x, NIF);
+        sprintf(message, "NIF events: %i", (int)(NIF+0.5));
+        TText* tNIF = new TText();
+        tNIF->SetNDC();
+        tNIF->DrawText(0.6, 0.8, message);
+
+        //// Draw original Dt spectrum with underground lines
+        sprintf(name, "%s_%s_DtUg_%i", FC.c_str(), Setup.c_str(), i+1);
+        pCDtUg[i] = new TCanvas(name, name, 200, 10, 700, 500);
+        gPad->SetTicks(1,1);
+        pH->GetXaxis()->SetRangeUser(62000, 80000);
+        pH->Draw();
+
+        fUg->GetPoint(0, UgX[0], UgY[0]);
+        fUgP->GetPoint(0, UgX[1], UgY[1]);
+        TGraph* g0 = new TGraph(2, UgX, UgY);
+        g0->SetLineColor(kRed);
+        g0->SetLineWidth(lw);
+        g0->Draw("same");
+        fUgP->GetPoint(1, UgX[0], UgY[0]);
+        fUg->GetPoint(1, UgX[1], UgY[1]);
+        TGraph* g1 = new TGraph(2, UgX, UgY);
+        g1->SetLineColor(kRed);
+        g1->SetLineWidth(lw);
+        g1->Draw("same");
+
+        SF = pH->Integral() - NIF;
         sprintf(message, "Underground events: %i", (int)(SF+0.5));
         TText* tSF = new TText();
         tSF->SetNDC();
         tSF->DrawText(0.2, 0.2, message);
-        if(strcmp(Setup.c_str(), "SF")) // if beam was on
-        {
-            // draw number
-            TGraphErrors* gNIF = (TGraphErrors*)f->Get("/Analysis/TimeDiff/NIF"); // get NIF counts
-            gNIF->GetPoint(i, x, NIF);
-            sprintf(message, "NIF events: %i", (int)(NIF+0.5));
-            TText* tNIF = new TText();
-            tNIF->SetNDC();
-            tNIF->DrawText(0.6, 0.8, message);
-        }
     }
 
     sprintf(name, "%s_%s_DtUg_all", FC.c_str(), Setup.c_str());
     TCanvas* pCsum = new TCanvas(name, name, 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
-    TMultiGraph* mg1 = new TMultiGraph();
     pHsum->SetNameTitle(name, "Time difference Sum over all deposits; #font[12]{t} / ch; counts");
-    pHsum->Rebin(10);
-    pHsum->SetAxisRange(62000, 80000, "X");
+    pHsum->Rebin(20);
+    pHsum->SetAxisRange(-5000, 13000, "X");
     pHsum->Draw();
 }
+
+
+Double_t func_peak(Double_t *x, Double_t *par)
+{
+    return par[0] * exp( - pow((x[0] - par[1]) / par[2], 2)) + par[3];
+}
+
+
+void DrawDtPeak(TFile* f, TFile* fCom, string FC, string Setup)
+{   // Draw the Dt-peak fits into Dt spectrum
+    if(!strcmp(Setup.c_str(), "SF")) // if Underground measurement
+    {
+        cout << "No TimeDiff peak for underground!" << endl;
+        return;
+    }
+    char name[64] = "";
+    char hname[64] = "";
+    char message[64] = "";
+    TCanvas* pCDtFit[8];
+    // open integration results
+//    sprintf(name, "/%s/TimeDiff/Signal/%s/nNIFfit", FC.c_str(), Setup.c_str());
+//    TGraphErrors* gIntegral = (TGraphErrors*)fCom->Get(name);
+    for (int i = 0; i < 8; i++)
+    {
+        // Create canvas
+        sprintf(name, "%s_%s_DtPeakFit_%i", FC.c_str(), Setup.c_str(), i+1);
+        pCDtFit[i] = new TCanvas(name, name, 200, 10, 700, 500);
+        gPad->SetTicks(1, 1);
+        // open Dt histogram nr i
+        sprintf(hname, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+        TH1I* pH = (TH1I*)f->Get(hname);
+        // open corresponding peak fit
+        sprintf(name, "/%s/TimeDiff/Signal/%s/Fit/f%s%sDtPeak_%i", FC.c_str(), Setup.c_str(), FC.c_str(), Setup.c_str(), i+1);
+        TF1* fP = (TF1*)fCom->Get(name);
+
+        // manipulate graphs
+        pH->SetAxisRange(62000, 80000, "X");
+        fP->SetLineColor(kRed);
+        fP->SetLineWidth(lw);
+        // Draw
+        pH->Draw();
+        fP->Draw("same");
+        // Draw integral number...
+        Double_t x = 0, content = 0, Dcontent = 0; // prepare number drawing
+        sprintf(name, "/%s/TimeDiff/Signal/%s/nNIFfit", FC.c_str(), Setup.c_str());
+        TGraphErrors* gNIF = (TGraphErrors*)fCom->Get(name); // get NIF counts
+        gNIF->GetPoint(i, x, content);
+        Dcontent = gNIF->GetErrorY(i);
+        sprintf(message, "peak content: %i +- %i", (int)(content+0.5), (int)(Dcontent+0.5));
+        TText* tNIF = new TText();
+        tNIF->SetNDC();
+        tNIF->DrawText(0.3, 0.8, message);
+//        cout << "checkpoint " << i+1 << endl;
+    }
+}
+
 
 void BiasX(TGraphErrors* pG, Double_t dx)
 {
@@ -311,6 +450,7 @@ void BiasX(TGraphErrors* pG, Double_t dx)
         pG->SetPoint(i, x + dx, y);
     }
 }
+
 
 void DrawSFRate(TFile* fNIF, TFile* fSB, TFile* fSF, TFile* fCom)
 {
@@ -355,6 +495,8 @@ void DrawSFRate(TFile* fNIF, TFile* fSB, TFile* fSF, TFile* fCom)
     c7->Modified();
     c7->Update();
 }
+
+
 void DrawNPu(TFile* f)
 {
     TCanvas* c2 = new TCanvas("NPuEff", "NPuEff", 200, 10, 700, 500);
@@ -395,6 +537,7 @@ void DrawNPu(TFile* f)
     c3->Modified();
     c3->Update();
 }
+
 
 void DrawQDCmin(TFile* fNIF, TFile* fSB, TFile* fSF, TFile* fUNIF, TFile* fUSB, TFile* fCom)
 {
@@ -470,6 +613,7 @@ void DrawQDCmin(TFile* fNIF, TFile* fSB, TFile* fSF, TFile* fUNIF, TFile* fUSB, 
     c9->Update();
 }
 
+
 void DrawIntEff(TFile* fNIF, TFile* fSB, TFile* fSF, TFile* fCom)
 {
     /// Internal efficiencies
@@ -506,6 +650,7 @@ void DrawIntEff(TFile* fNIF, TFile* fSB, TFile* fSF, TFile* fCom)
     c1->Modified();
     c1->Update();
 }
+
 
 void DrawEff(TFile* fCom)
 { // efficiency conclusion
@@ -557,6 +702,7 @@ void DrawEff(TFile* fCom)
     c2->Update();
 }
 
+
 void DrawEval(TFile* fCom)
 {
     TCanvas* c1 = new TCanvas("XS_SF", "XS_SF", 200, 10, 700, 500);
@@ -606,6 +752,7 @@ void DrawEval(TFile* fCom)
     c3->Update();
 }
 
+
 void DrawScaledDt(TFile* fNIF, TFile* fSB, TFile* fUG)
 {
     char name[64] = "";
@@ -650,13 +797,15 @@ void DrawScaledDt(TFile* fNIF, TFile* fSB, TFile* fUG)
     }
 }
 
-int DrawSingle(TFile* f, string FC, string Setup)
+
+int DrawSingle(TFile* f, TFile* fCom, string FC, string Setup)
 { // Draw all pictures concerning one single file
 //    DrawQDCfit(f, FC, Setup);
 //    DrawQDCeff(f, FC, Setup);
 //    DrawQDCres(f, FC, Setup);
 //    DrawDtInt(f, FC, Setup);
-    DrawDtUg(f, FC, Setup);
+//    DrawDtUg(f, fCom, FC, Setup);
+    DrawDtPeak(f, fCom, FC, Setup);
 
     return 1;
 }
@@ -670,18 +819,18 @@ int DrawPics()
     TFile* fNIF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/NIF.root");
     TFile* fSB = TFile::Open("/home/hoffma93/Go4nfis/offline/results/SB.root");
     TFile* fSF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/SF.root");
-//    TFile* fUNIF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_NIF.root");
-//    TFile* fUSB = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_SB.root");
+    TFile* fUNIF = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_NIF.root");
+    TFile* fUSB = TFile::Open("/home/hoffma93/Go4nfis/offline/results/UFC_SB.root");
+    TFile* fCom = TFile::Open("/home/hoffma93/Go4nfis/offline/results/Evaluation.root");
     /// single pics
-//    DrawSingle(fNIF, "PuFC", "NIF");
-//    DrawSingle(fSB, "PuFC", "SB");
-//    DrawSingle(fSF, "PuFC", "SF");
-//    DrawSingle(fUNIF, "UFC", "NIF");
-//    DrawSingle(fUSB, "UFC", "SB");
+//    DrawSingle(fNIF, fCom, "PuFC", "NIF");
+//    DrawSingle(fSB, fCom, "PuFC", "SB");
+    DrawSingle(fSF, fCom, "PuFC", "SF");
+//    DrawSingle(fUNIF, fCom, "UFC", "NIF");
+//    DrawSingle(fUSB, fCom, "UFC", "SB");
 
-    DrawScaledDt(fNIF, fSB, fSF);
+//    DrawScaledDt(fNIF, fSB, fSF);
     /// common pics
-//    TFile* fCom = TFile::Open("/home/hoffma93/Go4nfis/offline/results/Evaluation.root");
     // SF
 //    DrawSFRate(fNIF, fSB, fSF, fCom);
 //    DrawNPu(fCom);

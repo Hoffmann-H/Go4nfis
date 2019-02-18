@@ -143,7 +143,7 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
         DNeutronFlux[i] = sqrt( pow(DYield * Monitor / (r*r * t_real), 2) +
                                 pow(Yield * DMonitor / (r*r * t_real), 2) +
                                 pow(Yield * Monitor * 2*DL / (r*r*r * t_real), 2) );
-//        if(CommentFlag)
+        if(CommentFlag)
             cout << "ch " << i+1 << ": " << NeutronFlux[i] << " +- " << DNeutronFlux[i] << endl;
     }
 }
@@ -351,7 +351,7 @@ void Hist::DoAnalyzeQDC()
     SaveToFile("Analysis/QDC", g7);
 
     TGraphErrors* g8 = new TGraphErrors(NumHist, x, eInt, xerr, DeInt);
-    g8->SetNameTitle("eInt", "Internal efficiency");
+    g8->SetNameTitle("eInt", "Intrinsic efficiency");
     SaveToFile("Analysis/QDC", g8);
 
     return;

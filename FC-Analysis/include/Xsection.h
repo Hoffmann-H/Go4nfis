@@ -39,13 +39,14 @@ public:
 private:
     void SetParam();
     void CalculateThresholds();
-    void DoAnalyzeDt();
+    void UgPuFC();
+    void UgUFC();
+    void DoAnalyzeDt(string UFC);
     void ScatCorrNIF();
     void PrintInScat();
     void CalculateNPu();
     void CalculateEfficiency();
     void CalculateCrossSection();
-    void UFC_AnalyzeDt();
     void SaveToFile(string path, TObject *pObj);
     static Double_t func_peak(Double_t *x, Double_t *p);
 //    void CompareFiles(string path, Int_t start, Int_t stop);
@@ -91,8 +92,10 @@ private:
     Double_t DUNIFRate[NumHist];
     Double_t USFRate[NumHist];
     Double_t DUSFRate[NumHist];
-    Double_t nUNIF[NumHist]; // number of U atoms
-    Double_t DnUNIF[NumHist];
+    Double_t nU235eff[NumHist]; // number of U atoms
+    Double_t DnU235eff[NumHist];
+    Double_t nU238eff[NumHist];
+    Double_t DnU238eff[NumHist];
     Double_t nU[NumHist];
     Double_t DnU[NumHist];
     Double_t UXSec[NumHist];
