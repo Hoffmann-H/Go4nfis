@@ -18,6 +18,7 @@ LIBS += $$system(root-config --libs) \
 
 QMAKE_CXXFLAGS += -O2 \
                 $(shell root-config --cflags)
+QMAKE_CXXFLAGS_WARN_ON += -Wno-unused-parameter
 QMAKE_CFLAGS += -O2 \
                 $(shell root-config --cflags)
 QMAKE_LFLAGS += -O  \
@@ -31,14 +32,22 @@ unix {
 
 # Input
 HEADERS += include/Hist.h \
+           include/Xsection.h \
+           include/FC.h \
            include/PuFC.h \
-           include/Xsection.h
+           include/UFC.h \
+           include/AnaSim.h \
+           include/Plot.h
 
 SOURCES += \
     main.cpp \
     src/Xsection.cpp \
+    src/Hist.cpp \
+    src/FC.cpp \
     src/PuFC.cpp \
-    src/Hist.cpp
+    src/UFC.cpp \
+    src/AnaSim.cpp \
+    src/Plot.cpp
 
 !exists ($(ROOTSYS)/include/rootcintrule.pri):message ("The rootcintrules.pri was not found")
 exists ($(ROOTSYS)/include/rootcintrule.pri) {

@@ -4,7 +4,6 @@
 #include <string>
 #include <iostream>
 #include <sstream>
-
 #include "TH1.h"
 #include "TH2.h"
 #include "TFile.h"
@@ -19,6 +18,7 @@
 #include "TF1.h"
 #include "TFitResult.h"
 #include "TGo4WinCond.h"
+#include "Plot.h"
 
 #define NumHist 8
 
@@ -30,13 +30,15 @@ public:
     Hist(std::string file_path, string setup = "NIF", string FC = "PuFC");  // Constructor
 //     Hist(); // Standard constructor, needed for object i/o
     ~Hist(); // Destructor
+    void SetDraw(Plot *p);
 
 //    void DoAnalyzeDt();
     void DoAnalyzeQDC();
     void SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Double_t Dmonitor, Double_t l, Double_t Dl);
     Double_t GetPeakLow(Int_t i_ch);
     Double_t GetPeakUp(Int_t i_ch);
-    Double_t GetNumberEvents(int i);
+//    Double_t GetNumberEvents(int i);
+    Double_t GetNevents(Int_t i);
 
     Double_t SFRate[NumHist]; // SF rates assuming efficiency==100%
     Double_t DSFRate[NumHist];
@@ -45,24 +47,25 @@ public:
     Double_t t_live; // times
     Double_t t_real;
     TH1I *pHDtG[NumHist];
-    Double_t NeutronFlux[NumHist];
-    Double_t DNeutronFlux[NumHist];
+    Double_t NeutronFluence[NumHist];
+    Double_t DNeutronFluence[NumHist];
     Double_t eInt[NumHist]; // intrinsic detection efficiency
     Double_t DeInt[NumHist];
     Double_t PedQDC[NumHist]; // extrema positions
     Double_t CutQDC[NumHist];
     Double_t MaxQDC[NumHist];
+    Double_t Monitor, DMonitor;
 private:
     // run parameters
     Bool_t CommentFlag;
     string Setup; // measurement setup. Possible values are "NIF", "SB", "SF".
     Bool_t UFC; // UFC==kFALSE: Analyze PuFC. UFC==kTRUE: Analyze UFC.
-//    string FC;
     string FilePath;
     TFile *file;
+    Bool_t Draw;
+    Plot *plot;
     // Neutron field
     Double_t Yield,   DYield;
-    Double_t Monitor, DMonitor;
     Double_t L,       DL;
     // analysis parameters
     Double_t ToF_low;
@@ -124,6 +127,4 @@ private:
     */
 //    ClassDef(Hist, 1);
 };
-
-
 #endif

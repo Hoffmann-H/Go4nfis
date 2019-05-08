@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "Hist.h"
+#include "FC.h"
 #include "TF1.h"
 #include "TH1.h"
 #include "TH2.h"
@@ -26,10 +27,10 @@ public:
     Xsection();
     ~Xsection();
     
-    void Evaluation1();
-    void Evaluation2();
-    void Evaluation3();
-    void Evaluation4();
+    void Evaluation1(); // PuFC
+    void Evaluation2(); // PuFC additional
+    void Evaluation3(); // PuFC additional
+    void Evaluation4(); // UFC
 
     Hist *pHNIF; // PuFC
     Hist *pHSB;
@@ -39,14 +40,14 @@ public:
 private:
     void SetParam();
     void CalculateThresholds();
-    void UgPuFC();
-    void UgUFC();
-    void DoAnalyzeDt(string UFC);
-    void ScatCorrNIF();
-    void PrintInScat();
+//    void UgPuFC();
+//    void UgUFC();
+    void DoAnalyzeDt(string UFC, Bool_t method = 0);
     void CalculateNPu();
-    void CalculateEfficiency();
-    void CalculateCrossSection();
+//    void CalculateNU();
+//    void CalculateEfficiency(); // no success
+    Double_t GetCorrectionFactor(string FC, Int_t i);
+    void CalculateCrossSection(); // PuFC
     void SaveToFile(string path, TObject *pObj);
     static Double_t func_peak(Double_t *x, Double_t *p);
 //    void CompareFiles(string path, Int_t start, Int_t stop);
@@ -70,8 +71,8 @@ private:
     Double_t DmPu;
     Double_t mU;
     Double_t DmU;
-    Double_t eSimGayther; // simulated efficiencies
-    Double_t DeSimGayther;
+//    Double_t eSimGayther; // simulated efficiencies
+//    Double_t DeSimGayther;
     Double_t eSimMinimum;
     Double_t DeSimMinimum;
 

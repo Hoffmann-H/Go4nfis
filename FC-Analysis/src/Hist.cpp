@@ -13,6 +13,7 @@ Hist::Hist(string file_path, string setup, string FC)   // Constructor
     CommentFlag = kFALSE;
     Setup = setup;
     UFC = strcmp(FC.c_str(), "PuFC");
+    Draw = kFALSE;
 
     if(CommentFlag)
         cout << endl << "Creating instance Hist  " << (UFC?"UFC":"PuFC") << "  " << Setup << "  " << file_path << endl;
@@ -53,6 +54,14 @@ Hist::~Hist()    // Destructor
 {
     if(CommentFlag)
         cout << "Destroy" << endl;
+}
+
+void Hist::SetDraw(Plot *p)
+{
+    if (p == 0)
+        return;
+    plot = p;
+    Draw = kTRUE;
 }
 
 TH1I* Hist::GetTH1I(const char* hname)
@@ -136,15 +145,15 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
     for (int i = 0; i < NumHist; i++)
     {
         if (UFC)
-            r = L + 45 + 70 - 10 * i;
+            r = L + 119 - 10.8 * i; // UFC: 5mm distance, plates 0.4mm each
         else
-            r = L + 45 + 35 - 5 * i;
-        NeutronFlux[i] = Yield * Monitor / (r*r * t_real);
-        DNeutronFlux[i] = sqrt( pow(DYield * Monitor / (r*r * t_real), 2) +
-                                pow(Yield * DMonitor / (r*r * t_real), 2) +
-                                pow(Yield * Monitor * 2*DL / (r*r*r * t_real), 2) );
+            r = L + 191 - 20.8 * i; // PuFC: 10mm distance, plates 0.4mm each
+        NeutronFluence[i] = Yield * Monitor / (r*r);
+        DNeutronFluence[i] = sqrt( pow(DYield * Monitor / (r*r), 2) +
+                                pow(Yield * DMonitor / (r*r), 2) +
+                                pow(Yield * Monitor * 2*DL / (r*r*r), 2) );
         if(CommentFlag)
-            cout << "ch " << i+1 << ": " << NeutronFlux[i] << " +- " << DNeutronFlux[i] << endl;
+            cout << "ch " << i+1 << ": " << NeutronFluence[i] << " +- " << DNeutronFluence[i] << endl;
     }
 }
 
@@ -312,6 +321,11 @@ Double_t Hist::AnalyzeDtUnderground(Int_t i_ch, TH1I *pH)
     return pH->Integral(lim_0, lim_3) / (lim_3 - lim_0);
 }
 */
+Double_t Hist::GetNevents(Int_t i)
+{
+    return pHRawQDCl[i]->Integral();
+}
+
 void Hist::DoAnalyzeQDC()
 {
     Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -329,6 +343,9 @@ void Hist::DoAnalyzeQDC()
     for (int i = 0; i < 8; i++)
         cout << CutQDC[i] << "  ";
     cout << endl;
+
+    if (!Draw)
+        return;
 
     TGraph* g4 = new TGraph(NumHist, x, CutQDC);
     g4->SetMarkerStyle(20);
@@ -427,9 +444,9 @@ void Hist::AnalyzeQDC(TH1I *pH, Int_t channel)
     Double_t UgLevel = pH->Integral(low, up) / (up - low + 1.0);
     Double_t DUgLevel = sqrt(pH->Integral(low, up)) / (up - low + 1);
     if(CommentFlag)
-        cout << "low: " << low << ", up: " << up << ", level: " << UgLevel << " +- " << DUgLevel << endl;
+        cout << "minimum bin: " << pH->GetBin(Cut) << ", low: " << low << ", up: " << up << ", level: " << UgLevel << " +- " << DUgLevel << endl;
     if (pH->GetBinCenter(low) > CutUsed[channel] || pH->GetBinCenter(up) < CutUsed[channel])
-        cout << "*** " << FC << "," << Setup << ",ch" << channel+1 <<
+        cout << "*** " << FC << "," << Setup << ", ch " << channel+1 <<
                 " Warning: Individual minimum region " << pH->GetBinCenter(low) << "," << pH->GetBinCenter(up) <<
                 " does not fit into used cut " << CutUsed[channel] << endl;
 
@@ -440,13 +457,13 @@ void Hist::AnalyzeQDC(TH1I *pH, Int_t channel)
                            pow(DUgLevel * Integral * (CutUsed[channel] - Pedestal), 2)
                          ) / pow(Integral + UgLevel * (CutUsed[channel] - Pedestal), 2);
 
-    Double_t x[] = {Pedestal, Pedestal, pH->GetBinCenter(up), pH->GetBinCenter(up)};
-    Double_t y[] = {0, UgLevel, UgLevel, 0};
-//    cout << "Check" << endl;
-    TGraph* g1 = new TGraph(4, x, y);
-    sprintf(fname, "f%s%sUg_%i", FC.c_str(), Setup.c_str(), channel+1);
-    g1->SetNameTitle(fname, "QDC (low gain) constant level fit");
-    SaveToFile("Analysis/QDC/Ug", g1);
+//    Double_t x[] = {Pedestal, Pedestal, pH->GetBinLowEdge(CutUsed[channel]), pH->GetBinLowEdge(CutUsed[channel])};
+//    Double_t y[] = {0, UgLevel, UgLevel, 0};
+////    cout << "Check" << endl;
+//    TGraph* g1 = new TGraph(4, x, y);
+//    sprintf(fname, "f%s%sUg_%i", FC.c_str(), Setup.c_str(), channel+1);
+//    g1->SetNameTitle(fname, "QDC (low gain) constant level fit");
+//    SaveToFile("Analysis/QDC/Ug", g1);
 
     /// 3. Fit FF-maximum
     // find smeared FF-maximum
@@ -481,15 +498,13 @@ void Hist::AnalyzeQDC(TH1I *pH, Int_t channel)
     if(CommentFlag)
         cout << "Cut " << Cut << ", Max " << Max << endl;
 
-    // 4. Write values for graphs. Calculate efficiency
-//    UgQDC[channel] = Ug;
-//    DUgQDC[channel] = DUg;
     CutQDC[channel] = Cut;
     MaxQDC[channel] = Max;
-//    Double_t Integral = pH->Integral(pH->GetBin(Cut), pH->GetSize() + 1);
-//    Double_t DIntegral = sqrt(Integral);
-//    efficiency[channel] = Integral / ( (pH->GetBin(Cut) - pH->GetBin(Pedestal)) * Ug + Integral );
-    //*/
+
+    if (!Draw)
+        return;
+//    plot->QDCfit(channel, pHRawQDCl[channel], CutUsed[channel], fC);
+    plot->QDCeff(channel, pHAnaQDCl[channel], Pedestal, CutUsed[channel], UgLevel, eInt[channel], DeInt[channel]);
     return;
 }
 
@@ -522,11 +537,11 @@ void Hist::DeadTimeCorrection(Bool_t peak)
     }
 }
 
-Double_t Hist::GetNumberEvents(int i)
-{ // return total number of self-triggered events for uncertainty weighting purposes
-    Double_t number = (Double_t)pHAnaQDCl[i]->Integral();
-    return number;
-}
+//Double_t Hist::GetNumberEvents(int i)
+//{ // return total number of self-triggered events for uncertainty weighting purposes
+//    Double_t number = (Double_t)pHAnaQDCl[i]->Integral();
+//    return number;
+//}
 
 /*
 Double_t Hist::Fit2(TH1I *pH, Double_t xmin, Double_t xmax)
