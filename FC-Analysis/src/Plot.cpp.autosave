@@ -475,7 +475,7 @@ void Plot::DtPeakForm(Int_t ch, TH1F *pSc, TH1F *pUnsc, Double_t Emin, Int_t Pro
     TCanvas *C = new TCanvas(name, name, 200, 10, 700, 500);
     gPad->SetTicks(1,1);
     gPad->SetLogy(1);
-//    pUnsc->Add(pSc, -1);
+    pUnsc->Add(pSc, -1);
 
     pUnsc->SetStats(0);
     pUnsc->GetXaxis()->SetTitle("ToF / ns");

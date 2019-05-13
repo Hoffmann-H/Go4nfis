@@ -306,34 +306,42 @@ void FC::CompareShadowCone(string BgPath)
         GetSimRes();
     cout << "FC::CompareShadowCone(): sim->nProj = " << sim->nProj[0] << endl;
     AnaSim *simBg = new AnaSim(BgPath, Name, "SB", plot);
-    simBg->nProjectiles();
-    simBg->nFissions();
+    simBg->Corrections();
     cout << endl << "Comparing methods for In-scattering contribution..." << endl;
+    cout << "Foreground" << endl <<
+            " " << sim->nProj[0] << " Projectiles" << endl <<
+            " " << sim->nDirect[0] << " direct neutrons" << endl <<
+            " " << sim->effFullE[0] << " effective Full-E neutrons" << endl <<
+            " " << sim->effSc[0] << " effective scattered neutrons" << endl;
+    cout << "Background" << endl <<
+            " " << simBg->nProj[0] << " Projectiles" << endl <<
+            " " << simBg->nDirect[0] << " direct neutrons" << endl <<
+            " " << simBg->effFullE[0] << " effective Full-E neutrons" << endl <<
+            " " << simBg->effFullE[0] + simBg->effSc[0] << " effective neutrons" << endl;
     cout << " Ch   Exp   Sim(1)   Sim(2)" << endl;
     for (Int_t i = 0; i < NumCh; i++)
     {
-        cout << "   " << simBg->nFis[i] << "  " << sim->nFis[i] << "  " << sim->nProj[i] << "  " << simBg->nProj[i] << endl;
-        pDirect[i][2] = 1 - simBg->nFis[i] / sim->nFis[i] * sim->nProj[i] / simBg->nProj[i];
-        DpDirect[i][2] = (1 - pDirect[i][2]) * sqrt(
-                    pow(simBg->DnFis[i] / simBg->nFis[i], 2) +
-                    pow(sim->DnFis[i] / sim->nFis[i], 2) +
-                    pow(0 / sim->nProj[i], 2) + // nProj: exact
-                    pow(0 / simBg->nProj[i], 2) );
+//        cout << "   " << simBg->effSc[i] << "  " << sim->effSc[i] << "  " << sim->nProj[i] << "  " << simBg->nProj[i] << endl;
+        pDirect[i][2] = 1.0 - (simBg->effFullE[i] + simBg->effSc[i]) / (sim->effFullE[i] + sim->effSc[i]) * sim->nProj[i] / simBg->nProj[i];
+        DpDirect[i][2] = sqrt( pow(sim->DeffFullE[i] * (simBg->effFullE[i] + simBg->effSc[i]), 2) / pow(sim->effFullE[i] + sim->effSc[i], 4) +
+                               pow(sim->DeffSc[i] * (simBg->effFullE[i] + simBg->effSc[i]), 2) / pow(sim->effFullE[i] + sim->effSc[i], 4) +
+                               pow(simBg->DeffFullE[i] / (sim->effFullE[i] + sim->effSc[i]), 2) +
+                               pow(simBg->DeffSc[i] / (sim->effFullE[i] + sim->effSc[i]), 2) ); // nProj: exact
         cout << " " << i+1 << "  " << pDirect[i][0] << "+-" << DpDirect[i][0]
                            << "  " << pDirect[i][1] << "+-" << DpDirect[i][1]
                            << "  " << pDirect[i][2] << "+-" << DpDirect[i][2] << endl;
     }
-    cout << "Uncertainty influences on shadow cone simulation" << endl
-         << " Ch   nFis(Fg)   nFis(Bg)" << endl;
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        Double_t unc[] = {sim->DnFis[i] * simBg->nFis[i] / sim->nFis[i] / sim->nFis[i] * sim->nProj[i] / simBg->nProj[i],
-                          simBg->DnFis[i] / sim->nFis[i] * sim->nProj[i] / simBg->nProj[i]};
-        cout << " " << i+1 << "   " << unc[0] << "   " << unc[1] << endl;
-    }
+//    cout << "Uncertainty influences on shadow cone simulation" << endl
+//         << " Ch   nFis(Fg)   nFis(Bg)" << endl;
+//    for (Int_t i = 0; i < NumCh; i++)
+//    {
+//        Double_t unc[] = {sim->DnFis[i] * simBg->nFis[i] / sim->nFis[i] / sim->nFis[i] * sim->nProj[i] / simBg->nProj[i],
+//                          simBg->DnFis[i] / sim->nFis[i] * sim->nProj[i] / simBg->nProj[i]};
+//        cout << " " << i+1 << "   " << unc[0] << "   " << unc[1] << endl;
+//    }
     if (!Draw)
 //        return;
-        plot = new Plot();
+        plot = new Plot(Name, "Open");
     Double_t pExp[NumCh];
     Double_t DpExp[NumCh];
     Double_t pSim1[NumCh];

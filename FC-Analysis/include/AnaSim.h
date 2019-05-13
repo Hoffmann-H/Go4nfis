@@ -1,5 +1,6 @@
 #include <string>
 #include "Hist.h"
+#include "Sim.h"
 #include "TMath.h"
 #define NumCh 8
 #define m0 939.565 // MeV
@@ -30,7 +31,7 @@ public:
     TH2F *pH2TvsE[NumCh];
     TH1F *pH1Eproj[NumCh]; // time-gated projection on energy axis
     Double_t Distance[NumCh];
-    Double_t En, DEn; // neutron source eenrgy
+    Double_t En, DEn; // neutron source energy
     Int_t binEmin, binEmax;
     Double_t Emin, Emax;
     Double_t ToFmin[NumCh];
@@ -45,8 +46,8 @@ public:
     Double_t DnFullE[NumCh];
     Double_t effFullE[NumCh];
     Double_t DeffFullE[NumCh];
-    Double_t nFis[NumCh]; // effective n for fission
-    Double_t DnFis[NumCh];
+    Double_t effSc[NumCh]; // effective n for fission
+    Double_t DeffSc[NumCh];
     Double_t T[NumCh];
     Double_t DT[NumCh];
     Double_t S[NumCh];
@@ -62,7 +63,6 @@ private:
     Double_t Et(Double_t ToF, Double_t FlightPath);
     Double_t ToF(Double_t Ekin, Double_t FlightPath);
     void SetDistances();
-    void SetQDCwidths();
     void SetToFwidths();
     void OpenSigma(string path);
     void relSigma(Double_t E, Double_t &w, Double_t &Dw);

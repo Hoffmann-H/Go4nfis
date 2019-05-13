@@ -24,8 +24,11 @@ class Plot
 {
 public:
     Plot();
+    Plot(string FC, string setup);
     ~Plot();
+    string FC, Setup;
     void simply(TH1F *pH, string Name, string xTitle, string yTitle);
+    void Sigma(TGraph* gPu242, TGraph* gU235, TGraph* gU238);
     void Source_E(TGraph *g, Double_t E, Double_t DE);
     void QDCfit(Int_t ch, TH1I *pH, Double_t cut, TF1 *fCut);
     void QDCeff(Int_t ch, TH1I *pH, Double_t pedestal, Double_t cut, Double_t level, Double_t eInt, Double_t DeInt);
@@ -33,7 +36,8 @@ public:
     void ExpT(Double_t* uT, Double_t* DuT, Double_t* T, Double_t* DT);
     void SimT(Double_t* t, Double_t* DT, Double_t* S, Double_t* DS, Double_t* F, Double_t* DF);
     void CompSc(Double_t* pExp, Double_t* DpExp, Double_t* pSim1, Double_t* DpSim1, Double_t* pSim2, Double_t* DpSim2);
-    void TvsE(Int_t ch, TH2F *pH2TvsE, Double_t ToFmin, Double_t ToFmax, Double_t Emin, Double_t Emax);
+    void TvsE(Int_t ch, TH2F *pH2TvsE, Double_t binToFmin, Double_t binToFmax, Int_t directN);
+    void TvsE(Int_t ch, TH2F *pH2TvsE, Double_t binToFmin, Double_t binToFmax, Double_t Emin, Double_t Emax);
     void DtPeakForm(Int_t ch, TH1F *pSc, TH1F *pUnsc, Double_t Emin, Int_t Projectiles);
 //    void T();
 private:

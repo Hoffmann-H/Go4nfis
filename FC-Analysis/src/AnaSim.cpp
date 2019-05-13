@@ -39,6 +39,7 @@ AnaSim::AnaSim(string file_name, string fc, string setup, Plot *p)
     CommentFlag = kTRUE;
     DoneHist = kFALSE;
     DoneProjection = kFALSE;
+    DoneProjectiles = kFALSE;
     DoneDistance = kFALSE;
     DoneToFwidth = kFALSE;
     DoneSigma = kFALSE;
@@ -152,11 +153,13 @@ void AnaSim::SetToFwidths()
     {
 //        cout << "Check " << i << endl;
         ToFmin[i] = ToF(Emax, Distance[i]);
-        ToFmax[i] = 200;//ToF(Emin, sqrt( pow(Distance[i], 2) + pow(0.037, 2) ));
+        ToFmax[i] = ToF(Emin, sqrt( pow(Distance[i], 2) + pow(0.037, 2) ));
         Double_t binOffset = pH2TvsE[i]->GetXaxis()->GetBinLowEdge(0);
         Double_t binWidth = pH2TvsE[i]->GetXaxis()->GetBinWidth(0);
         binToFmin[i] = (ToFmin[i] - binOffset) / binWidth;
         binToFmax[i] = (ToFmax[i] - binOffset) / binWidth;
+//        cout << ToFmin[i] << " in (" << pH2TvsE[i]->GetXaxis()->GetBinLowEdge(binToFmin[i]) << ", " << pH2TvsE[i]->GetXaxis()->GetBinLowEdge(binToFmin[i] + 1) << ")" << endl;
+//        cout << ToFmax[i] << " in (" << pH2TvsE[i]->GetXaxis()->GetBinLowEdge(binToFmax[i]) << ", " << pH2TvsE[i]->GetXaxis()->GetBinLowEdge(binToFmax[i] + 1) << ")" << endl;
         cout << " " << i+1 << "   " << binToFmin[i] << "-" << binToFmax[i] << "   " << ToFmin[i] << " < ToF < " << ToFmax[i] << endl;
     }
     DoneToFwidth = kTRUE;
@@ -357,8 +360,10 @@ void AnaSim::nFissions()
         SetToFwidths();
     if (!DoneProjection)
         Projections();
+    if (!DoneProjectiles)
+        nProjectiles();
     // ...
-    cout << endl << "Calculating effective number of fissioning neutrons..." << endl;
+    cout << endl << "Calculating effective number of scattered neutrons..." << endl;
 
     char name[64] = "";
     char title[64] = "";
@@ -382,7 +387,7 @@ void AnaSim::nFissions()
         sprintf(title, "%s, %s, fission Yield in ToF range, ch %i", FC.c_str(), Setup.c_str(), i+1);
         TH1D* pH1YG = new TH1D(name, title, nbinsx, xmin, xmax);
         Double_t D2nFis = 0;
-        for (Int_t bin = 1; bin <= pH1Eproj[i]->GetNbinsX(); bin++)
+        for (Int_t bin = 1; bin < binEmin; bin++)
         {// Iterate over projection's energy bins
             Double_t E = pH1Eproj[i]->GetBinCenter(bin);
             Double_t nNeutrons = pH1Eproj[i]->GetBinContent(bin);
@@ -394,9 +399,9 @@ void AnaSim::nFissions()
             pH1YG->SetBinContent(bin, weight * nNeutrons);
             D2nFis += pow(Dweight * nNeutrons, 2) + pow(weight * DnNeutrons, 2);
         }
-        nFis[i] = pH1YG->Integral(); // Fission count as estimated by analysis
-        DnFis[i] = sqrt(D2nFis);
-        cout << "Ch " << i+1 << ", eff.n " << nFis[i] << " +- " << DnFis[i] << endl;
+        effSc[i] = pH1YG->Integral(); // Fissions caused by scattered neutrons
+        DeffSc[i] = sqrt(D2nFis);
+        cout << "Ch " << i+1 << ", eff.n " << effSc[i] << " +- " << DeffSc[i] << endl;
         if (DrawMulti)
             plot->TvsE(i, pH2TvsE[i], binToFmin[i], binToFmax[i], binEmin, binEmax);
         if (DrawMulti)
@@ -409,14 +414,6 @@ void AnaSim::nFissions()
 
 void AnaSim::PeakForm(Int_t ch)
 {
-    if (!DoneHist)
-        OpenHists();
-    if (!DoneToFwidth)
-        SetToFwidths();
-    if (!DoneProjectiles)
-        nProjectiles();
-//    if (!DoneDirect)
-//        DirectN();
     char name[64] = "";
     sprintf(name, "proj_ToF_%i", ch+1);
     TH1F *pH1X = (TH1F*)pH2TvsE[ch]->ProjectionX(name);
@@ -456,18 +453,39 @@ void AnaSim::PeakForm(Int_t ch)
 }
 
 
-void AnaSim::DirectN()
-{
+void AnaSim::Corrections()
+{// Calculate correction factors for data analysis from simulation.
+    // T := Direct incident n / emitted neutrons towards deposit
+    // S := fissions induced by direct / induced fissions (both in time gate)
+    //    = direct fissions / ( direct fissions + scattered fissions )
     if (!DoneHist)
         OpenHists();
     if (!DoneToFwidth)
         SetToFwidths();
     if (!DoneProjection)
         Projections();
-    cout << endl << "Getting number of direct neutrons" << endl;
+//    cout << "DoneProjectiles = " << DoneProjectiles << endl;
+    if (!DoneProjectiles)
+        nProjectiles();
+//    cout << "AnaSim::Corrections(): nProj[0] = " << nProj[0] << endl;
+    /////////////////////////////////////////////////////////////////////////////
+    /// Get effective number of scattered neutrons
+    if (!DoneFis)
+        nFissions();
+    /////////////////////////////////////////////////////////////////////////////
+
     char name[64] = "";
+    cout << endl << "Correction factors..." <<
+            endl << "Ch          T                     S(stat,sys)                        F(stat,sys)" << endl;
+
     for (int i = 0; i < NumCh; i++)
     {
+//        cout << pH2TvsE[i]->GetXaxis()->GetBinCenter(binToFmin[i]) << "  "
+//             << pH2TvsE[i]->GetXaxis()->GetBinCenter(binToFmax[i]) << "  "
+//             << pH2TvsE[i]->GetYaxis()->GetBinCenter(binEmin) << "  "
+//             << pH2TvsE[i]->GetYaxis()->GetBinCenter(binEmax) << endl;
+
+        //// Calculate number of full-energy n and effective number of full-E n.
         nFullE[i] = pH2TvsE[i]->Integral(binToFmin[i], binToFmax[i], binEmin, binEmax);
         DnFullE[i] = sqrt(nFullE[i]); // use Poisson statistics because nFullE is counted
         Double_t E, N;
@@ -479,70 +497,55 @@ void AnaSim::DirectN()
             N = pH1Eproj[i]->GetBinContent(bin);
             relSigma(E, w, Dw);
             effN += w * N;
-            D2effN += /*pow(Dw * N, 2) +*/ w * w * N;
+            D2effN += w * w * N;
         }
-        sprintf(name, "/%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
-        TH2F *pH2TvsE_Sc = (TH2F*) f->Get(name);
         effFullE[i] = effN;
         DeffFullE[i] = sqrt(D2effN);
+
+        //// Calculate number of direct neutrons
+        sprintf(name, "/%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+        TH2F *pH2TvsE_Sc = (TH2F*) f->Get(name);
         nDirect[i] = pH2TvsE[i]->Integral() - pH2TvsE_Sc->Integral();
         DnDirect[i] = sqrt(nDirect[i]);
-        if (CommentFlag)
-            cout << " Ch " << i+1 << ", full-energy neutrons " << nFullE[i] << "+-" << DnFullE[i] <<
-                    ", effective full-E neutrons " << effFullE[i] << "+-" << DeffFullE[i] <<
-                    ", direct neutrons " << nDirect[i] << "+-" << DnDirect[i] << endl;
-    }
-    DoneDirect = kTRUE;
-    cout << "Done: Direct neutrons" << endl;
-}
 
-
-void AnaSim::Corrections()
-{// Calculate correction factors for data analysis from simulation.
-    // T := Direct incident n / emitted neutrons towards deposit
-    // S := fissions induced by direct / induced fissions (both in time gate)
-    //    = direct fissions / ( direct fissions + scattered fissions )
-    if (!DoneProjectiles)
-        nProjectiles();
-    if (!DoneDirect)
-        DirectN();
-
-    /////////////////////////////////////////////////////////////////////////////
-    /// Get effective number of scattered neutrons
-    if (!DoneFis)
-        nFissions();
-    /////////////////////////////////////////////////////////////////////////////
-
-    cout << endl << "Correction factors..." <<
-            endl << "Ch   T   S   F" << endl;
-
-    for (int i = 0; i < NumCh; i++)
-    {
-//        cout << 0 / nProj[i] << " " << DnDirect[i] / nDirect[i] << " " << DnFis[i] / nFis[i] << " " << DnFullE[i] / nFullE[i] << " " << DeffFullE[i] / effFullE[i] << endl;
+        //// Calculate Transmission and Scattering correction factor
         T[i] = nDirect[i] / nProj[i];
         DT[i] = DnDirect[i] / nProj[i];
-        S[i] = nDirect[i] / nFis[i] * effFullE[i] / nFullE[i];
-        DS[i] = S[i] * sqrt( pow(DnDirect[i] / nDirect[i], 2) +
-                             pow(DnFis[i] / nFis[i], 2) +
-                             pow(DeffFullE[i] / effFullE[i], 2) +
-                             pow(DnFullE[i] / nFullE[i], 2) );
-        F[i] = nProj[i] / nFis[i] * effFullE[i] / nFullE[i];
-        DF[i] = F[i] * sqrt( pow(DnFis[i] / nFis[i], 2) +
-                             pow(DeffFullE[i] / effFullE[i], 2) +
-                             pow(DnFullE[i] / nFullE[i], 2) );
-        cout << " " << i+1 << "  " << T[i] << "+-" << DT[i] << "  " << S[i] << "+-" << DS[i] << "  " << F[i] << "+-" << DF[i] << endl;
-//        cout << " " << nDirect[i] << " " << nProj[i] << endl;
+        S[i] = nDirect[i] / (effSc[i] + effFullE[i]) * effFullE[i] / nFullE[i];
+
+        //// Calculate T&S's correction factor
+        F[i] = nProj[i] / (effSc[i] + effFullE[i]) * effFullE[i] / nFullE[i];   // == S[i] / T[i]
+
+        //// Calculate correlated uncertainties
+        Double_t D2S = 0; // squared statistical uncertainty
+        Double_t D2S_sys = 0;
+        Double_t summand; // allows to print summands
+//        Double_t D2F = 0;
+
+        for (Int_t bin = binEmin; bin <= binEmax; bin++)
+        {
+            E = pH1Eproj[i]->GetBinCenter(bin);
+            N = pH1Eproj[i]->GetBinContent(bin);
+            relSigma(E, w, Dw);
+            // summand for statistical uncertainty from DN = sqrt(N):
+            summand = N * pow(nDirect[i] * (effSc[i] * (w * nFullE[i] - effFullE[i]) - effFullE[i]*effFullE[i] + 1.5*w*N), 2)
+                     / pow(nFullE[i] * (effFullE[i] + effSc[i]), 4);
+            D2S += summand;
+            // summand for systematic uncertainty from Dw:
+            summand = pow(nDirect[i] / nFullE[i] * N * (effFullE[i] + effSc[i] - nFullE[i]), 2) / pow(effFullE[i] + effSc[i], 4);
+            D2S_sys += summand;
+//            cout << "  E = " << E << ", D2S += " << summand << endl;
+        }
+        summand = pow(DeffSc[i] * nDirect[i] / nFullE[i] * effFullE[i], 2) / pow(effFullE[i] + effSc[i], 4);
+//        cout << "  effSc, D2S += " << summand << endl;
+        DS[i] = sqrt( D2S + summand );
+        DF[i] = F[i] * sqrt( pow(DS[i] / S[i], 2) +
+                             pow(DT[i] / T[i], 2) );
+        cout << " " << i+1 << "  " << T[i] << "+-" << DT[i] <<
+                              "  " << S[i] << "+-" << DS[i] << "+-" << sqrt(D2S_sys) <<
+                              "  " << F[i] << "+-" << DF[i] << "+-" << sqrt(D2S_sys) / T[i] << endl;
     }
-    cout << "Uncertainty influences on Scattering correction factor" << endl
-         << " Ch   nDirect   nFis   effFullE   nFullE" << endl;
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        Double_t unc[] = {S[i] * DnDirect[i] / nDirect[i],
-                          S[i] * DnFis[i] / nFis[i],
-                          S[i] * DeffFullE[i] / effFullE[i],
-                          S[i] * DnFullE[i] / nFullE[i]};
-        cout << " " << i+1 << "   " << unc[0] << "   " << unc[1] << "   " << unc[2] << "   " << unc[3] << endl;
-    }
+
     DoneCorrections = kTRUE;
     cout << "Done: Corrections" << endl;
     if (!DrawSingle)
