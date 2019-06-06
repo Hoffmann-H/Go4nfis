@@ -1,21 +1,29 @@
 #include "PuFC.h"
 using namespace std;
 
-PuFC::PuFC(Plot *p)
+PuFC::PuFC(Bool_t draw)
 {
     Name = "PuFC";
     cout << endl << "Creating fission chamber " << Name << endl;
     CommentFlag = kTRUE;
-    InitVar();
+    InitVar(draw);
     InitPuVar();
-    SimPath = "/home/hoffma93/Programme/Geant4-Work/builds/G4PuFCvsH19/results/4_ene/PuFC_Open_5E6.root";
-    SetDraw(p);
 
     pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "NIF");
-    pHBG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root", "SB");
-    pHSF = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "SF");
     pHFG->SetNeutronField(Yield, DYield, MonitorFG, DMonitorFG, 1500, 1);
+
+//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/PuFC_FG_MS4.root", "NIF");
+//    pHFG->SetNeutronField(Yield, DYield, 27492078.81, 0, 1500, 1);
+//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/PuFC_FG_MS5.root", "NIF");
+//    pHFG->SetNeutronField(Yield, DYield, 33478369.95, 0, 1500, 1);
+//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/PuFC_FG_MS6.root", "NIF");
+//    pHFG->SetNeutronField(Yield, DYield, 30916955.27, 0, 1500, 1);
+//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/PuFC_FG_MS7.root", "NIF");
+//    pHFG->SetNeutronField(Yield, DYield, 54792678.94, 0, 1500, 1);
+
+    pHBG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root", "SB");
     pHBG->SetNeutronField(Yield, DYield, MonitorBG, DMonitorBG, 1500, 1);
+    pHSF = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "SF");
 
     cout << "Created " << Name << endl;
 }
@@ -49,34 +57,18 @@ void PuFC::InitPuVar()
     cout << endl << "Initializing Pu variables.." << endl;
     PuSFT2 = 6.77E10 * 365.24*24*60*60; // Pu-242 spontaneaus fission half-life period in s
     DPuSFT2 = 7E8 * 365.24*24*60*60;
-    MonitorFG = 27492079+33478370+30916955+54792679;
+    MonitorFG = 27492079+33478370+30916955+54792679; // MS#4 - MS#7
     DMonitorFG = MonitorFG * 0.0014;
     MonitorBG = 3623069+28646614+4757385;
     DMonitorBG = MonitorBG * 0.0015;
 
     Double_t L = 1500, DL = 1;
-//    Double_t T[] = {0.936084, 0.942565, 0.949147, 0.955535, 0.962355, 0.968932, 0.974894, 0.981514};
-//    Double_t DT[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-//    Double_t S[] = {0.0999258, 0.0918293, 0.0852001, 0.0811008, 0.0807139, 0.0770468, 0.0685954, 0.0604568};
-//    Double_t DS[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     for (int i = 0; i < NumHist; i++)
     {// Distances source-deposit
         sd[i] = L + 191 - 20.8 * i;
         Dsd[i] = DL;
     }
     cout << "Done: Pu variables" << endl;
-}
-
-
-void PuFC::SetDraw(Plot *p)
-{
-    if (p == 0)
-        return;
-    plot = p;
-    pHFG->SetDraw(p);
-    pHBG->SetDraw(p);
-    pHSF->SetDraw(p);
-    Draw = kTRUE;
 }
 
 
@@ -134,6 +126,7 @@ void PuFC::AnalyzeDtBG()
     Double_t tBG = pHBG->t_live;
     Double_t tSF = pHSF->t_live;
 
+    cout << "Ch   tFG   tBG   tSF   counts   binsBG   binsFG   avBg" << endl;
     for (int i = 0; i < NumHist; i++)
     {
         // Integrate background
@@ -144,9 +137,8 @@ void PuFC::AnalyzeDtBG()
                         tSF * (lim[3][i] - lim[0][i] + 1); // Counted bins * live time
         avBg[i] = counts / tBin;
         DavBg[i] = sqrt(counts) / tBin;
-        if (CommentFlag)
-            cout << " ch " << i+1 << "  t " << tFG << " " << tBG << " " << tSF << "  counts " << counts << "  bins " << lim[1][i]- lim[0][i] + lim[3][i] - lim[2][i] << " " << lim[3][i] - lim[0][i] + 1 << endl <<
-                    "  avBg " << avBg[i] << "+-" << DavBg[i] << endl;
+
+        cout << " " << i+1 << "  " << tFG << "  " << tBG << "  " << tSF << "  " << counts << "  " << lim[1][i]- lim[0][i] + lim[3][i] - lim[2][i] << "  " << lim[3][i] - lim[0][i] + 1 << "  " << avBg[i] << "+-" << DavBg[i] << endl;
     }
     DoneDtBG = kTRUE;
     cout << "Done: TimeDiff background" << endl;
@@ -159,6 +151,11 @@ void PuFC::GetNatoms()
         AnalyzeDt();
     cout << endl << "Calculating effective number of Pu atoms..." << endl;
     cout << " T2SF(Pu-242) = " << PuSFT2 << "+-" << DPuSFT2 << endl;
+    Double_t eMinimum = 0.986;
+    Double_t DeMinimum = 0.010;
+    Double_t cAtoms[NumCh];
+    Double_t DcAtoms[NumCh];
+    cout << "Ch   SF-rate   eff.At.   Atoms" << endl;
     for (int i = 0; i < NumHist; i++)
     {
         Double_t t_live = pHFG->t_live + pHBG->t_live + pHSF->t_live;
@@ -167,7 +164,9 @@ void PuFC::GetNatoms()
                        pHSF->pHDtG[i]->Integral();
         nAtoms[i] = nSF / t_live * PuSFT2 / log(2.0);
         DnAtoms[i] = sqrt(nSF) / t_live * PuSFT2 / log(2.0);
-        cout << " Ch " << i+1 << ", eff. atoms " << nAtoms[i] << "+-" << DnAtoms[i] << endl;
+        cAtoms[i] = nAtoms[i] / eMinimum;
+        DcAtoms[i] = cAtoms[i] * sqrt( pow(DnAtoms[i] / nAtoms[i], 2) + pow(DeMinimum / eMinimum, 2) );
+        cout << " " << i+1 << "   " << nSF / t_live << "+-" << sqrt(nSF) / t_live << "   " << nAtoms[i] << "+-" << DnAtoms[i] << "   " << cAtoms[i] << "+-" << DcAtoms[i] << endl;
     }
     cout << "Done: effective number of Pu atoms" << endl;
     DoneNatoms = kTRUE;
@@ -187,30 +186,14 @@ void PuFC::IsoVec()
 }
 
 
-void PuFC::ExpTrans()
+void PuFC::GetExpT()
 {
-    if (!DoneDt)
-        AnalyzeDt();
-    if (!DoneDtBG)
-        AnalyzeDtBG();
-    cout << endl << "Experimental transmission" << endl;
-
-    Double_t uT[NumCh];
-    Double_t DuT[NumCh];
-    Double_t T[NumCh];
-    Double_t DT[NumCh];
+    cout << endl << "PuFC::GetExpT() experimental transmission" << endl;
     for (int i = 0; i < NumCh; i++)
     {
         Double_t nSF = pHFG->pHDtG[i]->Integral() - nFG[i];
         uT[i] = nFG[i] / nSF; // ExpT := N(n,f) / N(sf)
         DuT[i] = sqrt( pow(DnFG[i] / nFG[i], 2) +
-                       1.0 / nSF ) * uT[i];
-        T[i] = uT[i] * pow(sd[i] / sd[7], 2);
-        DT[i] = DuT[i] * pow(sd[i] / sd[7], 2);
-        if (CommentFlag)
-            cout << " Ch " << i+1 << ", T " << uT[i] << "+-" << DuT[i] << " / " << T[i] << "+-" << DT[i] << endl;
+                   1.0 / nSF ) * uT[i];
     }
-    if (!Draw)
-        return;
-    plot->ExpT(uT, DuT, T, DT);
 }

@@ -22,25 +22,23 @@ Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t 
     // output settings
     CommentFlag = kTRUE; // set manually
     DrawSingle = draw_flag;
-    DrawMulti = kTRUE;
-    if (DrawSingle || DrawMulti)
-        plot = new Plot(FC, Setup);
-
+    DrawMulti = kFALSE;
 
     cout << " Opening " << file_name << endl;
     f = TFile::Open(FileName.c_str(), "UPDATE");
     if (f == 0)
         cout << " Error while opening " << FileName << endl;
+    if (DrawSingle || DrawMulti)
+        plot = new Plot(FC, Setup, f);
     OpenHists();
     SetDistances();
     nProjectiles();
     GetSigma("/home/hoffma93/Programme/ROOT/Data");
     GetEwidth();
     GetTwidth();
-    Projections();
+
     UisoVec[0] = 0.904, DUisoVec[0] = 0.005; // U-235 portion
     UisoVec[1] = 0.0912, DUisoVec[1] = 0.0006; // U-238 portion
-
 }
 
 
@@ -70,7 +68,7 @@ void Sim::OpenHists()
 
 void Sim::SetDistances()
 {// Define distances from front window to deposit in m
-    cout << "Define distances source-deposit..." << endl;
+    cout << endl << "Define distances source-deposit..." << endl;
     if (strcmp(FC.c_str(), "UFC"))
         // PuFC
         for (int i = 0; i < NumCh; i++)
@@ -128,6 +126,7 @@ void Sim::relSigma(Double_t E, Double_t &w, Double_t &Dw)
                         pow(DgU238->Eval(15.0) * UisoVec[1] * numerator / (denominator*denominator), 2) + // U-238 sigma(15MeV)
                         pow(DUisoVec[1]        * (gU238->Eval(E) * gU235->Eval(15.0) - gU238->Eval(15.0) * gU235->Eval(E))
                                                * UisoVec[0] / (denominator*denominator)            , 2) ); // U-238 portion
+        Dw = 0;
     }
 }
 
@@ -158,7 +157,7 @@ void Sim::GetEwidth()
     DEn = sqrt(var);
     cout << " E_n = " << En << " +- " << DEn << " MeV" << endl;
     if (DrawSingle)
-        plot->Source_E(gE, En, DEn);
+        plot->Source_E(gE, En, DEn, 1);
 
     // Energy spectrum's edges
     Double_t dummy = 0;
@@ -188,7 +187,8 @@ void Sim::GetTwidth()
         Double_t binOffset = pH2TvsE[i][0]->GetXaxis()->GetBinLowEdge(0);
         Double_t binWidth = pH2TvsE[i][0]->GetXaxis()->GetBinWidth(0);
         binToFmin[i] = (ToFmin[i] - binOffset) / binWidth;
-        binToFmax[i] = (ToFmax[i] - binOffset) / binWidth;
+//        binToFmax[i] = (ToFmax[i] - binOffset) / binWidth;
+        binToFmax[i] = pH2TvsE[i][0]->GetNbinsX();
         cout << " " << i+1 << "   " << ToFmin[i] << "-" << ToFmax[i] << "   " << binToFmin[i] << "-" << binToFmax[i] << endl;
     }
     cout << "Done: Time width" << endl;
@@ -199,6 +199,8 @@ void Sim::Projections()
 {
     if (!DoneProjectiles)
         nProjectiles();
+    if (!DoneSigma)
+        cout << "No Cross section data!" << endl;
     cout << endl << "Projections..." << endl;
     char name[128] = "";
     for (Int_t i = 0; i < NumCh; i++)
@@ -213,10 +215,16 @@ void Sim::Projections()
         pH1Eproj[i][1]->SetTitle(name);
         if (DrawMulti)
         { // Calculate weighted time spectrum. Could take some time.
+            if (PuFC)
+                plot->Eproj(i, pH1Eproj[i][1], pH1Eproj[i][0], nProj[i]);//, gPu242);
+            else
+                plot->Eproj(i, pH1Eproj[i][1], pH1Eproj[i][0], nProj[i]);
             Int_t NbinsX = pH2TvsE[i][0]->GetNbinsX();
             Int_t NbinsY = pH2TvsE[i][0]->GetNbinsY();
             Double_t xmin = pH2TvsE[i][0]->GetXaxis()->GetBinLowEdge(1);
             Double_t xmax = pH2TvsE[i][0]->GetXaxis()->GetBinLowEdge(NbinsX + 1);
+            Double_t ymin = pH2TvsE[i][0]->GetYaxis()->GetBinLowEdge(1);
+            Double_t ymax = pH2TvsE[i][0]->GetYaxis()->GetBinLowEdge(NbinsX + 1);
             sprintf(name, "%s_%s_ProjT_%i", FC.c_str(), Setup.c_str(), i+1);
             pH1Tproj[i][0] = new TH1F(name, name, NbinsX, xmin, xmax);
             sprintf(name, "%s, %s, Time profile, Ch.%i; t / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
@@ -225,11 +233,21 @@ void Sim::Projections()
             pH1Tproj[i][1] = new TH1F(name, name, NbinsX, xmin, xmax);
             sprintf(name, "%s, %s, Time profile, scattered, Ch.%i; t / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
             pH1Tproj[i][1]->SetTitle(name);
+            sprintf(name, "%s_%s_ProjEeff_%i", FC.c_str(), Setup.c_str(), i+1);
+            pH1Eeff[i][0] = new TH1F(name, name, NbinsY, ymin, ymax);
+            sprintf(name, "%s, %s, Effective neutron spectrum", FC.c_str(), Setup.c_str());
+            pH1Eeff[i][0]->SetTitle(name);
+            sprintf(name, "%s_%s_ProjEeff_Sc_%i", FC.c_str(), Setup.c_str(), i+1);
+            pH1Eeff[i][1] = new TH1F(name, name, NbinsY, ymin, ymax);
+            sprintf(name, "%s, %s, Effective scattered neutron spectrum", FC.c_str(), Setup.c_str());
+            pH1Eeff[i][1]->SetTitle(name);
             for (Int_t binE = 0; binE <= binEmax; binE++)
             {
                 Double_t E = pH1Eproj[i][0]->GetBinCenter(binE);
                 Double_t w = 0, Dw = 0;
                 relSigma(E, w, Dw);
+                pH1Eeff[i][0]->AddBinContent(binE, w * pH1Eproj[i][0]->GetBinContent(binE));
+                pH1Eeff[i][1]->AddBinContent(binE, w * pH1Eproj[i][1]->GetBinContent(binE));
                 for (Int_t binT = 0; binT <= NbinsY + 1; binT ++)
                 {
                     pH1Tproj[i][0]->AddBinContent(binT, w * pH2TvsE[i][0]->GetBinContent(binT, binE));
@@ -240,6 +258,7 @@ void Sim::Projections()
                 }
             } // for(binE)
             plot->DtPeakForm(i, pH1Tproj[i][1], pH1Tproj[i][0], Emin, nProj[i]);
+//            plot->Eproj(i, pH1Eeff[i][1], pH1Eeff[i][0], nProj[i]);
         } // if(Draw)
     } // for(i)
     cout << "Done: Projections" << endl;
@@ -261,7 +280,7 @@ void Sim::nProjectiles()
 {
     cout << endl << "Get number of projectiles towards deposits..." << endl;
     char name[64] = "";
-    cout << " Ch  projetiles" << endl;
+    cout << " Ch  projectiles" << endl;
     for (int i = 0; i < NumCh; i++)
     {
         sprintf(name, "Source/Source_Theta_Ch.%i", i+1);
@@ -285,8 +304,11 @@ void Sim::DirectN()
                       : nN(i, binEmin, binEmax, 0);
         DnDirect[i] = sqrt(nDirect[i]);
         cout << " " << i+1 << "   " << nDirect[i] << "+-" << DnDirect[i] << endl;
+        if (DrawMulti)
+            plot->TvsE(i, pH2TvsE[i][0], binToFmin[i], binToFmax[i], nDirect[i]);
     }
     cout << "Done: Direct neutrons" << endl;
+    DoneDirect = kTRUE;
 }
 
 
@@ -384,3 +406,55 @@ void Sim::ScatEff()
 }
 
 
+void Sim::SigmaEff()
+{
+    cout << endl << "Efficient cross sections..." << endl;
+    cout << " Ch  Direct/b   Scattered/b" << endl;
+    Double_t sigma15 = gPu242->Eval(15.0);
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        CsDir[i] = sigma15 * effDirect[i] / nDirect[i];
+        CsSc[i]  = sigma15 * effScat[i] / nScat[i];
+        cout << " " << i+1 << "   " << CsDir[i] << "   " << CsSc[i] << endl;
+    }
+    cout << "Done: efficient cross sections" << endl;
+}
+
+
+void Sim::Calculate()
+{
+    Projections();
+    DirectN();
+    DirectEff();
+    ScatN();
+    ScatEff();
+    SigmaEff();
+}
+
+
+void Sim::PrintEffN()
+{
+    if (!DoneProjections)
+        Projections();
+    if (!DoneSigma)
+        cout << "No cross section data!" << endl;
+    cout << "E   w   {dir   sc}" << endl;
+    for (Int_t binE = 1; binE <= pH1Eproj[0][0]->GetNbinsX(); binE++)
+    {
+        Double_t E = pH1Eproj[0][0]->GetBinCenter(binE), w, Dw;
+        relSigma(E, w, Dw);
+        cout << E << " " << w << " ";
+        for (Int_t i = 0; i < NumCh; i++)
+        {
+            if (tID)
+            {
+                cout << pH1Eproj[i][0]->GetBinContent(binE) - pH1Eproj[i][1]->GetBinContent(binE) << " "
+                     << pH1Eproj[i][1]->GetBinContent(binE) << " ";
+            } else {
+                cout << (binE < binEmin ? 0 : pH1Eproj[i][0]->GetBinContent(binE)) << " "
+                     << (binE < binEmin ? pH1Eproj[i][0]->GetBinContent(binE) : 0) << " ";
+            }
+        }
+        cout << endl;
+    }
+}

@@ -37,7 +37,8 @@ HEADERS += include/Hist.h \
            include/PuFC.h \
            include/UFC.h \
            include/AnaSim.h \
-           include/Plot.h
+           include/Plot.h \
+           include/Sim.h
 
 SOURCES += \
     main.cpp \
@@ -47,7 +48,8 @@ SOURCES += \
     src/PuFC.cpp \
     src/UFC.cpp \
     src/AnaSim.cpp \
-    src/Plot.cpp
+    src/Plot.cpp \
+    src/Sim.cpp
 
 !exists ($(ROOTSYS)/include/rootcintrule.pri):message ("The rootcintrules.pri was not found")
 exists ($(ROOTSYS)/include/rootcintrule.pri) {

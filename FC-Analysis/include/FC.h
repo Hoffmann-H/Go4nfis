@@ -16,7 +16,7 @@ public:
     string Name;
     string SimPath;
     Bool_t CommentFlag;
-    Bool_t Draw;
+    Bool_t DrawSingle, DrawMulti;
     Plot *plot;
     Hist *pHFG;
     Hist *pHBG;
@@ -33,18 +33,20 @@ public:
     virtual void AnalyzeDtBG() = 0;//{cout << "virtual FC::AnalyzeDtBG. Don't call me" << endl;}
     virtual void GetNatoms() = 0;
     virtual void IsoVec() = 0;
-    virtual void ExpTrans() = 0;
-    virtual void SetDraw(Plot *p) = 0;
-    void InitVar();
+    virtual void GetExpT() = 0;
+    void ExpTrans();
+    void InitVar(Bool_t draw);
     void GetLimits(Double_t n = 3);
     void AnalyzeDt();
     void ScatCorrDiff();
     void ScatCorrFit();
     void ScatCorrSim();
     void CrossSection();
-    void GetSimRes();
+    void GetSimFg();
+    void GetSimBg();
     void Corrections();
-    void CompareShadowCone(string BgPath);
+    void CompareShadowCone();
+    void CompareTransmission();
 
     // Workflow variables
     Bool_t DoneQDC,
@@ -54,10 +56,12 @@ public:
            DoneDtBG,
            DoneDt,
            DoneScatCorr,
-           DoneSim,
+           DoneSimFg,
+           DoneSimBg,
            DoneIso,
            DoneRawCS,
-           DoneCorrections;
+           DoneCorrections,
+           DoneTransmission;
 
     // Physics
     Double_t u;
@@ -100,8 +104,12 @@ public:
     Double_t DfIsoVec;
     Double_t fTS[NumCh];
     Double_t DfTS[NumCh];
-//    Double_t Transm[NumHist]; // transmission factor
-//    Double_t DTransm[NumHist];
+    Double_t uT[NumCh]; // NIF over SF rate
+    Double_t DuT[NumCh];
+    Double_t ExpT[NumHist]; // Experimental transmission factor
+    Double_t DExpT[NumHist];
+    Double_t SimT[NumHist]; // Simulated transmission factor
+    Double_t DSimT[NumHist];
     Double_t pDirect[NumHist][3]; // Direct portion: ratio of direct to all fissions
     Double_t DpDirect[NumHist][3]; // 2nd index: 0 Experimental, 1 one sim, 2 shadow cone sim
 //    Double_t nInc[NumHist]; // Incident neutron fluence = #neutrons / area

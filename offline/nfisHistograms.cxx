@@ -365,7 +365,7 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
         sprintf(obj_title,"Time Diff to Acc (coarse bin, pulse height refused),"
                           " channel %i", i_ch+1);
         pH1AnaDtHZDR_r[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
-                                            107000,62000.,80000.,
+                                            107000,-535000.,535000.,
                                            "#font[12]{t} / ch", "counts");
 
         ////QDC (low gain)

@@ -15,10 +15,13 @@ FC::~FC()
 }
 
 
-void FC::InitVar()
+void FC::InitVar(Bool_t draw)
 {
     cout << endl << "Initializing common variables..." << endl;
-    Draw = kFALSE;
+    DrawSingle = draw;
+    DrawMulti = kFALSE;
+    if (DrawSingle || DrawMulti)
+        plot = new Plot(Name, "Open");
     DoneQDC = kFALSE;
     DoneThresholds = kFALSE;
     DoneLimits = kFALSE;
@@ -26,9 +29,11 @@ void FC::InitVar()
     DoneDtBG = kFALSE;
     DoneDt = kFALSE;
     DoneScatCorr = kFALSE;
-    DoneSim = kFALSE;
+    DoneSimFg = kFALSE;
     DoneIso = kFALSE;
     DoneRawCS = kFALSE;
+    DoneCorrections = kFALSE;
+    DoneTransmission = kFALSE;
 
     u = 1.660539E-24;
     DtBgLow = 63600; // QDC channels
@@ -79,7 +84,10 @@ void FC::AnalyzeDt()
     cout << endl << "Analyzing TimeDiff peaks..." << endl;
 
     Double_t PeakInt;
-    cout << "Ch   nFG   nBG" << endl;
+    Double_t tFg = pHFG->t_live;
+    Double_t tBg = pHBG->t_live;
+
+    cout << "Ch   rFG   rBG" << endl;
     for (int i = 0; i < NumHist; i++)
     {
         // Integrate peaks: FG
@@ -91,8 +99,8 @@ void FC::AnalyzeDt()
         PeakInt = pHBG->pHDtG[i]->Integral(lim[1][i], lim[2][i]);
         nBG[i] = PeakInt - (lim[2][i] - lim[1][i] + 1) * pHBG->t_live * avBg[i];
         DnBG[i] = sqrt(PeakInt + pow((lim[2][i] - lim[1][i] + 1) * pHBG->t_live * DavBg[i], 2));
-        cout << " " << i+1 << "   " << nFG[i] << "+-" << DnFG[i] << "   " << nBG[i] << "+-" << DnBG[i] << endl;
-        if (Draw)
+        cout << " " << i+1 << "   " << nFG[i] / tFg << "+-" << DnFG[i] / tFg << "   " << nBG[i] / tBg << "+-" << DnBG[i] / tBg << endl;
+        if (DrawMulti)
         {
             plot->Dt(i, pHFG->pHDtG[i], nFG[i], DnFG[i],
                      lim[0][i], lim[1][i], lim[2][i], lim[3][i], pHFG->t_live * avBg[i], "FG");
@@ -189,16 +197,10 @@ void FC::ScatCorrSim()
 {
     if (!DoneDt)
         AnalyzeDt();
-    if (!DoneSim)
-        GetSimRes();
+    if (!DoneSimFg)
+        GetSimFg();
     cout << endl << "Scattering correction: Simulaion" << endl;
-//    for (int i = 0; i < NumHist; i++)
-//    {
-////        nfDirect[i] = nFG[i] * (1.0 - InScat[i]);
-////        DnfDirect[i] = sqrt( pow(DnFG[i] * (1.0 - InScat[i]), 2) +
-////                            pow(nFG[i] * DInScat[i], 2) );
-//        cout << " ch " << i+1 << " " << S[i] << " +- " << DInScat[i] << endl;
-//    }
+
     DoneScatCorr = kTRUE;
     cout << "Done: Scattering correction" << endl;
 }
@@ -214,50 +216,67 @@ void FC::CrossSection()
     if (!DoneNatoms)
         GetNatoms();
     cout << endl << "Uncorrected cross section..." << endl;
-//    Double_t sumCS = 0; // cross section all channels' sum
-//    Double_t D2sumCS = 0;
-//    Double_t avCS; // average cross section
-//    Double_t DavCS;
+    Double_t sumCS = 0; // cross section all channels' sum
+    Double_t D2sumCS = 0;
+    Double_t avCS; // average cross section
+    Double_t DavCS;
     for (int i = 0; i < NumHist; i++)
     {
         /// Cross section ////////////////////////////////////////////////////////////
-        uCS[i] = nFG[i] / (nAtoms[i] * pHFG->NeutronFluence[i]); ///////////////////
+        uCS[i] = 1.E22 * nFG[i] / (nAtoms[i] * pHFG->NeutronFluence[i]); /////////////
         //////////////////////////////////////////////////////////////////////////////
 
-        DuCS[i] = sqrt( pow(DnFG[i] / (nAtoms[i] * pHFG->NeutronFluence[i]), 2) +
+        DuCS[i] = 1.E22 * sqrt( pow(DnFG[i] / (nAtoms[i] * pHFG->NeutronFluence[i]), 2) +
                        pow(nFG[i] * DnAtoms[i] / (nAtoms[i] * nAtoms[i] * pHFG->NeutronFluence[i]), 2) +
                        pow(nFG[i] * pHFG->DNeutronFluence[i] / (nAtoms[i] * pHFG->NeutronFluence[i]*pHFG->NeutronFluence[i]), 2) );
-//        sumCS += uCS[i];
-//        D2sumCS += DuCS[i] * DuCS[i];
+        sumCS += uCS[i];
+        D2sumCS += DuCS[i] * DuCS[i];
         cout << " Ch " << i+1 << endl;
         if (CommentFlag)
             cout << "   nFluence " << pHFG->NeutronFluence[i] << "+-" << pHFG->DNeutronFluence[i] << endl <<
                     "   nAtoms " << nAtoms[i] << "+-" << DnAtoms[i] << endl <<
                     "   Foreground " << nFG[i] << "+-" << DnFG[i] << endl;
-        cout << "  raw CS = " << uCS[i] * 1.E22 << "+-" << DuCS[i] * 1.E22 << " barn" << endl;
+        cout << "  raw CS = " << uCS[i] << "+-" << DuCS[i] << " barn" << endl;
     }
-//    avCS = sumCS / NumHist;
-//    DavCS = sqrt(D2sumCS) / NumHist;
-//    cout << " Average: sigma = " << avCS << "+-" << DavCS << endl;
+    avCS = sumCS / NumHist;
+    DavCS = sqrt(D2sumCS) / NumHist;
+    cout << " Average: sigma = " << avCS << "+-" << DavCS << endl;
     DoneRawCS = kTRUE;
     cout << "Done: raw cross section" << endl;
 }
 
 
-void FC::GetSimRes()
+void FC::GetSimFg()
 {
-    cout << endl << "Simulation results requested. Starting " << Name << " analysis..." << endl;
-    sim = new AnaSim(SimPath, Name, "Open", plot);
+    cout << endl << "Simulation results requested. Starting " << Name << " foreground simulation analysis..." << endl;
+    sim = new AnaSim(Name, 1, plot);
     sim->Corrections();
     for (Int_t i = 0; i < NumCh; i++)
     {
         fTS[i] = sim->F[i];
         DfTS[i] = sim->DF[i];
-        pDirect[i][1] = sim->S[i]; // simplified identity. Assuming equal spectra for Direct and Full-E neutrons.
+        pDirect[i][1] = sim->S[i];
         DpDirect[i][1] = sim->DS[i];
+        SimT[i] = sim->T[i];
+        DSimT[i] = sim->DT[i];
     }
-    DoneSim = kTRUE;
-    cout << "Done: Got simulation results" << endl;
+    DoneSimFg = kTRUE;
+    cout << "Done: Got foreground simulation" << endl;
+}
+
+
+void FC::GetSimBg()
+{
+    if (!DoneSimFg)
+        GetSimFg();
+    cout << endl << "Simulation results requested. Starting " << Name << " background simulation analysis..." << endl;
+    sim->ShadowCone();
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        pDirect[i][2] = sim->SC[i];
+        DpDirect[i][2] = sim->DSC[i];
+    }
+    DoneSimBg = kTRUE;
 }
 
 
@@ -278,70 +297,68 @@ void FC::Corrections()
 //        cout << InScat[i] << "   ";
 //        cout << fIsoVec - sIsoVec / InScat[i] * Transm[i] / uCS[i] << "" << endl;
 //    }
+    if (strcmp(Name.c_str(), "UFC"))
+        cout << "CS(14.97 MeV) = " << sim->Fg->gPu242->Eval(14.97) << "+-" << sim->Fg->DgPu242->Eval(14.97) << endl;
+    else
+        cout << "CS(14.97 MeV) = " << sim->Fg->gU235->Eval(14.97) << "+-" << sim->Fg->DgU235->Eval(14.97) << endl;
     cout << "Ch   uncorrected CS   corrected CS" << endl;
+    Double_t sUCS = 0, sCS = 0, D2UCS = 0, D2CS = 0;
     for (int i = 0; i < NumCh; i++)
     {
-        CS[i] = fIsoVec * fTS[i] * uCS[i] - sIsoVec;
-        Double_t uncert[] = {DfIsoVec * fTS[i] * uCS[i],
+        CS[i] = fTS[i] * uCS[i]/* * fIsoVec - sIsoVec*/;
+        Double_t uncert[] = {0,//DfIsoVec * fTS[i] * uCS[i],
                              fIsoVec * DfTS[i] * uCS[i],
                              fIsoVec * fTS[i] * DuCS[i],
-                             DsIsoVec };
+                             0//DsIsoVec
+                            };
         DCS[i] = sqrt( pow(uncert[0], 2) +
                        pow(uncert[1], 2) +
                        pow(uncert[2], 2) +
                        pow(uncert[3], 2) );
         cout << " " << i+1 << ",  " << uCS[i] * 1.E22 << "+-" << DuCS[i] * 1.E22 << " barn,  " << CS[i] * 1.E22 << "+-" << DCS[i] * 1.E22 << " barn" << endl;
-        cout << "  unc: f " << uncert[0] << ", TS " << uncert[1] << ", u " << uncert[2] << ", s " << uncert[3] << endl;
+//        cout << "  unc: f " << uncert[0] << ", TS " << uncert[1] << ", u " << uncert[2] << ", s " << uncert[3] << endl;
+        sUCS += uCS[i];
+        D2UCS += pow(DuCS[i], 2);
+        sCS += CS[i];
+        D2CS += pow(DCS[i], 2);
     }
+    cout << "Average: " << sUCS / 8 * 1.E22 << "+-" << sqrt(D2UCS) / 8 * 1.E22 << "    " << sCS / 8 * 1.E22 << "+-" << sqrt(D2CS) / 8 * 1.E22 << endl;
     DoneCorrections = kTRUE;
     cout << "Done: Corrections" << endl;
+    if (!DrawSingle)
+        return;
+    plot->Result(uCS, DuCS, CS, DCS);
 }
 
 
-void FC::CompareShadowCone(string BgPath)
+void FC::CompareShadowCone()
 {
     if (!DoneScatCorr)
         ScatCorrDiff();
-    if (!DoneSim)
-        GetSimRes();
-    cout << "FC::CompareShadowCone(): sim->nProj = " << sim->nProj[0] << endl;
-    AnaSim *simBg = new AnaSim(BgPath, Name, "SB", plot);
-    simBg->Corrections();
+    if (!DoneSimBg)
+        GetSimBg();
+
     cout << endl << "Comparing methods for In-scattering contribution..." << endl;
     cout << "Foreground" << endl <<
-            " " << sim->nProj[0] << " Projectiles" << endl <<
-            " " << sim->nDirect[0] << " direct neutrons" << endl <<
-            " " << sim->effFullE[0] << " effective Full-E neutrons" << endl <<
-            " " << sim->effSc[0] << " effective scattered neutrons" << endl;
+            " " << sim->Fg->nProj[0] << " Projectiles" << endl <<
+            " " << sim->Fg->nDirect[0] << " direct neutrons" << endl <<
+            " " << sim->Fg->effDirect[0] << " effective direct neutrons" << endl <<
+            " " << sim->Fg->effScat[0] << " effective scattered neutrons" << endl;
     cout << "Background" << endl <<
-            " " << simBg->nProj[0] << " Projectiles" << endl <<
-            " " << simBg->nDirect[0] << " direct neutrons" << endl <<
-            " " << simBg->effFullE[0] << " effective Full-E neutrons" << endl <<
-            " " << simBg->effFullE[0] + simBg->effSc[0] << " effective neutrons" << endl;
+            " " << sim->Bg->nProj[0] << " Projectiles" << endl <<
+            " " << sim->Bg->nDirect[0] << " direct neutrons" << endl <<
+            " " << sim->Bg->effDirect[0] << " effective direct neutrons" << endl <<
+            " " << sim->Bg->effDirect[0] + sim->Bg->effScat[0] << " effective neutrons" << endl;
     cout << " Ch   Exp   Sim(1)   Sim(2)" << endl;
     for (Int_t i = 0; i < NumCh; i++)
     {
-//        cout << "   " << simBg->effSc[i] << "  " << sim->effSc[i] << "  " << sim->nProj[i] << "  " << simBg->nProj[i] << endl;
-        pDirect[i][2] = 1.0 - (simBg->effFullE[i] + simBg->effSc[i]) / (sim->effFullE[i] + sim->effSc[i]) * sim->nProj[i] / simBg->nProj[i];
-        DpDirect[i][2] = sqrt( pow(sim->DeffFullE[i] * (simBg->effFullE[i] + simBg->effSc[i]), 2) / pow(sim->effFullE[i] + sim->effSc[i], 4) +
-                               pow(sim->DeffSc[i] * (simBg->effFullE[i] + simBg->effSc[i]), 2) / pow(sim->effFullE[i] + sim->effSc[i], 4) +
-                               pow(simBg->DeffFullE[i] / (sim->effFullE[i] + sim->effSc[i]), 2) +
-                               pow(simBg->DeffSc[i] / (sim->effFullE[i] + sim->effSc[i]), 2) ); // nProj: exact
         cout << " " << i+1 << "  " << pDirect[i][0] << "+-" << DpDirect[i][0]
                            << "  " << pDirect[i][1] << "+-" << DpDirect[i][1]
                            << "  " << pDirect[i][2] << "+-" << DpDirect[i][2] << endl;
     }
-//    cout << "Uncertainty influences on shadow cone simulation" << endl
-//         << " Ch   nFis(Fg)   nFis(Bg)" << endl;
-//    for (Int_t i = 0; i < NumCh; i++)
-//    {
-//        Double_t unc[] = {sim->DnFis[i] * simBg->nFis[i] / sim->nFis[i] / sim->nFis[i] * sim->nProj[i] / simBg->nProj[i],
-//                          simBg->DnFis[i] / sim->nFis[i] * sim->nProj[i] / simBg->nProj[i]};
-//        cout << " " << i+1 << "   " << unc[0] << "   " << unc[1] << endl;
-//    }
-    if (!Draw)
-//        return;
-        plot = new Plot(Name, "Open");
+
+    if (!DrawSingle)
+        return;
     Double_t pExp[NumCh];
     Double_t DpExp[NumCh];
     Double_t pSim1[NumCh];
@@ -359,6 +376,46 @@ void FC::CompareShadowCone(string BgPath)
     }
 
     plot->CompSc(&(pExp[0]), &(DpExp[0]), &(pSim1[0]), &(DpSim1[0]), &(pSim2[0]), &(DpSim2[0]));
+}
+
+
+void FC::CompareTransmission()
+{
+    if (!DrawSingle)
+        return;
+    if (!DoneSimFg)
+        GetSimFg();
+    if (!DoneTransmission)
+        ExpTrans();
+    plot->CompT(ExpT, DExpT, SimT, DSimT);
+}
+
+
+void FC::ExpTrans()
+{
+    if (!DoneDt)
+        AnalyzeDt();
+    if (!DoneDtBG)
+        AnalyzeDtBG();
+    GetExpT();
+    if (!DoneSimFg)
+        GetSimFg();
+    cout << endl << "Experimental transmission" << endl;
+
+    cout << " Ch   expT   simT   anaT" << endl;
+    for (int i = 0; i < NumCh; i++)
+    {
+        ExpT[i] = uT[i] * pow(sd[i] / sd[7], 2);
+        DExpT[i] = DuT[i] * pow(sd[i] / sd[7], 2);
+        if (CommentFlag)
+            cout << " " << i+1 << "   " << ExpT[i] << "+-" << DExpT[i] << "   " << SimT[i] << "+-" << DSimT[i] << endl;
+    }
+    //
+    cout << "Done: Experimental transmission" << endl;
+    DoneTransmission = kTRUE;
+    if (!DrawSingle)
+        return;
+    plot->ExpT(ExpT, DExpT, SimT, DSimT);
 }
 
 

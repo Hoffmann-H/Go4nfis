@@ -141,7 +141,7 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
     DL = Dl;
     Double_t r;
     if(CommentFlag)
-        cout << "Neutron flux density" << endl;
+        cout << endl << " Ch   nFluence[mm^-2]   nFlux[cm^-2 s^-1]" << endl;
     for (int i = 0; i < NumHist; i++)
     {
         if (UFC)
@@ -153,7 +153,7 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
                                 pow(Yield * DMonitor / (r*r), 2) +
                                 pow(Yield * Monitor * 2*DL / (r*r*r), 2) );
         if(CommentFlag)
-            cout << "ch " << i+1 << ": " << NeutronFluence[i] << " +- " << DNeutronFluence[i] << endl;
+            cout << " " << i+1 << "   " << NeutronFluence[i] << " +- " << DNeutronFluence[i] << "   " << NeutronFluence[i] / t_live << " +- " << DNeutronFluence[i] / t_live << endl;
     }
 }
 
@@ -518,6 +518,8 @@ void Hist::GetTimes()
     // Include Overflow bin for the case of wrong binning.
     t_live = pHtLive->Integral(0, pHtLive->GetNbinsX()+1);
     t_real = pHtReal->Integral(0, pHtReal->GetNbinsX()+1);
+    if (CommentFlag)
+        cout << endl << "t_real / t_live = " << t_real / t_live << endl;
 }
 
 void Hist::DeadTimeCorrection(Bool_t peak)

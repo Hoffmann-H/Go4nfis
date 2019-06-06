@@ -12,6 +12,8 @@ class Sim
 public:
     Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t draw_flag);
     ~Sim();
+    void Calculate();
+    void PrintEffN();
     Bool_t CommentFlag;
     string FileName;
     TFile *f;
@@ -29,6 +31,7 @@ public:
     Double_t En, DEn; // neutron source energy
     TH2F *pH2TvsE[NumCh][2];
     TH1F *pH1Eproj[NumCh][2]; // time-gated projection on energy axis
+    TH1F *pH1Eeff[NumCh][2];
     TH1F *pH1Tproj[NumCh][2];
     Double_t Emin, Emax;
     Int_t binEmin, binEmax;
@@ -46,17 +49,20 @@ public:
     Double_t DnScat[NumCh];
     Double_t effScat[NumCh];
     Double_t DeffScat[NumCh];
+    Double_t CsDir[NumCh];
+    Double_t DCsDir[NumCh];
+    Double_t CsSc[NumCh];
+    Double_t DCsSc[NumCh];
 
     Int_t nN(Int_t ch, Int_t binElow, Int_t binEup, Int_t Sc = 0);
     Double_t effN(Int_t ch, Int_t binElow, Int_t binEup, Int_t Sc = 0);
     Double_t DeffN(Int_t ch, Int_t binElow, Int_t binEup, Int_t Sc = 0);
 
-    void ScatEff();
+    void relSigma(Double_t E, Double_t &w, Double_t &Dw);
 private:
     void OpenHists();
     void SetDistances();
     void GetSigma(string path);
-    void relSigma(Double_t E, Double_t &w, Double_t &Dw);
     void nProjectiles();
     void GetEwidth();
     void GetTwidth();
@@ -64,6 +70,8 @@ private:
     void DirectN();
     void DirectEff();
     void ScatN();
+    void ScatEff();
+    void SigmaEff();
 
     Double_t ToF(Double_t Ekin, Double_t FlightPath);
 
@@ -75,8 +83,4 @@ private:
             DoneTwidth,
             DoneProjections,
             DoneDirect;
-//            DoneToFwidth,
-//            DoneProjection,
-//            DoneDirect,
-//            DoneFis,
 };

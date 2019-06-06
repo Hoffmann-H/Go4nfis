@@ -9,8 +9,8 @@ UFC::UFC(Bool_t draw)
     InitVar(draw);
     InitUVar();
 
-//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF");
-//    pHFG->SetNeutronField(Yield, DYield, MonitorFG, DMonitorFG, 1500, 1);
+    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF");
+    pHFG->SetNeutronField(Yield, DYield, MonitorFG, DMonitorFG, 1500, 1);
 
 //    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_2.root");
 //    pHFG->SetNeutronField(Yield, DYield, 9698643, 0.02 * 9698643, 1500, 1);
@@ -18,13 +18,11 @@ UFC::UFC(Bool_t draw)
 //    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_3.root");
 //    pHFG->SetNeutronField(Yield, DYield, 12621803, 0.02 * 12621803, 1500, 1);
 
-    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_4.root");
-    pHFG->SetNeutronField(Yield, DYield, 13133947, 0.02 * 13133947, 1500, 1);
+//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_4.root");
+//    pHFG->SetNeutronField(Yield, DYield, 13133947, 0.02 * 13133947, 1500, 1);
 
     //    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_2.root");
     //    pHFG->SetNeutronField(Yield, DYield, 9698643, 0.02 * 9698643, 1500, 1);
-
-
 
     pHBG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root", "SB");
     pHBG->SetNeutronField(Yield, DYield, MonitorBG, DMonitorBG, 1500, 1);

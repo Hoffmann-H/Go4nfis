@@ -10,15 +10,14 @@ class PuFC : public FC
 {
 public:
     Hist *pHSF;
-    PuFC(Plot *p = 0);
+    PuFC(Bool_t draw);
     ~PuFC();
     void AnalyzeQDC() override;
     void HardCodedThresholds() override;
     void AnalyzeDtBG() override;
     void GetNatoms() override;
     void IsoVec() override;
-    void ExpTrans() override;
-    void SetDraw(Plot *p);
+    void GetExpT() override;
     void plt();
 
 private:
