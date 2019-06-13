@@ -2,41 +2,103 @@
 
 using namespace std;
 
-Xsection::Xsection()
+Xsection::Xsection(Bool_t draw)
 {
     CommentFlag = kFALSE;
-    SetParam();
-
-    pHNIF = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "NIF");
-    pHNIF->SetNeutronField(Yield, DYield, MonitorNIF, DMonitorNIF, 1500, 1);
-    pHSB  = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root", "SB");
-    pHSB->SetNeutronField(Yield, DYield, MonitorSB, DMonitorSB, 1500, 1);
-    pHUG  = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "SF");
-//    pHNIF->DoAnalyzeQDC();
-//    pHSB ->DoAnalyzeQDC();
-//    pHUG ->DoAnalyzeQDC();
-    CalculateThresholds();
-    DoAnalyzeDt("PuFC", 0);
-    CalculateNPu();
-//    CalculateEfficiency();
-    Evaluation1();
-
-//    Evaluation2();
-//    Evaluation3();
-
-//    pHUNIF = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF", "UFC");
-//    pHUNIF->SetNeutronField(Yield, DYield, MonitorUNIF, DMonitorUNIF, 1500, 1);
-//    pHUSB = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root", "SB", "UFC");
-//    pHUSB->SetNeutronField(Yield, DYield, MonitorUSB, DMonitorUSB, 1500, 1);
-
-//    pHUNIF->DoAnalyzeQDC();
-//    pHUSB->DoAnalyzeQDC();
-//    DoAnalyzeDt("UFC", 0);
-//    Evaluation4();
-
-//    CompareFiles("/home/hoffma93/Programme/Go4nfis/offline/results/test", 191, 204);
+    Draw = draw;
+    Pu = new PuFC(Draw);
+    U = new UFC(Draw);
+    simPu = new AnaSim("PuFC", 1, 0);
+    simU = new AnaSim("UFC", 1, 0);
 }
 
+
+void Xsection::RelativeCS()
+{
+    cout << endl << "Relative Cross section 242Pu/235U..." << endl;
+    Double_t cPu[NumCh];
+    Double_t DcPu[NumCh];
+    Double_t cU[NumCh];
+    Double_t DcU[NumCh];
+    Double_t nPu[NumCh];
+    Double_t DnPu[NumCh];
+    Double_t nU[NumCh];
+    Double_t DnU[NumCh];
+    Double_t flPu[NumCh];
+    Double_t DflPu[NumCh];
+    Double_t flU[NumCh];
+    Double_t DflU[NumCh];
+    Pu->AnalyzeDt();
+    Pu->GetNatoms();
+    simPu->Corrections();
+    Double_t sum_cPu = 0;
+    Double_t D2sum_cPu = 0;
+    Double_t sum_nflPu = 0;
+    Double_t D2sum_nflPu = 0;
+    Double_t sum_sigmaPu = 0;
+    Double_t D2sum_sigmaPu = 0;
+    Double_t sigma, D2sigma, f, Df;
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        cout << "Channel " << i+1 << endl;
+        cPu[i] = Pu->nFG[i]; DcPu[i] = Pu->DnFG[i];
+        sum_cPu += cPu[i]; D2sum_cPu += pow(DcPu[i], 2);
+        cout << " Pu(n,f) counts: " << cPu[i] << "+-" << DcPu[i] << endl;
+        nPu[i] = Pu->nAtoms[i]; DnPu[i] = Pu->DnAtoms[i];
+        cout << " 242Pu atoms: " << nPu[i] << "+-" << DnPu[i] << endl;
+        flPu[i] = Pu->pHFG->NeutronFluence[i]; DflPu[i] = Pu->pHFG->DstatNeutronFluence[i];
+        sum_nflPu += nPu[i] * flPu[i]; D2sum_nflPu += pow(flPu[i] * DnPu[i], 2) + pow(nPu[i] * DflPu[i], 2);
+        cout << " Pu n fluence: " << flPu[i] << "+-" << DflPu[i] << " mm^-2" << endl;
+        f = simPu->F[i]; Df = simPu->DF[i];
+        cout << " Pu T&S correction factor: " << f << "+-" << Df << endl;
+        sigma = f * cPu[i] / (nPu[i] * flPu[i]) * 1.E22;
+        D2sigma = pow(sigma, 2) * (pow(Df / f, 2) +
+                                   pow(DcPu[i] / cPu[i], 2) +
+                                   pow(DnPu[i] / nPu[i], 2) +
+                                   pow(DflPu[i] / flPu[i], 2));
+        sum_sigmaPu += sigma;
+        D2sum_sigmaPu += D2sigma;
+        cout << " Cross section: " << sigma << "+-" << sqrt(D2sigma) << endl;
+    }
+    U->AnalyzeDt();
+    U->GetNatoms();
+    simU->Corrections();
+    Double_t sum_cU = 0;
+    Double_t D2sum_cU = 0;
+    Double_t sum_nflU = 0;
+    Double_t D2sum_nflU = 0;
+    Double_t sum_sigmaU = 0;
+    Double_t D2sum_sigmaU = 0;
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        cout << "Channel " << i+1 << endl;
+        cU[i] = U->nFG[i]; DcU[i] = U->DnFG[i];
+        sum_cU += cU[i]; D2sum_cU += pow(DcU[i], 2);
+        cout << " U(n,f) counts: " << cU[i] << "+-" << DcU[i] << endl;
+        nU[i] = U->n235[i]; DnU[i] = U->Dn235[i];
+        cout << " 235U atoms: " << nU[i] << "+-" << DnU[i] << endl;
+        flU[i] = U->pHFG->NeutronFluence[i]; DflU[i] = U->pHFG->DstatNeutronFluence[i];
+        sum_nflU += nU[i] * flU[i]; D2sum_nflU += pow(flU[i] * DnU[i], 2) + pow(nU[i] * DflU[i], 2);
+        cout << " U n fluence: " << flU[i] << "+-" << DflU[i] << " mm^-2" << endl;
+        f = simU->F[i]; Df = simU->DF[i];
+        cout << " U T&S correction factor: " << f << "+-" << Df << endl;
+        Double_t sigma_raw = f * cU[i] / (nU[i] * flU[i]) * 1.E22 / U->frac235;
+        sigma = sigma_raw - U->frac238 * U->sigma238 / U->frac235;
+        D2sigma = pow(sigma, 2) * (pow(Df / f, 2) +
+                                   pow(DcU[i] / cU[i], 2) +
+                                   pow(DnU[i] / nU[i], 2) +
+                                   pow(DflU[i] / flU[i], 2)) +
+                  pow(U->Dfrac238 * U->sigma238 / U->frac235, 2) +
+                  pow(U->Dfrac235 * U->frac238 * U->sigma238 / (U->frac235*U->frac235), 2);
+        sum_sigmaU += sigma;
+        D2sum_sigmaU += D2sigma;
+        cout << " Cross section: " << sigma << "+-" << sqrt(D2sigma) << endl;
+    }
+    Double_t relSigmaRaw = sum_sigmaPu / sum_sigmaU;
+    Double_t DrelSigmaRaw = relSigmaRaw * sqrt( D2sum_sigmaPu / pow(sum_sigmaPu, 2) + D2sum_sigmaU / pow(sum_sigmaU, 2));
+    cout << "Quotient of averages: " << relSigmaRaw << "+-" << DrelSigmaRaw << endl;
+}
+/*
 void Xsection::SetParam()
 {
     // physics parameters
@@ -503,7 +565,7 @@ void Xsection::ScatCorrNIF()
                             pow(pHSB->NIFRate[i] * pHNIF->DNeutronFlux[i] / pHSB->NeutronFlux[i], 2) +
                             pow(pHSB->NIFRate[i] * pHNIF->NeutronFlux[i] * pHSB->DNeutronFlux[i] / pow(pHSB->NeutronFlux[i], 2), 2) );
     }
-}//*/
+}//
 
 void Xsection::CalculateNPu()
 {
@@ -514,8 +576,8 @@ void Xsection::CalculateNPu()
     {   // Calculate N(242Pu) from SF rate for each plate.
         // Calculate effective N(242Pu)
         nPuSF[i_ch] = SFRate[i_ch] * PuSFT2 / log(2.0); // SFRate, PuSFT2: both in seconds!
-        DnPuSF[i_ch] = sqrt( pow(DSFRate[i_ch] * PuSFT2 / (log(2.0)/* * pHUG->eInt[i_ch]*/), 2) +
-                             pow(SFRate[i_ch] * DPuSFT2 / (log(2.0)/* * pHUG->eInt[i_ch]*/), 2) );
+        DnPuSF[i_ch] = sqrt( pow(DSFRate[i_ch] * PuSFT2 / (log(2.0) * pHUG->eInt[i_ch]), 2) +
+                             pow(SFRate[i_ch] * DPuSFT2 / (log(2.0) * pHUG->eInt[i_ch]), 2) );
 
         // Calculate N(242Pu) using internal efficiency from SF measurement
         nPu[i_ch] = nPuSF[i_ch] / pHUG->eInt[i_ch];
@@ -540,40 +602,40 @@ void Xsection::CalculateNPu()
     TGraphErrors* g3 = new TGraphErrors(NumHist, x, nPu, xerr, DnPu);
     g3->SetNameTitle("NPu", "Number of 242Pu atoms from spontaneaus fission");
     SaveToFile("PuFC/N_atoms", g3);
-//*/
+//
 }
 
-/*void Xsection::CalculateEfficiency()
-{ // calculate the PuFC neutron-induced detection efficiency via comparing internal efficiencies of NIF and SB setup
-    //// note: method not successful, too large uncertainty.
-    Double_t NIFcSFRate, D2NIFcSFRate; // efficiency-corrected SF rate of NIF setup, squared error
-    Double_t NIFcNIFRate, D2NIFcNIFRate;
-    Double_t eNIF[NumHist], DeNIF[NumHist];
-    for (int i = 0; i < NumHist; i++)
-    {
-        eSF[i] = pHUG->eInt[i];
-        DeSF[i] = pHUG->DeInt[i];
+//void Xsection::CalculateEfficiency()
+//{ // calculate the PuFC neutron-induced detection efficiency via comparing internal efficiencies of NIF and SB setup
+//    //// note: method not successful, too large uncertainty.
+//    Double_t NIFcSFRate, D2NIFcSFRate; // efficiency-corrected SF rate of NIF setup, squared error
+//    Double_t NIFcNIFRate, D2NIFcNIFRate;
+//    Double_t eNIF[NumHist], DeNIF[NumHist];
+//    for (int i = 0; i < NumHist; i++)
+//    {
+//        eSF[i] = pHUG->eInt[i];
+//        DeSF[i] = pHUG->DeInt[i];
 
-        NIFcSFRate = pHNIF->SFRate[i] / eSF[i];
-        D2NIFcSFRate = pow(pHNIF->DSFRate[i] / eSF[i], 2) +
-                       pow(pHNIF->SFRate[i] * DeSF[i], 2) / pow(eSF[i], 4);
-        NIFcNIFRate = (pHNIF->NIFRate[i] + pHNIF->SFRate[i]) / pHNIF->eInt[i] - NIFcSFRate;
-        D2NIFcNIFRate = D2NIFcSFRate +
-                        pow(pHNIF->DNIFRate[i] / pHNIF->eInt[i], 2) +
-                        pow(pHNIF->DNIFRate[i] / pHNIF->eInt[i], 2) +
-                        pow((pHNIF->NIFRate[i] + pHNIF->SFRate[i]) * pHNIF->DeInt[i], 2) / pow(pHNIF->eInt[i], 4);
-        eNIF[i] = pHNIF->NIFRate[i] / NIFcNIFRate;
-        DeNIF[i] = sqrt( D2NIFcNIFRate * pHNIF->NIFRate[i] / pow(NIFcNIFRate, 2) +
-                         pow(pHNIF->DNIFRate[i] / NIFcNIFRate, 2) );
-    }
-    // Draw...
-    double x[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    double xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
+//        NIFcSFRate = pHNIF->SFRate[i] / eSF[i];
+//        D2NIFcSFRate = pow(pHNIF->DSFRate[i] / eSF[i], 2) +
+//                       pow(pHNIF->SFRate[i] * DeSF[i], 2) / pow(eSF[i], 4);
+//        NIFcNIFRate = (pHNIF->NIFRate[i] + pHNIF->SFRate[i]) / pHNIF->eInt[i] - NIFcSFRate;
+//        D2NIFcNIFRate = D2NIFcSFRate +
+//                        pow(pHNIF->DNIFRate[i] / pHNIF->eInt[i], 2) +
+//                        pow(pHNIF->DNIFRate[i] / pHNIF->eInt[i], 2) +
+//                        pow((pHNIF->NIFRate[i] + pHNIF->SFRate[i]) * pHNIF->DeInt[i], 2) / pow(pHNIF->eInt[i], 4);
+//        eNIF[i] = pHNIF->NIFRate[i] / NIFcNIFRate;
+//        DeNIF[i] = sqrt( D2NIFcNIFRate * pHNIF->NIFRate[i] / pow(NIFcNIFRate, 2) +
+//                         pow(pHNIF->DNIFRate[i] / NIFcNIFRate, 2) );
+//    }
+//    // Draw...
+//    double x[] = {1, 2, 3, 4, 5, 6, 7, 8};
+//    double xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    TGraphErrors* g1 = new TGraphErrors(NumHist, x, eNIF, xerr, DeNIF);
-    g1->SetNameTitle("eNIFdiff", "PuFC neutron-induced detection efficiency");
-    SaveToFile("PuFC/Efficiency", g1);
-}*/
+//    TGraphErrors* g1 = new TGraphErrors(NumHist, x, eNIF, xerr, DeNIF);
+//    g1->SetNameTitle("eNIFdiff", "PuFC neutron-induced detection efficiency");
+//    SaveToFile("PuFC/Efficiency", g1);
+//}
 
 
 Double_t Xsection::GetCorrectionFactor(string FC, Int_t i)
@@ -663,7 +725,7 @@ void Xsection::Evaluation2()
         DnPuNIF[i] = sqrt( pow(DNIFRate[i] / (pHNIF->NeutronFluence[i] / pHNIF->t_live * PuLit), 2) +
                         pow(NIFRate[i] * pHNIF->DNeutronFluence[i] / pHNIF->t_live / ( pow(pHNIF->NeutronFluence[i] / pHNIF->t_live, 2) * PuLit ), 2) +
                         pow(NIFRate[i] * DPuLit / ( pHNIF->NeutronFluence[i] / pHNIF->t_live * pow(PuLit, 2) ), 2) );
-        cout << " " << i+1 << "  " << nPuNIF[i] << /*" +- " << DnPu[i] << */endl;
+        cout << " " << i+1 << "  " << nPuNIF[i] << " +- " << DnPu[i] << endl;
         sum += nPuNIF[i];
         Dsum += pow(DnPuNIF[i], 2);
     }
@@ -896,7 +958,7 @@ Double_t Xsection::func_peak(Double_t *x, Double_t *par)
 {
     return par[0] * exp( - pow((x[0] - par[1]) / par[2], 2)) + par[3];
 }
-
+*/
 
 /*void Xsection::CompareFiles(string path, Int_t start, Int_t stop)
 {

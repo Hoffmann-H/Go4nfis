@@ -20,6 +20,8 @@ PuFC::PuFC(Bool_t draw)
 //    pHFG->SetNeutronField(Yield, DYield, 30916955.27, 0, 1500, 1);
 //    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/PuFC_FG_MS7.root", "NIF");
 //    pHFG->SetNeutronField(Yield, DYield, 54792678.94, 0, 1500, 1);
+//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/PuFC_FG_MS8.root", "NIF");
+//    pHFG->SetNeutronField(Yield, DYield, 27492078.81, 0, 1500, 1);
 
     pHBG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root", "SB");
     pHBG->SetNeutronField(Yield, DYield, MonitorBG, DMonitorBG, 1500, 1);

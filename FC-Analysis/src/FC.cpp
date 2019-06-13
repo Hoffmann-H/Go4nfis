@@ -35,7 +35,7 @@ void FC::InitVar(Bool_t draw)
     DoneCorrections = kFALSE;
     DoneTransmission = kFALSE;
 
-    u = 1.660539E-24;
+    u = 1.660539E-24; // [g]
     DtBgLow = 63600; // QDC channels
     DtBgUp = 78500;
     Area = 4300;
@@ -352,9 +352,9 @@ void FC::CompareShadowCone()
     cout << " Ch   Exp   Sim(1)   Sim(2)" << endl;
     for (Int_t i = 0; i < NumCh; i++)
     {
-        cout << " " << i+1 << "  " << pDirect[i][0] << "+-" << DpDirect[i][0]
-                           << "  " << pDirect[i][1] << "+-" << DpDirect[i][1]
-                           << "  " << pDirect[i][2] << "+-" << DpDirect[i][2] << endl;
+        cout << " " << i+1 << "  " << pDirect[i][0] << " +- " << DpDirect[i][0]
+                           << "  " << pDirect[i][1] << " +- " << DpDirect[i][1]
+                           << "  " << pDirect[i][2] << " +- " << DpDirect[i][2] << endl;
     }
 
     if (!DrawSingle)

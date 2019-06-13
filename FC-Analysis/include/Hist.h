@@ -49,6 +49,7 @@ public:
     TH1I *pHDtG[NumHist];
     Double_t NeutronFluence[NumHist];
     Double_t DNeutronFluence[NumHist];
+    Double_t DstatNeutronFluence[NumHist];
     Double_t eInt[NumHist]; // intrinsic detection efficiency
     Double_t DeInt[NumHist];
     Double_t PedQDC[NumHist]; // extrema positions

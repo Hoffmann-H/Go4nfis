@@ -15,8 +15,8 @@ Hist::Hist(string file_path, string setup, string FC)   // Constructor
     UFC = strcmp(FC.c_str(), "PuFC");
     Draw = kFALSE;
 
-    if(CommentFlag)
-        cout << endl << "Creating instance Hist  " << (UFC?"UFC":"PuFC") << "  " << Setup << "  " << file_path << endl;
+//    if(CommentFlag)
+        cout << endl << "Creating instance Hist (" << file_path << ", " << Setup << ", " << FC << ")" << endl;
     //define surrounding peak limits
     Dt_min = 63600;
     Dt_max = 78500;
@@ -152,8 +152,9 @@ void Hist::SetNeutronField(Double_t yield, Double_t Dyield, Double_t monitor, Do
         DNeutronFluence[i] = sqrt( pow(DYield * Monitor / (r*r), 2) +
                                 pow(Yield * DMonitor / (r*r), 2) +
                                 pow(Yield * Monitor * 2*DL / (r*r*r), 2) );
+        DstatNeutronFluence[i] = Yield * sqrt(Monitor) / (r*r); // exact stat. uncertainty would be sqrt(uncorrected monitor)
         if(CommentFlag)
-            cout << " " << i+1 << "   " << NeutronFluence[i] << " +- " << DNeutronFluence[i] << "   " << NeutronFluence[i] / t_live << " +- " << DNeutronFluence[i] / t_live << endl;
+            cout << " " << i+1 << "   " << NeutronFluence[i] << " +- " << DNeutronFluence[i] << " +- " << DstatNeutronFluence[i] << "   " << NeutronFluence[i] / t_live << " +- " << DNeutronFluence[i] / t_live << endl;
     }
 }
 

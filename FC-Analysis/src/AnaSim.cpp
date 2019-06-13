@@ -23,9 +23,10 @@ AnaSim::AnaSim(string fc, Bool_t use_track_id, Plot *p)
     DrawMulti = kTRUE;
     if (p != 0)
         plot = p;
-    else {
+//    else {
         DrawSingle = kFALSE;
-        DrawMulti = kFALSE; }
+        DrawMulti = kFALSE;
+//    }
     CommentFlag = kTRUE;
 
     cout << "Done: Create simulation analysis instance for " << FC << ", " << Setup << endl;
@@ -49,8 +50,10 @@ void AnaSim::Corrections()
     cout << endl << "Correction factors..." << endl;
 //    char name[64] = "";
 
+//    cout << "Input for correction factors" << endl;
     for (int i = 0; i < NumCh; i++)
     {
+//        cout << " " << Fg->nDirect[i] << " " << Fg->DnDirect[i] << " " << Fg->nProj[i] << " " << Fg->effDirect[i] << " " << Fg->effScat[i] << endl;
         //// Calculate Transmission and Scattering correction factor
         T[i] = Fg->nDirect[i] / Fg->nProj[i];
         DT[i] = Fg->DnDirect[i] / Fg->nProj[i];

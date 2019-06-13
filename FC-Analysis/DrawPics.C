@@ -343,6 +343,45 @@ void DrawUGDt(TFile* f, TFile* fCom, string FC, string Setup)
 }
 
 
+TH1I* GetDt(TFile* f, string FC, string Setup, Int_t channel)
+{
+    char name[64] = "";
+    char title[64] = "";
+    Double_t chMin, chMax, tMin, tMax;
+    Double_t TimePerCh = 25.E-03; // 25 ps in ns
+
+    // Open PH-gated TimeDiff spectrum
+    sprintf(name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", channel+1);
+    TH1I *pHDtG = (TH1I*) f->Get(name);
+    Int_t nbins = pHDtG->GetXaxis()->GetNbins();
+    chMin = pHDtG->GetXaxis()->GetBinLowEdge(1);
+    chMax = pHDtG->GetXaxis()->GetBinUpEdge(nbins);
+//        ChPerBin = pHDtG->GetXaxis()->GetBinWidth(0);
+
+    // Create counts over time histogram
+    sprintf(name, "%s_%s_DtG_%i", FC.c_str(), Setup.c_str(), channel+1);
+    sprintf(title, "; #font[12]{t} [ns]; Counts");
+    tMin = TimePerCh * chMin;
+    tMax = TimePerCh * chMax;
+    TH1I *pHDtRate = new TH1I(name, title, nbins, tMin, tMax);
+    pHDtRate->GetXaxis()->SetRangeUser(1550, 2000);
+    pHDtRate->GetXaxis()->SetTitleSize(0.05);
+    pHDtRate->GetYaxis()->SetTitleSize(0.05);
+    pHDtRate->GetYaxis()->SetTitleOffset(1.0);
+    pHDtRate->SetStats(0);
+    pHDtRate->SetLineWidth(lw);
+
+    // Fill histogram
+    Int_t counts;
+    for (int j = 0; j < nbins + 2; j++)
+    {
+        counts = pHDtG->GetBinContent(j);
+        pHDtRate->SetBinContent(j, counts);
+    }
+    return pHDtRate;
+}
+
+
 void DrawDtUg(TFile* f, TFile* fCom, string FC, string Setup)
 { // Draw TimeDiff integration
     if(!strcmp(Setup.c_str(), "SF"))
@@ -361,8 +400,7 @@ void DrawDtUg(TFile* f, TFile* fCom, string FC, string Setup)
     for (int i = 0; i < 8; i++)
     {
         // open Dt histogram nr i
-        sprintf(hname, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
-        TH1I* pH = (TH1I*)f->Get(hname);
+        TH1I* pH = (TH1I*)GetDt(f, FC, Setup, i);
 
         // open underground fit nr i
         sprintf(hname, "/%s/TimeDiff/Underground/%s/f%s%sUg_%i", FC.c_str(), Setup.c_str(), FC.c_str(), Setup.c_str(), i+1);
@@ -378,16 +416,16 @@ void DrawDtUg(TFile* f, TFile* fCom, string FC, string Setup)
 
         // create full TH1F histogram
         sprintf(name, "%s_%s_Dt_%i", FC.c_str(), Setup.c_str(), i+1);
-        TH1F* pH1 = CopyRange(pH, name, 62000, 80000, - level);
-        pH1->SetTitle("Underground-subtracted time difference spectrum; #font[12]{t} / ch; counts");
+        TH1F* pH1 = CopyRange(pH, name, 1550, 2000, - level);
+        pH1->SetTitle("Untergrund-bereinigtes Zeitdifferenz-Spektrum; #font[12]{t} [ns]; Counts");
 
         // create peak region TH1F histogram
         sprintf(name, "%s_%s_DtInt_%i", FC.c_str(), Setup.c_str(), i+1);
-        TH1F* pH2 = CopyRange(pH, name, x0, x1, - level);
+        TH1F* pH2 = CopyRange(pH, name, .025*x0, .025*x1, - level);
 
         // manipulate histograms
         TH1I* pH3 = (TH1I*)pH->Clone();
-        BiasX(pH3, 0.5*(x0 + x1));
+        BiasX(pH3, 0.5*0.025*(x0 + x1));
         pHsum->Add(pH3);
         pH2->SetFillColorAlpha(kRed, 0.25);
         pH2->SetLineColor(kWhite);
@@ -396,6 +434,13 @@ void DrawDtUg(TFile* f, TFile* fCom, string FC, string Setup)
         sprintf(name, "%s_%s_DtPeak_%i", FC.c_str(), Setup.c_str(), i+1);
         pCDtPeak[i] = new TCanvas(name, name, 200, 10, 700, 500);
         gPad->SetTicks(1, 1);
+        pH1->SetStats(0);
+        pH1->GetXaxis()->SetLabelSize(0.05);
+        pH1->GetXaxis()->SetTitleSize(0.07);
+        pH1->GetXaxis()->SetTitleOffset(0.7);
+        pH1->GetYaxis()->SetLabelSize(0.05);
+        pH1->GetYaxis()->SetTitleSize(0.07);
+        pH1->GetYaxis()->SetTitleOffset(0.7);
         pH1->Draw();
         pH2->Draw("same");
         pH1->Draw("same");
@@ -406,15 +451,16 @@ void DrawDtUg(TFile* f, TFile* fCom, string FC, string Setup)
         TGraphErrors* gNIF = (TGraphErrors*)fCom->Get(name); // get NIF counts
         gNIF->GetPoint(i, x, NIF);
         DNIF = gNIF->GetErrorY(i);
-        sprintf(message, "NIF events: %i +- %i", (int)(NIF+0.5), (int)(DNIF+0.5));
-        TText* tNIF = new TText();
+        sprintf(message, "(n, f): %i #pm %i", (int)(NIF+0.5), (int)(DNIF+0.5));
+        TLatex* tNIF = new TLatex();
         tNIF->SetNDC();
-        tNIF->DrawText(0.6, 0.8, message);
+        tNIF->DrawLatex(0.6, 0.8, message);
 
         //// Draw original Dt spectrum with underground lines
         sprintf(name, "%s_%s_DtUg_%i", FC.c_str(), Setup.c_str(), i+1);
         pCDtUg[i] = new TCanvas(name, name, 200, 10, 700, 500);
         gPad->SetTicks(1,1);
+        pH->SetStats(0);
         pH->GetXaxis()->SetRangeUser(62000, 80000);
         pH->Draw();
 
@@ -433,10 +479,10 @@ void DrawDtUg(TFile* f, TFile* fCom, string FC, string Setup)
 
         SF = pH->Integral() - NIF;
         DSF = sqrt(pH->Integral() + DNIF*DNIF);
-        sprintf(message, "Underground events: %i +- %i", (int)(SF+0.5), (int)(DSF+0.5));
-        TText* tSF = new TText();
+        sprintf(message, "Untergrund: %i #pm %i", (int)(SF+0.5), (int)(DSF+0.5));
+        TLatex* tSF = new TLatex();
         tSF->SetNDC();
-        tSF->DrawText(0.2, 0.2, message);
+        tSF->DrawLatex(0.2, 0.2, message);
     }
 
     sprintf(name, "%s_%s_DtUg_all", FC.c_str(), Setup.c_str());
@@ -1381,10 +1427,10 @@ void DrawCompareDt(TFile* fPu, TFile* fU, string Setup)
 int DrawSingle(TFile* f, TFile* fCom, string FC, string Setup)
 { // Draw all pictures concerning one single file
 //    DrawQDCfit(f, FC, Setup);
-    DrawQDCeff(f, FC, Setup);
+//    DrawQDCeff(f, FC, Setup);
 //    DrawQDCres(f, FC, Setup);
 //    DrawDtInt(f, FC, Setup);
-//    DrawDtUg(f, fCom, FC, Setup);
+    DrawDtUg(f, fCom, FC, Setup);
 //    DrawDtRate(f, FC, Setup);
 //    DrawDtPeak(f, fCom, FC, Setup);
 
@@ -1404,7 +1450,7 @@ int DrawPics()
     TFile* fUSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root");
     TFile* fCom = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/Evaluation.root");
     /// single pics
-//    DrawSingle(fNIF, fCom, "PuFC", "NIF");
+    DrawSingle(fNIF, fCom, "PuFC", "NIF");
 //    DrawSingle(fSB, fCom, "PuFC", "SB");
 //    DrawSingle(fSF, fCom, "PuFC", "SF");
 //    DrawSingle(fUNIF, fCom, "UFC", "NIF");
@@ -1422,7 +1468,7 @@ int DrawPics()
 //    DrawEval(fCom);
 //    DrawDtComp(fNIF, fUNIF, "NIF", 4);
 //    DrawDtComp(fSB, fUSB, "SB", 4);
-    DrawDtComp(fNIF, fSB, fUNIF, fUSB, 4);
+//    DrawDtComp(fNIF, fSB, fUNIF, fUSB, 4);
 //    DrawDtFC(fNIF, fSB, "PuFC", 10);
 //    DrawDtFC(fUNIF, fUSB, "UFC", 10);
     return 1;

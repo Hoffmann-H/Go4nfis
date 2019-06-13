@@ -608,6 +608,9 @@ void Plot::CompSc(Double_t* pExp, Double_t* DpExp, Double_t* pSim1, Double_t* Dp
     g1->SetName("pExp");
     g1->SetLineColor(kRed);
     g1->SetLineWidth(lw);
+    g1->SetMarkerColor(kRed);
+    g1->SetMarkerStyle(21);
+    g1->SetMarkerSize(0.5);
     mg->Add(g1);
     l->AddEntry(g1, "FG+BG Measurement");
 

@@ -9,8 +9,8 @@ UFC::UFC(Bool_t draw)
     InitVar(draw);
     InitUVar();
 
-//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF");
-//    pHFG->SetNeutronField(Yield, DYield, MonitorFG, DMonitorFG, 1500, 1);
+    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF");
+    pHFG->SetNeutronField(Yield, DYield, MonitorFG, DMonitorFG, 1500, 1);
 
 //    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_2.root");
 //    pHFG->SetNeutronField(Yield, DYield, 9698643, 0.02 * 9698643, 1500, 1);
@@ -18,13 +18,11 @@ UFC::UFC(Bool_t draw)
 //    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_3.root");
 //    pHFG->SetNeutronField(Yield, DYield, 12621803, 0.02 * 12621803, 1500, 1);
 
-    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_4.root");
-    pHFG->SetNeutronField(Yield, DYield, 13133947, 0.02 * 13133947, 1500, 1);
+//    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_4.root");
+//    pHFG->SetNeutronField(Yield, DYield, 13133947, 0.02 * 13133947, 1500, 1);
 
     //    pHFG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_2.root");
     //    pHFG->SetNeutronField(Yield, DYield, 9698643, 0.02 * 9698643, 1500, 1);
-
-
 
     pHBG = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root", "SB");
     pHBG->SetNeutronField(Yield, DYield, MonitorBG, DMonitorBG, 1500, 1);
@@ -45,7 +43,7 @@ void UFC::InitUVar()
     Dfrac235 = 0.005;
     frac238 = 0.0912;
     Dfrac238 = 0.0006;
-    sigma238 = 1.25E-22; // in mm^2
+    sigma238 = 1.25; // in barns
     Dsigma238 = 0.0307 * sigma238;
     MonitorFG = 9509138+12371470+12876188+27941726+9962706;
     DMonitorFG = MonitorFG * 0.0014;
@@ -59,8 +57,8 @@ void UFC::InitUVar()
     {// Distances source-deposit
         sd[i] = L + 119 - 10.8 * i;
         Dsd[i] = DL;
-        emA[i] = ema[i];
-        DemA[i] = Dema[i];
+        emA[i] = ema[i] * 1.E-8; // Unit: g/mm^2
+        DemA[i] = Dema[i] * 1.E-8;
     }
     cout << "Done: U variables" << endl;
 }
@@ -150,10 +148,16 @@ void UFC::GetNatoms()
 
     for (int i = 0; i < NumHist; i++)
     {
-        nAtoms[i] = Area * emA[i] / (M * u) * 1.E-8;
+        nAtoms[i] = Area * emA[i] / (M * u); // units: mm^2 * g/mm^2 / g == 1
         DnAtoms[i] = nAtoms[i] * sqrt( pow(DArea / Area, 2) +
                                        pow(DemA[i] / emA[i], 2) +
                                        pow(DM / M, 2) );
+        n235[i] = frac235 * nAtoms[i];
+        Dn235[i] = n235[i] * sqrt( pow(Dfrac235 / frac235, 2) +
+                                   pow(DemA[i] / emA[i], 2) );
+        n238[i] = frac238 * nAtoms[i];
+        Dn238[i] = n238[i] * sqrt( pow(Dfrac238 / frac238, 2) +
+                                   pow(DemA[i] / emA[i], 2) ); // Statistical uncertainties
     }
     cout << "Done: effective number of U atoms" << endl;
     DoneNatoms = kTRUE;
