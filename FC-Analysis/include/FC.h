@@ -7,6 +7,7 @@
 #include "Plot.h"
 
 #define NumHist 8
+#define NumRuns 5
 
 using namespace std;
 
@@ -18,8 +19,11 @@ public:
     Bool_t CommentFlag;
     Bool_t DrawSingle, DrawMulti;
     Plot *plot;
-    Hist *pHFG;
-    Hist *pHBG;
+//    Int_t ScatterMethod;
+    Int_t FgRuns;
+    Int_t BgRuns;
+    Hist *pHFG[NumRuns];
+    Hist *pHBG[NumRuns];
     AnaSim *sim;
     FC(); //Double_t nFieldFG, Double_t DnFieldFG, Double_t nFieldBG, Double_t DnFieldBG);
     ~FC();
@@ -64,19 +68,14 @@ public:
            DoneTransmission;
 
     // Physics
+    Double_t tFG, tBG;
     Double_t u;
     Double_t Area;
     Double_t DArea;
-    Double_t nFluenceFG;
-    Double_t DnFluenceFG;
-    Double_t nFluenceBG;
-    Double_t DnFluenceBG;
     Double_t nAtoms[NumHist];
     Double_t DnAtoms[NumHist];
     Double_t sd[NumHist]; // Distance source-detector
     Double_t Dsd[NumHist];
-    Double_t Yield, DYield;
-    Double_t MonitorFG, DMonitorFG, MonitorBG, DMonitorBG;
 
     // TimeDiff integration parameters
     Double_t DtPeakLow[NumHist];
@@ -92,17 +91,19 @@ public:
     Double_t DnFG[NumHist];
     Double_t nBG[NumHist];
     Double_t DnBG[NumHist];
-    Double_t cFG[NumHist]; // fission count Constant in time
-    Double_t DcFG[NumHist];
-    Double_t cBG[NumHist];
-    Double_t DcBG[NumHist];
+    Double_t nFlux[NumHist];
+    Double_t DnFlux[NumHist];
+//    Double_t cFG[NumHist]; // fission count Constant in time
+//    Double_t DcFG[NumHist];
+//    Double_t cBG[NumHist];
+//    Double_t DcBG[NumHist];
 //    Double_t nfDirect[NumHist]; // number of fissions induced by direct neutrons
 //    Double_t DnfDirect[NumHist];
     Double_t sIsoVec; // correction subtrahend for isotope vector
     Double_t DsIsoVec;
     Double_t fIsoVec; // correction factor for isotope vector
     Double_t DfIsoVec;
-    Double_t fTS[NumCh];
+    Double_t fTS[NumCh]; // Transmission and scattering correction factor
     Double_t DfTS[NumCh];
     Double_t uT[NumCh]; // NIF over SF rate
     Double_t DuT[NumCh];
@@ -112,8 +113,6 @@ public:
     Double_t DSimT[NumHist];
     Double_t pDirect[NumHist][3]; // Direct portion: ratio of direct to all fissions
     Double_t DpDirect[NumHist][3]; // 2nd index: 0 Experimental, 1 one sim, 2 shadow cone sim
-//    Double_t nInc[NumHist]; // Incident neutron fluence = #neutrons / area
-//    Double_t DnInc[NumHist];
     Double_t uCS[NumHist]; // un-corrected, raw cross section
     Double_t DuCS[NumHist];
     Double_t CS[NumHist]; // corrected cross section

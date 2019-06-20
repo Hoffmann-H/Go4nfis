@@ -22,30 +22,34 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
-//    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "NIF");
+//    Plot *p = new Plot("UFC", "Open", 0);
+//    p->Source_E();
+
+//    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF", "UFC");
 //    h->SetDraw(p);
 //    h->DoAnalyzeQDC();
 
-//    PuFC *fc = new PuFC(1);
-//    UFC *fc = new UFC(1);
+//    PuFC *fc = new PuFC(0);
+    UFC *ufc = new UFC(1);
+    ufc->Calibrate();
 
-    Xsection *xs = new Xsection();
-    xs->RelativeCS();
+//    Xsection *xs = new Xsection();
+//    xs->RelativeCS();
 
 //    fc->CompareTransmission();
 
 //    cout << "t_live(FG) = " << ufc->pHFG->t_live << endl;
 //    cout << "t_live(BG) = " << ufc->pHBG->t_live << endl;
-//    ufc->AnalyzeDt();
+//    fc->AnalyzeDt();
+//    fc->CrossSection();
 //    ufc->CrossSection();
+//    fc->Corrections();
+//    ufc->Corrections();
 //    fc->CompareShadowCone();
 //    ufc->CompareTransmission();
 
 //    Sim *sim = new Sim("/home/hoffma93/Programme/Geant4-Work/builds/G4PuFCvsH19/results/4_ene/PuFC_Open_5E7.root", "PuFC", "Open", 1, 1);
 //    sim->Calculate();
-
-//    Plot *p = new Plot("PuFC", "Open", 0);
-//    p->Source_E();
 
 //    AnaSim *Pu = new AnaSim("PuFC", 1, 0);
 //    AnaSim *U = new AnaSim("UFC", 1, p);

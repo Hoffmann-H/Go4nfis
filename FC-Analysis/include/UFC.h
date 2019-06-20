@@ -16,11 +16,14 @@ public:
     void GetNatoms() override;
     void IsoVec() override;
     void GetExpT() override;
+    void Calibrate();
 //    void CalcCS(Int_t i);
 
 
 //private:
     void InitUVar();
+    Double_t M;
+    Double_t DM;
     Double_t frac238, Dfrac238;
     Double_t frac235, Dfrac235;
     Double_t n238[NumCh], Dn238[NumCh];

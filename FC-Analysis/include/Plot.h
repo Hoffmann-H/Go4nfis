@@ -35,7 +35,8 @@ public:
     void Source_E_v1(TGraph *g, Double_t E, Double_t DE);
     void QDCfit(Int_t ch, TH1I *pH, Double_t cut, TF1 *fCut);
     void QDCeff(Int_t ch, TH1I *pH, Double_t pedestal, Double_t cut, Double_t level, Double_t eInt, Double_t DeInt);
-    void Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1, Int_t l2, Int_t l3, Double_t level, string Setup);
+    void Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1, Int_t l2, Int_t l3, string Setup);
+//    void QDCcut(
     void ExpT(Double_t* expT, Double_t* DexpT, Double_t* simT, Double_t* DsimT);
     void SimF(Double_t* T, Double_t* DT, Double_t* S, Double_t* DS, Double_t* F, Double_t* DF);
     void SimF(Double_t* T, Double_t* DT, Double_t* S, Double_t* DS, Double_t* F, Double_t* DF, Double_t* T2, Double_t* DT2, Double_t* S2, Double_t* DS2, Double_t* F2, Double_t* DF2);
@@ -47,6 +48,7 @@ public:
     void Eproj(Int_t ch, TH1F *pSc, TH1F *pUnsc, Int_t Projectiles);
     void Eproj(Int_t ch, TH1F *pSc, TH1F *pUnsc, Int_t Projectiles, TGraph *gSigma);
     void Result(Double_t* uCS, Double_t* DuCS, Double_t* CS, Double_t* DCS);
+    void CalibrateUFC(Double_t* emA, Double_t* DemA, Double_t* Area, Double_t* DArea);
 //    void T();
 private:
     TH1F* CopyBins(TH1I *pH, char *name, Int_t b0, Int_t b1, Double_t yoffset);

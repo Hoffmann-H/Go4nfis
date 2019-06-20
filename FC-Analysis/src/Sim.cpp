@@ -3,6 +3,7 @@ using namespace std;
 
 Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t draw_flag)
 {
+    cout << endl << "Starting " << fc << " " << setup << " simulation analysis" << endl;
     // Input settings
     FileName = file_name;
     FC = fc;
@@ -39,6 +40,7 @@ Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t 
 
     UisoVec[0] = 0.904, DUisoVec[0] = 0.005; // U-235 portion
     UisoVec[1] = 0.0912, DUisoVec[1] = 0.0006; // U-238 portion
+    cout << "Started simulation analysis" << endl;
 }
 
 
@@ -50,7 +52,7 @@ Sim::~Sim()
 
 void Sim::OpenHists()
 {
-    cout << "Open histograms..." << endl;
+    cout << endl << "Open histograms..." << endl;
     char name[64] = "";
     for (Int_t i = 0; i < NumCh; i++)
     {

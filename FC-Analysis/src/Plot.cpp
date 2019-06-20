@@ -228,6 +228,12 @@ void Plot::Source_E_v1(TGraph *g, Double_t E, Double_t DE)
 void Plot::QDCeff(Int_t ch, TH1I *pH, Double_t pedestal, Double_t cut, Double_t level, Double_t eInt, Double_t DeInt)
 {
     char name[64] = "";
+
+    sprintf(name, "%s_%s_QDCeff_%i", FC.c_str(), Setup.c_str(), ch+1);
+    TCanvas *pC = new TCanvas(name, name, 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    gPad->SetLogy(1);
+
     pH->SetLineColor(kBlue);
     pH->SetStats(0);
     pH->GetXaxis()->SetTitleSize(0.05);
@@ -259,11 +265,6 @@ void Plot::QDCeff(Int_t ch, TH1I *pH, Double_t pedestal, Double_t cut, Double_t 
 //        legend->AddEntry(fUg, "FF constant extrapolation");
 
     // draw histogram and graph together
-    sprintf(name, "QDCeff_%i", ch+1);
-    TCanvas *pC = new TCanvas(name, name, 200, 10, 700, 500);
-    gPad->SetTicks(1, 1);
-    gPad->SetLogy(1);
-
     pH1->Draw("hist");
     pH2->Draw("same");
     fUg->Draw("fsame");
@@ -276,9 +277,11 @@ void Plot::QDCeff(Int_t ch, TH1I *pH, Double_t pedestal, Double_t cut, Double_t 
 //    TText* thr = new TText();
 //    thr->SetNDC();
 //    thr->DrawText(0.25, 0.5, "thr");
-//    TText* FF = new TText();
-//    FF->SetNDC();
-//    FF->DrawText(0.5, 0.6, "Fission fragments");
+    Int_t ff = pH->Integral(cut, 4096);
+    sprintf(name, "%i Fission fragments", ff);
+    TText* FF = new TText();
+    FF->SetNDC();
+    FF->DrawText(0.5, 0.6, name);
 //    TText* alpha = new TText();
 //    alpha->SetNDC();
 //    alpha->DrawText(0.15, 0.6, "Alphas");
@@ -637,13 +640,15 @@ void Plot::CompSc(Double_t* pExp, Double_t* DpExp, Double_t* pSim1, Double_t* Dp
 }
 
 
-void Plot::Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1, Int_t l2, Int_t l3, Double_t level, string Setup)
+void Plot::Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1, Int_t l2, Int_t l3, string Setup)
 {
 //    cout << "Plotting Dt..." << endl << "(n,f) " << nf << endl;
     char name[64] = "";
     sprintf(name, "Dt_%i", ch+1);
     TCanvas *C = new TCanvas(name, "Time differecne spectrum", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
+    Int_t ff = pH->Integral();
+    Double_t level = (pH->Integral(l0, l3) - pH->Integral(l1, l2)) / (l1 - l0 + l3 - l2);
     sprintf(name, "Ug_%s_%i", Setup.c_str(), ch+1);
     TH1F *pHbg = CopyRange(pH, name, 62000, 80000, -level);
     sprintf(name, "Peak_%s_%i", Setup.c_str(), ch+1);
@@ -671,9 +676,16 @@ void Plot::Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1,
     TText *tbg = new TText();
     tbg->SetNDC();
     tbg->DrawText(0.2, 0.2, name);
+    sprintf(name, "%i Fission fragments", ff);
+    TText *tff = new TText();
+    tff->SetNDC();
+    tff->DrawText(0.4, 0.9, name);
     C->Modified();
     C->Update();
 }
+
+
+//void Plot::
 
 
 void Plot::TvsE(Int_t ch, TH2F *pH2TvsE, Double_t binToFmin, Double_t binToFmax, Int_t directN)
@@ -974,6 +986,75 @@ void Plot::Result(Double_t *uCS, Double_t *DuCS, Double_t *CS, Double_t *DCS)
     l->Draw();
     c1->Modified();
     c1->Update();
+}
+
+
+void Plot::CalibrateUFC(Double_t* emA, Double_t* DemA, Double_t* Area, Double_t* DArea)
+{
+    Double_t X[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    Double_t Xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
+    Double_t ema[] = {365.2, 396.2, 400.4, 393, 403.9, 403.7, 406.6, 397.1}; // calibration on H19
+    Double_t Dema[] = {1.7, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8};
+
+    TCanvas *c1 = new TCanvas("c_U_Cal", "Charakterisierung der Uran-Deposits", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    TMultiGraph* mg = new TMultiGraph();
+    mg->SetNameTitle("mg_U_Cal", "Charakterisierung der Uran-Deposits; Kanal; #varepsilon#font[12]{m_{A}} [#mug/cm^{2}]");
+    TLegend* l = new TLegend(0.6, 0.15, 0.8, 0.4);
+
+    TGraphErrors *g1 = new TGraphErrors(NumCh, X, emA, Xerr, DemA);
+    g1->SetName("PTB");
+    g1->SetMarkerStyle(20);
+    g1->SetMarkerSize(1.5);
+    g1->SetMarkerColor(kRed);
+    g1->SetLineColor(kRed);
+    g1->SetLineWidth(lw);
+    mg->Add(g1);
+    l->AddEntry(g1, "PTB");
+
+    TGraphErrors *g2 = new TGraphErrors(NumCh, X, ema, Xerr, Dema);
+    g2->SetName("H19");
+    g2->SetMarkerStyle(20);
+    g2->SetMarkerSize(1.5);
+    g2->SetMarkerColor(kGreen);
+    g2->SetLineColor(kGreen);
+    g2->SetLineWidth(lw);
+    mg->Add(g2);
+    l->AddEntry(g2, "H19");
+
+    mg->Draw("AP");
+    mg->GetXaxis()->SetNdivisions(8);
+    mg->GetXaxis()->SetLabelSize(0.06);
+    mg->GetXaxis()->SetTitleSize(0.08);
+    mg->GetXaxis()->SetTitleOffset(0.7);
+    mg->GetYaxis()->SetLabelSize(0.06);
+    mg->GetYaxis()->SetTitleSize(0.08);
+    mg->GetYaxis()->SetTitleOffset(0.8);
+    l->Draw();
+    c1->Modified();
+    c1->Update();
+
+    TCanvas *c2 = new TCanvas("c_U_Area", "Efektive Flaeche", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+
+    TGraphErrors *g3 = new TGraphErrors(NumCh, X, Area, Xerr, DArea);
+    g3->SetNameTitle("Area", "Effektive Fl#ddot{a}che; Kanal; #font[12]{A} [mm^{2}]");
+    g3->SetMarkerStyle(20);
+    g3->SetMarkerSize(1.5);
+    g3->SetMarkerColor(kBlue);
+    g3->SetLineColor(kBlue);
+    g3->SetLineWidth(lw);
+
+    g3->Draw("AP");
+    g3->GetXaxis()->SetNdivisions(8);
+    g3->GetXaxis()->SetLabelSize(0.06);
+    g3->GetXaxis()->SetTitleSize(0.08);
+    g3->GetXaxis()->SetTitleOffset(0.7);
+    g3->GetYaxis()->SetLabelSize(0.06);
+    g3->GetYaxis()->SetTitleSize(0.08);
+    g3->GetYaxis()->SetTitleOffset(0.8);
+    c2->Modified();
+    c2->Update();
 }
 
 
