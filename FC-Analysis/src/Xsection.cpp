@@ -8,97 +8,97 @@ Xsection::Xsection(Bool_t draw)
     Draw = draw;
     Pu = new PuFC(Draw);
 //    cout << endl << "DEBUG: Neutron flux PuFC Open ch 1: " << Pu->pHFG[0]->NeutronFlux[0] << endl;
-    U = new UFC(Draw);
+//    U = new UFC(Draw);
     simPu = new AnaSim("PuFC", 1, 0);
     simU = new AnaSim("UFC", 1, 0);
 }
 
 
-void Xsection::RelativeCS()
-{
-    cout << endl << "Relative Cross section 242Pu/235U..." << endl;
-    Double_t cPu[NumCh];
-    Double_t DcPu[NumCh];
-    Double_t cU[NumCh];
-    Double_t DcU[NumCh];
-    Double_t nPu[NumCh];
-    Double_t DnPu[NumCh];
-    Double_t nU[NumCh];
-    Double_t DnU[NumCh];
-    Double_t flPu[NumCh];
-    Double_t DflPu[NumCh];
-    Double_t flU[NumCh];
-    Double_t DflU[NumCh];
-    Pu->AnalyzeDt();
-    Pu->GetNatoms();
-    simPu->Corrections();
-    Double_t sum_cPu = 0;
-    Double_t D2sum_cPu = 0;
-    Double_t sum_nflPu = 0;
-    Double_t D2sum_nflPu = 0;
-    Double_t sum_sigmaPu = 0;
-    Double_t D2sum_sigmaPu = 0;
-    Double_t sigma, D2sigma, f, Df;
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        cout << endl << "Channel " << i+1 << endl;
-        cPu[i] = Pu->nFG[i] / Pu->tFG; DcPu[i] = Pu->DnFG[i] / Pu->tFG;
-        sum_cPu += cPu[i]; D2sum_cPu += pow(DcPu[i], 2);
-        cout << " Pu(n,f) count rate: " << cPu[i] << "+-" << DcPu[i] << endl;
-        nPu[i] = Pu->nAtoms[i]; DnPu[i] = Pu->DnAtoms[i];
-        cout << " 242Pu atoms: " << nPu[i] << "+-" << DnPu[i] << endl;
-        flPu[i] = Pu->nFlux[i]; DflPu[i] = Pu->DnFlux[i];
-        sum_nflPu += nPu[i] * flPu[i]; D2sum_nflPu += pow(flPu[i] * DnPu[i], 2) + pow(nPu[i] * DflPu[i], 2);
-        cout << " Pu n flux: " << flPu[i] << "+-" << DflPu[i] << " mm^-2 s^-1" << endl;
-        f = simPu->F[i]; Df = simPu->DF[i];
-        cout << " Pu T&S correction factor: " << f << "+-" << Df << endl;
-        sigma = f * cPu[i] / (nPu[i] * flPu[i]) * 1.E22;
-        D2sigma = pow(sigma, 2) * (pow(Df / f, 2) +
-                                   pow(DcPu[i] / cPu[i], 2) +
-                                   pow(DnPu[i] / nPu[i], 2) +
-                                   pow(DflPu[i] / flPu[i], 2));
-        sum_sigmaPu += sigma;
-        D2sum_sigmaPu += D2sigma;
-        cout << " Cross section: " << sigma << "+-" << sqrt(D2sigma) << endl;
-    }
-    U->AnalyzeDt();
-    U->GetNatoms();
-    simU->Corrections();
-    Double_t sum_cU = 0;
-    Double_t D2sum_cU = 0;
-    Double_t sum_nflU = 0;
-    Double_t D2sum_nflU = 0;
-    Double_t sum_sigmaU = 0;
-    Double_t D2sum_sigmaU = 0;
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        cout << "Channel " << i+1 << endl;
-        cU[i] = U->nFG[i] / U->tFG; DcU[i] = U->DnFG[i] / U->tFG;
-        sum_cU += cU[i]; D2sum_cU += pow(DcU[i], 2);
-        cout << " U(n,f) count rate: " << cU[i] << "+-" << DcU[i] << endl;
-        nU[i] = U->n235[i]; DnU[i] = U->Dn235[i];
-        cout << " 235U atoms: " << nU[i] << "+-" << DnU[i] << endl;
-        flU[i] = U->nFlux[i]; DflU[i] = U->DnFlux[i];
-        sum_nflU += nU[i] * flU[i]; D2sum_nflU += pow(flU[i] * DnU[i], 2) + pow(nU[i] * DflU[i], 2);
-        cout << " U n fluence: " << flU[i] << "+-" << DflU[i] << " mm^-2 s^-1" << endl;
-        f = simU->F[i]; Df = simU->DF[i];
-        cout << " U T&S correction factor: " << f << "+-" << Df << endl;
-        Double_t sigma_raw = f * cU[i] / (nU[i] * flU[i]) * 1.E22;// / U->frac235;
-        sigma = sigma_raw;// - U->frac238 * U->sigma238 / U->frac235;
-        D2sigma = pow(sigma, 2) * (pow(Df / f, 2) +
-                                   pow(DcU[i] / cU[i], 2) +
-                                   pow(DnU[i] / nU[i], 2) +
-                                   pow(DflU[i] / flU[i], 2))/* +
-                  pow(U->Dfrac238 * U->sigma238 / U->frac235, 2) +
-                  pow(U->Dfrac235 * U->frac238 * U->sigma238 / (U->frac235*U->frac235), 2)*/;
-        sum_sigmaU += sigma;
-        D2sum_sigmaU += D2sigma;
-        cout << " Cross section: " << sigma << "+-" << sqrt(D2sigma) << endl;
-    }
-    Double_t relSigmaRaw = sum_sigmaPu / sum_sigmaU;
-    Double_t DrelSigmaRaw = relSigmaRaw * sqrt( D2sum_sigmaPu / pow(sum_sigmaPu, 2) + D2sum_sigmaU / pow(sum_sigmaU, 2));
-    cout << "Quotient of averages: " << relSigmaRaw << "+-" << DrelSigmaRaw << endl;
-}
+//void Xsection::RelativeCS()
+//{
+//    cout << endl << "Relative Cross section 242Pu/235U..." << endl;
+//    Double_t cPu[NumCh];
+//    Double_t DcPu[NumCh];
+//    Double_t cU[NumCh];
+//    Double_t DcU[NumCh];
+//    Double_t nPu[NumCh];
+//    Double_t DnPu[NumCh];
+//    Double_t nU[NumCh];
+//    Double_t DnU[NumCh];
+//    Double_t flPu[NumCh];
+//    Double_t DflPu[NumCh];
+//    Double_t flU[NumCh];
+//    Double_t DflU[NumCh];
+//    Pu->AnalyzeDt();
+//    Pu->GetNatoms();
+//    simPu->Corrections();
+//    Double_t sum_cPu = 0;
+//    Double_t D2sum_cPu = 0;
+//    Double_t sum_nflPu = 0;
+//    Double_t D2sum_nflPu = 0;
+//    Double_t sum_sigmaPu = 0;
+//    Double_t D2sum_sigmaPu = 0;
+//    Double_t sigma, D2sigma, f, Df;
+//    for (Int_t i = 0; i < NumCh; i++)
+//    {
+//        cout << endl << "Channel " << i+1 << endl;
+//        cPu[i] = Pu->nFG[i] / Pu->tFG; DcPu[i] = Pu->DnFG[i] / Pu->tFG;
+//        sum_cPu += cPu[i]; D2sum_cPu += pow(DcPu[i], 2);
+//        cout << " Pu(n,f) count rate: " << cPu[i] << "+-" << DcPu[i] << endl;
+//        nPu[i] = Pu->nAtoms[i]; DnPu[i] = Pu->DnAtoms[i];
+//        cout << " 242Pu atoms: " << nPu[i] << "+-" << DnPu[i] << endl;
+//        flPu[i] = Pu->nFlux[i]; DflPu[i] = Pu->DnFlux[i];
+//        sum_nflPu += nPu[i] * flPu[i]; D2sum_nflPu += pow(flPu[i] * DnPu[i], 2) + pow(nPu[i] * DflPu[i], 2);
+//        cout << " Pu n flux: " << flPu[i] << "+-" << DflPu[i] << " mm^-2 s^-1" << endl;
+//        f = simPu->F[i]; Df = simPu->DF[i];
+//        cout << " Pu T&S correction factor: " << f << "+-" << Df << endl;
+//        sigma = f * cPu[i] / (nPu[i] * flPu[i]) * 1.E22;
+//        D2sigma = pow(sigma, 2) * (pow(Df / f, 2) +
+//                                   pow(DcPu[i] / cPu[i], 2) +
+//                                   pow(DnPu[i] / nPu[i], 2) +
+//                                   pow(DflPu[i] / flPu[i], 2));
+//        sum_sigmaPu += sigma;
+//        D2sum_sigmaPu += D2sigma;
+//        cout << " Cross section: " << sigma << "+-" << sqrt(D2sigma) << endl;
+//    }
+//    U->AnalyzeDt();
+//    U->GetNatoms();
+//    simU->Corrections();
+//    Double_t sum_cU = 0;
+//    Double_t D2sum_cU = 0;
+//    Double_t sum_nflU = 0;
+//    Double_t D2sum_nflU = 0;
+//    Double_t sum_sigmaU = 0;
+//    Double_t D2sum_sigmaU = 0;
+//    for (Int_t i = 0; i < NumCh; i++)
+//    {
+//        cout << "Channel " << i+1 << endl;
+//        cU[i] = U->nFG[i] / U->tFG; DcU[i] = U->DnFG[i] / U->tFG;
+//        sum_cU += cU[i]; D2sum_cU += pow(DcU[i], 2);
+//        cout << " U(n,f) count rate: " << cU[i] << "+-" << DcU[i] << endl;
+//        nU[i] = U->n235[i]; DnU[i] = U->Dn235[i];
+//        cout << " 235U atoms: " << nU[i] << "+-" << DnU[i] << endl;
+//        flU[i] = U->nFlux[i]; DflU[i] = U->DnFlux[i];
+//        sum_nflU += nU[i] * flU[i]; D2sum_nflU += pow(flU[i] * DnU[i], 2) + pow(nU[i] * DflU[i], 2);
+//        cout << " U n fluence: " << flU[i] << "+-" << DflU[i] << " mm^-2 s^-1" << endl;
+//        f = simU->F[i]; Df = simU->DF[i];
+//        cout << " U T&S correction factor: " << f << "+-" << Df << endl;
+//        Double_t sigma_raw = f * cU[i] / (nU[i] * flU[i]) * 1.E22;// / U->frac235;
+//        sigma = sigma_raw;// - U->frac238 * U->sigma238 / U->frac235;
+//        D2sigma = pow(sigma, 2) * (pow(Df / f, 2) +
+//                                   pow(DcU[i] / cU[i], 2) +
+//                                   pow(DnU[i] / nU[i], 2) +
+//                                   pow(DflU[i] / flU[i], 2))/* +
+//                  pow(U->Dfrac238 * U->sigma238 / U->frac235, 2) +
+//                  pow(U->Dfrac235 * U->frac238 * U->sigma238 / (U->frac235*U->frac235), 2)*/;
+//        sum_sigmaU += sigma;
+//        D2sum_sigmaU += D2sigma;
+//        cout << " Cross section: " << sigma << "+-" << sqrt(D2sigma) << endl;
+//    }
+//    Double_t relSigmaRaw = sum_sigmaPu / sum_sigmaU;
+//    Double_t DrelSigmaRaw = relSigmaRaw * sqrt( D2sum_sigmaPu / pow(sum_sigmaPu, 2) + D2sum_sigmaU / pow(sum_sigmaU, 2));
+//    cout << "Quotient of averages: " << relSigmaRaw << "+-" << DrelSigmaRaw << endl;
+//}
 ///*
 //void Xsection::SetParam()
 //{

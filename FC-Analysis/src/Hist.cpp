@@ -8,15 +8,16 @@
 
 using namespace std;
 
-Hist::Hist(string file_path, string setup, string FC, Int_t nr)   // Constructor
+Hist::Hist(string file_path, string setup, string FC, string name, Int_t run_nr)   // Constructor
 {
-    CommentFlag = kFALSE;
+    CommentFlag = kTRUE;
     Setup = setup;
     UFC = strcmp(FC.c_str(), "PuFC");
     Draw = kFALSE;
-    Name = FC.append("_").append(Setup.c_str()).append("_").append(to_string(nr + 1));
+    Name = name;//FC.append("_").append(Setup.c_str()).append("_").append(to_string(nr + 1));
+    RunNr = run_nr;
 
-    cout << endl << "Creating " << Name << " using " << file_path << endl;
+    cout << endl << "Creating Hist " << Name << " using " << file_path << endl;
 //    //define surrounding peak limits
 //    Dt_min = 63600;
 //    Dt_max = 78500;
@@ -29,28 +30,36 @@ Hist::Hist(string file_path, string setup, string FC, Int_t nr)   // Constructor
 //        ToF_low = 72400;
 //        ToF_up = 73600;
 //    }
-
-    Yield = 2.15882E4;
-    DYield = 543.3;
-
     FilePath = file_path;
-
+    file = TFile::Open(FilePath.c_str());
     pHtLive = GetTH1D("/Histograms/Raw/Scaler/Rates/H1RawRate_47");
     pHtReal = GetTH1D("/Histograms/Raw/Scaler/Rates/H1RawRate_48");
     char hist_name[64] = "";
     for(int i_ch = 0; i_ch < 8; i_ch++) {
         sprintf(hist_name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i_ch + 1);
         pHDtG[i_ch] = GetTH1I(hist_name);
-        sprintf(hist_name, "/Histograms/Raw/QDC/low/H1RawQDCl_%i", i_ch + 1);
-        pHRawQDCl[i_ch] = GetTH1I(hist_name);
+//        sprintf(hist_name, "/Histograms/Raw/QDC/low/H1RawQDCl_%i", i_ch + 1);
+//        pHRawQDCl[i_ch] = GetTH1I(hist_name);
         sprintf(hist_name, "/Histograms/Analysis/FC/QDC/low/trig/H1AnaQDCl_trig_%i", i_ch + 1);
         pHAnaQDCl[i_ch] = GetTH1I(hist_name);
-        sprintf(hist_name, "/Conditions/Analysis/QDC/QDCl_Thr_Ch%i", i_ch + 1);
-        TGo4WinCond* con = GetWinCond(hist_name);
-        CutUsed[i_ch] = con->GetXLow();
+//        sprintf(hist_name, "/Conditions/Analysis/QDC/QDCl_Thr_Ch%i", i_ch + 1);
+//        TGo4WinCond* con = GetWinCond(hist_name);
+//        CutUsed[i_ch] = con->GetXLow();
     }
     GetTimes();
-    cout << "Done: Created run analysis " << Name << endl;
+    GetLimits();
+    DoAnalyzeDt();
+    pHtLive->Delete();
+    pHtReal->Delete();
+    for(Int_t i = 0; i < NumCh; i++)
+    {
+        if (!Draw)
+            pHDtG[i]->Delete();
+        pHAnaQDCl[i]->Delete();
+    }
+    if (!Draw)
+        file->Close();
+    cout << "Done: Created hist " << Name << endl;
 }
 
 Hist::~Hist()    // Destructor
@@ -67,9 +76,14 @@ void Hist::SetDraw(Plot *p)
     Draw = kTRUE;
 }
 
+Bool_t Hist::IsForeground()
+{
+    return !strcmp(Setup.c_str(), "Open") || !strcmp(Setup.c_str(), "FG");
+}
+
 TH1I* Hist::GetTH1I(const char* hname)
 {   //opens a histogram in rootfile fname with (root path and name) hname
-    TFile* file = TFile::Open(FilePath.c_str());
+//    TFile* file = TFile::Open(FilePath.c_str());
     TH1I* histo = (TH1I*) file->Get(hname)->Clone();
     if(CommentFlag)
         cout << "Opening histogram " << hname << endl;
@@ -79,12 +93,12 @@ TH1I* Hist::GetTH1I(const char* hname)
     }
     else
         return histo;
-    file->Close();
+//    file->Close();
 }
 
 TH1D* Hist::GetTH1D(const char* hname)
 {   //opens a histogram in rootfile fname with (root path and name) hname
-    TFile* file = TFile::Open(FilePath.c_str());
+//    TFile* file = TFile::Open(FilePath.c_str());
     TH1D* histo = (TH1D*) file->Get(hname)->Clone();
     if(CommentFlag)
         cout << "Opening histogram " << hname << endl;
@@ -94,12 +108,12 @@ TH1D* Hist::GetTH1D(const char* hname)
     }
     else
         return histo;
-    file->Close();
+//    file->Close();
 }
 
 TGo4WinCond* Hist::GetWinCond(const char* hname)
 {   //opens a histogram in rootfile fname with (root path and name) hname
-    TFile* file = TFile::Open(FilePath.c_str());
+//    TFile* file = TFile::Open(FilePath.c_str());
     TGo4WinCond* obj = (TGo4WinCond*) file->Get(hname)->Clone();
     if(CommentFlag)
         cout << "Opening Condition " << hname << endl;
@@ -109,12 +123,12 @@ TGo4WinCond* Hist::GetWinCond(const char* hname)
     }
     else
         return obj;
-    file->Close();
+//    file->Close();
 }
 
 void Hist::SaveToFile(string path, TObject *pObj)
 {   //saves a TObject into the selected file fname
-    TFile* file = TFile::Open(FilePath.c_str(), "UPDATE");
+//    TFile* file = TFile::Open(FilePath.c_str(), "UPDATE");
     TDirectory *EvalDir;
     TObject *pGraph;
     pGraph = (TObject*) pObj;
@@ -130,47 +144,7 @@ void Hist::SaveToFile(string path, TObject *pObj)
     if (EvalDir->Get(GraphName.c_str())!=0)
         EvalDir->Delete((GraphName+";*").c_str());
     pGraph->Clone()->Write();
-    file->Save(); file->Close();
-}
-
-
-void Hist::SetNeutronField(Double_t monitorCounts, Double_t monitorRelUnc, Double_t monitorTreal, Double_t l, Double_t Dl)
-{
-    Monitor = monitorCounts;
-    DMonitor = monitorRelUnc * monitorCounts;
-    t_mon = monitorTreal;
-    L = l;
-    DL = Dl;
-    Double_t r;
-    cout << endl << "Getting neutron monitor data"
-         << endl << " t_real  = " << t_mon << endl
-         << endl << " Ch   n-Fluence[mm^-2]   n-Flux[mm^-2 s^-1]" << endl;
-    for (int i = 0; i < NumHist; i++)
-    {
-        if (UFC)
-            r = L + 119 - 10.8 * i; // UFC: 5mm distance, plates 0.4mm each
-        else
-            r = L + 191 - 20.8 * i; // PuFC: 10mm distance, plates 0.4mm each
-        NeutronFlux[i] = Yield * Monitor / (r*r * t_mon);
-        DNeutronFlux[i] = sqrt( pow(DYield * Monitor / (r*r * t_mon), 2) +
-                                pow(Yield * DMonitor / (r*r * t_mon), 2) +
-                                pow(Yield * Monitor * 2*DL / (r*r*r * t_mon), 2) );
-        DstatNeutronFlux[i] = Yield * sqrt(Monitor) / (r*r * t_mon); // exact stat. uncertainty would be sqrt(uncorrected monitor)
-//        if(CommentFlag)
-            cout << " " << i+1 << "   " << NeutronFlux[i] * t_mon << " +- " << DNeutronFlux[i] * t_mon
-                 << "   " << NeutronFlux[i] << " +- " << DNeutronFlux[i] << " +- " << DstatNeutronFlux[i] << endl;
-    }
-    cout << "Done: Get neutron monitor data" << endl;
-}
-
-
-void Hist::SetNatoms(Double_t *nAt, Double_t *DnAt)
-{
-    for (Int_t i = 0; i < NumHist; i++)
-    {
-        nAtoms[i] = nAt[i];
-        DnAtoms[i] = DnAt[i];
-    }
+//    file->Save(); file->Close();
 }
 
 
@@ -184,27 +158,81 @@ void Hist::SetNatoms(Double_t *nAt, Double_t *DnAt)
 //}
 
 
-void Hist::AnalyzeDtPeak(Int_t i_ch, Int_t lim0, Int_t lim1, Int_t lim2, Int_t lim3)
-{ // Don't call this for Pu SF measurement. Calculates number of Peak and Underground events
-    Double_t PeakInt = pHDtG[i_ch]->Integral(lim1, lim2);
-//    cout << "DEBUG: lim " << lim1 << ", " << lim2 << "; PeakInt " << PeakInt << ", " << "avBg " << avBg[i_ch] << "+-" << DavBg[i_ch] << endl;
-    Double_t UgInt = pHDtG[i_ch]->Integral(lim0, lim3) - PeakInt;
-    avBg[i_ch] = UgInt / (lim1 - lim0 + lim3 - lim2);
-    DavBg[i_ch] = sqrt(UgInt) / (lim1 - lim0 + lim3 - lim2);
-    nNIF[i_ch] = PeakInt - (lim2 - lim1 + 1) * avBg[i_ch];
-    DnNIF[i_ch] = sqrt( PeakInt + pow((lim2-lim1+1) * DavBg[i_ch], 2) );
-    nSF[i_ch] = pHDtG[i_ch]->Integral() - nNIF[i_ch];
-    DnSF[i_ch] = sqrt(pHDtG[i_ch]->Integral() + pow(DnNIF[i_ch], 2) );
+void Hist::GetLimits(Double_t n)
+{   // Set integration limits to n sigma
+    cout << endl << "Opening peak integration limits..." << endl;
+    DtBgLow = 63600; // QDC channels
+    DtBgUp = 78500;
+    Double_t ChPerBin = pHDtG[0]->GetBinWidth(1);
+    Double_t BinOffset = pHDtG[0]->GetBinCenter(1);
+    if (CommentFlag)
+        cout << " ChPerBin: " << ChPerBin << ", BinOffset: " << BinOffset << endl
+             << "Ch   Peak   bins" << endl;
+    for (int i = 0; i < NumCh; i++)
+    {
+        Double_t ToF_low = GetPeakLow(i);
+        Double_t ToF_up = GetPeakUp(i); // Limits for background are the same
+        Double_t center = 0.5 * (ToF_low + ToF_up);
+        Double_t width = (ToF_up - ToF_low) / 6.0;
+        DtPeakLow[i] = center - 500;//n * width;//
+        DtPeakUp[i] = center + 1500;//n * width;//
+
+        lim[0][i] = (DtBgLow - BinOffset) / ChPerBin;
+        lim[1][i] = (DtPeakLow[i] - BinOffset) / ChPerBin;
+        lim[2][i] = (DtPeakUp[i] - BinOffset) / ChPerBin;
+        lim[3][i] = (DtBgUp - BinOffset) / ChPerBin;
+        if (CommentFlag)
+            cout << " " << i+1 << "   " << DtPeakLow[i] << " " << DtPeakUp[i] << "   " << lim[0][i] << " " << lim[1][i] << " " << lim[2][i] << " " << lim[3][i] << " " << endl;
+    }
+    cout << "Done: peak integration limits" << endl;
 }
 
 
-void Hist::UncorrectedCrossSection(Int_t i_ch)
+void Hist::DoAnalyzeDt()
 {
-    uncCS[i_ch] = 1.E22 * nNIF[i_ch] / (t_live * nAtoms[i_ch] * NeutronFlux[i_ch]);
-    DuncCS[i_ch] = uncCS[i_ch] * sqrt( pow(DnNIF[i_ch] / nNIF[i_ch], 2) +
-                                       pow(DnAtoms[i_ch] / nAtoms[i_ch], 2) +
-                                       pow(DstatNeutronFlux[i_ch] / NeutronFlux[i_ch], 2) );
-//    cout << "DEBUG: ch " << i_ch+1 << ", (n,f) " << nNIF[i_ch] << ", t " << t_live << ", nAt " << nAtoms[i_ch] << ", N-Fluss " << NeutronFlux[i_ch] << ", CS " << uncCS[i_ch] << "+-" << DuncCS[i_ch] << endl;
+    cout << endl << Name << " analyzing ToF..." << endl;
+    if (!strcmp(Setup.c_str(), "SF"))
+    {
+        for (Int_t i = 0; i < NumCh; i++)
+            AnalyzeDtBg(i);
+    }
+    else
+    {
+        if (CommentFlag)
+            cout << " Ch   (n,f)   sf" << endl;
+        for (Int_t i = 0; i < NumCh; i++)
+        {
+            AnalyzeDtPeak(i);
+            cout << " " << i+1 << "   " << nNIF[i] << "+-" << DnNIF[i] << "   " << nSF[i] << "+-" << DnSF[i] << endl;
+        }
+    }
+    cout << "Done: Analyze ToF" << endl;
+}
+
+
+void Hist::AnalyzeDtBg(Int_t i)
+{
+    nNIF[i] = 0;
+    DnNIF[i] = 0;
+    nSF[i] = pHDtG[i]->Integral();
+    DnSF[i] = sqrt(nSF[i]);
+}
+
+
+void Hist::AnalyzeDtPeak(Int_t i)
+{ // Don't call this for Pu SF measurement. Calculates number of Peak and Underground events
+    Double_t PeakInt = pHDtG[i]->Integral(lim[1][i], lim[2][i]);
+    Double_t UgInt = pHDtG[i]->Integral(lim[0][i], lim[3][i]) - PeakInt;
+    avBg[i] = UgInt / (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
+    DavBg[i] = sqrt(UgInt) / (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
+//    cout << "DEBUG: ch " << i+1 << "; lim " << lim[0][i] << ", " << lim[1][i] << ", " << lim[2][i] << ", " << lim[3][i] << "; PeakInt " << PeakInt << ", " << "avBg " << avBg[i] << "+-" << DavBg[i] << ", NIF " << nNIF[i] << ", SF " << nSF[i] << endl;
+    nNIF[i] = PeakInt - (lim[2][i] - lim[1][i] + 1) * avBg[i];
+    DnNIF[i] = sqrt( PeakInt + pow((lim[2][i]-lim[1][i]+1) * DavBg[i], 2) );
+    nSF[i] = pHDtG[i]->Integral() - nNIF[i];
+    DnSF[i] = sqrt(pHDtG[i]->Integral() + pow(DnNIF[i], 2) );
+    if (!Draw)
+        return;
+    plot->Dt(i, pHDtG[i], nNIF[i], DnNIF[i], lim[0][i], lim[1][i], lim[2][i], lim[3][i], Setup);
 }
 
 
@@ -225,137 +253,57 @@ Double_t Hist::GetPeakUp(Int_t i_ch)
     return con->GetXUp();
 }
 
-/*
-void Hist::DoAnalyzeDt()
-{   // Analyze ToF spectra for all channels: Determine underground and, if the beam was on, peak content. Setup == "SF" for measurements without beam.
-    Bool_t peak;
-    if (strcmp(Setup.c_str(), "SF") == 0) // decide if to analyze a Dt peak
-        peak = kFALSE;
-    else
-        peak = kTRUE;
-    string FC;
-    if(UFC)
-        FC = "UFC";
-    else
-        FC = "PuFC";
-    char hname[64] = "";
-    if(CommentFlag)
-        cout << endl;
-    for (int i_ch = 0; i_ch < NumHist; i_ch++)
-    { // Analyze one channel's ToF spectrum
-        if(CommentFlag)
-            cout << "Channel " << i_ch+1 << endl;
-        Double_t niveau;
-        if(peak)
-            niveau = AnalyzeDtPeak(i_ch, pHDtG[i_ch]);
-        else
-            niveau = AnalyzeDtUnderground(i_ch, pHDtG[i_ch]);
-        Double_t x[] = {Dt_min, Dt_max};
-        Double_t y[] = {niveau, niveau};
-        TGraph* g0 = new TGraph(2, x, y);
-        sprintf(hname, "f%s%sUg_%i", FC.c_str(), Setup.c_str(), i_ch+1);
-        g0->SetNameTitle(hname, "Pulse-heigt gated ToF Underground Fit");
-        SaveToFile("Analysis/TimeDiff/Ug", g0);
-        x[0] = ToF_low;
-        x[1] = ToF_up;
-        TGraph* g1 = new TGraph(2, x, y);
-        sprintf(hname, "f%s%sUgPeak_%i", FC.c_str(), Setup.c_str(), i_ch+1);
-        g1->SetNameTitle(hname, "ToF Peak area Underground");
-        SaveToFile("Analysis/TimeDiff/Ug", g1);
-    }
 
-    DeadTimeCorrection(peak);
+//void Hist::DoAnalyzeDt()
+//{   // Analyze ToF spectra for all channels: Determine underground peak content.
+//    cout << endl << "Analying ToF peak..." << endl;
+//    if (CommentFlag)
+//        cout << " Ch   (n,f)   SF" << endl;
+//    for (Int_t i = 0; i < NumCh; i++)
+//    {
+//        AnalyzeDtPeak(i);
+//        if (CommentFlag)
+//            cout << " " << i+1 << "   " << nNIF[i] << "+-" << DnNIF[i] << "   " << nSF[i] << "+-" << DnSF[i] << endl;
+//    }
+//    cout << "Done: Analyze ToF peak" << endl;
+//}
 
-    if (CommentFlag)
-        cout << "Times: " << t_real << ", " << t_live << endl
-             << "ch   NIF   SF   SF rate" << endl;
-    for (int i = 0; i < NumHist; i++)
-    {
-        SFRate[i] = nSF[i] / t_real;
-        DSFRate[i] = DnSF[i] / t_real;
-        if(CommentFlag)
-            cout << " " << i+1 << "  " << nNIF[i] << "+-" << DnNIF[i] << "  " << nSF[i] << "+-" << DnSF[i] << "  " << SFRate[i] << "+-" << DSFRate[i] << endl;
-    }
 
-    Double_t x[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    Double_t xerr[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    TGraphErrors* g0 = new TGraphErrors(NumHist, x, SFRate, xerr, DSFRate);
-    g0->SetNameTitle("SF_Rate", "SF detection rate");
-    SaveToFile("Analysis/TimeDiff", g0);
+//Double_t Hist::AnalyzeDtPeak(Int_t i_ch, TH1I *pH)
+//{
+////    TH1I* pH = (TH1I*)pHDtG[i_ch]->Clone();
+//    Double_t ChPerBin = pH->GetBinWidth(0);
+//    Double_t BinOffset = pH->GetBinCenter(0);
+//    // Calculate integration limit bins
+//    Double_t lim_0 = (Dt_min - BinOffset) / ChPerBin;
+//    Double_t lim_1 = (ToF_low - BinOffset) / ChPerBin;
+//    Double_t lim_2 = (ToF_up - BinOffset) / ChPerBin;
+//    Double_t lim_3 = (Dt_max - BinOffset) / ChPerBin;
+//    if(CommentFlag)
+//        cout << "Analyzing Dt peak. Ch per bin: " << ChPerBin << ", Offset: " << BinOffset << endl <<
+//                " Integration limits: Bin nr. " << lim_0 << " " << lim_1 << " " << lim_2 << " " << lim_3 << endl;
+//    // Integrations
+//    Int_t PeakCount = pH->Integral(lim_1, lim_2); // Sum within peak region
+//    Double_t UgCount = pH->Integral(lim_0, lim_3) - PeakCount; // Sum within underground region; follows Poisson-stat
+//    Double_t DUgCount = sqrt(UgCount); // Underground deviation
+//    Double_t UgPerBin = 1.0 * UgCount / (lim_1 - lim_0 + lim_3 - lim_2);
+//    Double_t DUgPerBin = 1.0 * DUgCount / (lim_1 - lim_0 + lim_3 - lim_2);
+//    nNIF_raw[i_ch] = PeakCount - (lim_2 - lim_1 + 1) * UgPerBin;
+//    DnNIF_raw[i_ch] = (lim_2 - lim_1 + 1) * DUgPerBin;
+//    nSF_raw[i_ch] = pH->Integral() - nNIF_raw[i_ch]; // Calculate total underground
+//    DnSF_raw[i_ch] = sqrt(pow(DnNIF_raw[i_ch], 2) + pH->Integral()); // Error according to Gauss
+//    if(CommentFlag)
+//        cout << "NIF: " << nNIF_raw[i_ch] << " +- " << DnNIF_raw[i_ch] << endl <<
+//                "SF:  " << nSF_raw[i_ch]  << " +- " << DnSF_raw[i_ch]  << endl;
+//    return UgPerBin;
+//}
 
-    TGraphErrors* g5 = new TGraphErrors(NumHist, x, nSF, xerr, DnSF);
-    g5->SetNameTitle("SF", "SF count");
-    SaveToFile("Analysis/TimeDiff", g5);
 
-    if(peak)
-    {   // If measured with beam, draw NIF rates, NIF/SF rates ratio and NIF/Flux ratio
-        Double_t Ratio_SF[NumHist];
-        Double_t DRatio_SF[NumHist];
-        Double_t Ratio_Flux[NumHist];
-        Double_t DRatio_Flux[NumHist];
-        for (int i = 0; i < NumHist; i++)
-        {
-            NIFRate[i] = nNIF[i] / t_real;
-            DNIFRate[i] = DnNIF[i] / t_real;
-            Ratio_SF[i] = nNIF[i] / nSF[i];
-            DRatio_SF[i] = sqrt( pow(DnNIF[i] / nSF[i], 2) +
-                              pow(nNIF[i] * DnSF[i] / pow(nSF[i], 2), 2) );
-            Ratio_Flux[i] = NIFRate[i] / NeutronFlux[i];
-            DRatio_Flux[i] = sqrt( pow(DNIFRate[i] / NeutronFlux[i], 2) +
-                                   pow(NIFRate[i] * DNeutronFlux[i] / pow(NeutronFlux[i], 2), 2) );
-        }
-        TGraphErrors* g1 = new TGraphErrors(NumHist, x, nNIF, xerr, DnNIF);
-        g1->SetNameTitle("NIF", "NIF count");
-        SaveToFile("Analysis/TimeDiff", g1);
-
-        TGraphErrors* g2 = new TGraphErrors(NumHist, x, NIFRate, xerr, DNIFRate);
-        g2->SetNameTitle("NIF_Rate", "NIF detection rate");
-        SaveToFile("Analysis/TimeDiff", g2);
-
-        TGraphErrors* g3 = new TGraphErrors(NumHist, x, Ratio_SF, xerr, DRatio_SF);
-        g3->SetNameTitle("NIF_SF_Ratio", "NIF to SF detection ratio");
-        SaveToFile("Analysis/TimeDiff", g3);
-
-        TGraphErrors* g4 = new TGraphErrors(NumHist, x, Ratio_Flux, xerr, DRatio_Flux);
-        g4->SetNameTitle("NIF_Flux_Ratio", "NIF detection to neutron flux ratio");
-        SaveToFile("Analysis/TimeDiff", g4);
-    }
-    return;
-}
-
-Double_t Hist::AnalyzeDtPeak(Int_t i_ch, TH1I *pH)
-{
-//    TH1I* pH = (TH1I*)pHDtG[i_ch]->Clone();
-    Double_t ChPerBin = pH->GetBinWidth(0);
-    Double_t BinOffset = pH->GetBinCenter(0);
-    // Calculate integration limit bins
-    Double_t lim_0 = (Dt_min - BinOffset) / ChPerBin;
-    Double_t lim_1 = (ToF_low - BinOffset) / ChPerBin;
-    Double_t lim_2 = (ToF_up - BinOffset) / ChPerBin;
-    Double_t lim_3 = (Dt_max - BinOffset) / ChPerBin;
-    if(CommentFlag)
-        cout << "Analyzing Dt peak. Ch per bin: " << ChPerBin << ", Offset: " << BinOffset << endl <<
-                " Integration limits: Bin nr. " << lim_0 << " " << lim_1 << " " << lim_2 << " " << lim_3 << endl;
-    // Integrations
-    Int_t PeakCount = pH->Integral(lim_1, lim_2); // Sum within peak region
-    Double_t UgCount = pH->Integral(lim_0, lim_3) - PeakCount; // Sum within underground region; follows Poisson-stat
-    Double_t DUgCount = sqrt(UgCount); // Underground deviation
-    Double_t UgPerBin = 1.0 * UgCount / (lim_1 - lim_0 + lim_3 - lim_2);
-    Double_t DUgPerBin = 1.0 * DUgCount / (lim_1 - lim_0 + lim_3 - lim_2);
-    nNIF_raw[i_ch] = PeakCount - (lim_2 - lim_1 + 1) * UgPerBin;
-    DnNIF_raw[i_ch] = (lim_2 - lim_1 + 1) * DUgPerBin;
-    nSF_raw[i_ch] = pH->Integral() - nNIF_raw[i_ch]; // Calculate total underground
-    DnSF_raw[i_ch] = sqrt(pow(DnNIF_raw[i_ch], 2) + pH->Integral()); // Error according to Gauss
-    if(CommentFlag)
-        cout << "NIF: " << nNIF_raw[i_ch] << " +- " << DnNIF_raw[i_ch] << endl <<
-                "SF:  " << nSF_raw[i_ch]  << " +- " << DnSF_raw[i_ch]  << endl;
-    return UgPerBin;
-}
-*/
 Double_t Hist::GetNevents(Int_t i)
 {
     return pHRawQDCl[i]->Integral();
 }
+
 
 void Hist::DoAnalyzeQDC()
 {
@@ -552,6 +500,17 @@ void Hist::GetTimes()
     cout <<"t_real = " << t_real << endl << "t_live = " << t_live << endl;
     if (CommentFlag)
         cout << endl << "t_real / t_live = " << t_real / t_live << endl;
+    Int_t N = pHtLive->GetNbinsX();
+    Int_t i = 1;
+    while (i < N+1 && pHtLive->GetBinContent(i) == 0)
+        i++;
+    t_start = pHtLive->GetXaxis()->GetBinCenter(i);
+    i = N;
+    while (i > 0 && pHtLive->GetBinContent(i) == 0)
+        i--;
+    t_stop = pHtLive->GetXaxis()->GetBinCenter(i);
+    if (CommentFlag)
+        cout << "t_start = " << t_start << endl << "t_stop = " << t_stop << endl;
 }
 
 //void Hist::DeadTimeCorrection(Bool_t peak)
@@ -597,7 +556,7 @@ Int_t Hist::FindMax(TH1I *pH, Int_t rough_pos, Int_t range)
     Double_t Max_fit = Fit2(pH, low, up);
     if(Max_fit < low || Max_fit > up)
     {
-        cout << "Error: Maximum " << Max_fit << " not in (" << low << ";" << ")" << endl;
+        cout << "Error: Maximum " << Max_fit << " not in (" << low << ";" << up << ")" << endl;
         return 0;
     }
     if(CommentFlag)

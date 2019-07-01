@@ -3,28 +3,30 @@
 
 #include <string>
 #include "FC.h"
+#include "Hist.h"
 
 using namespace std;
 
 class PuFC : public FC
 {
 public:
-    Hist *pHSF;
     PuFC(Bool_t draw);
     ~PuFC();
-    void AnalyzeQDC() override;
+//    void AnalyzeQDC() override;
     void HardCodedThresholds() override;
-    void AnalyzeDtBG() override;
+//    void AnalyzeDtBG() override;
     void GetNatoms() override;
     void IsoVec() override;
-    void GetExpT() override;
-    void plt();
+//    void GetExpT() override;
+//    void plt();
 
 private:
     void InitPuVar();
     Double_t PuSFT2, DPuSFT2;
     Double_t cSF[NumHist];
     Double_t DcSF[NumHist];
+    Run *pRSF;
+    Hist *pHSF;
 
 };
 

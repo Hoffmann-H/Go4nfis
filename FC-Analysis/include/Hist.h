@@ -27,34 +27,38 @@ using namespace std;
 class Hist
 {
 public:
-    Hist(std::string file_path, string setup = "NIF", string FC = "PuFC", Int_t nr = 0);  // Constructor
+    Hist(std::string file_path, string setup/* = "NIF"*/, string FC/* = "PuFC"*/, string name, Int_t run_nr);  // Constructor
 //     Hist(); // Standard constructor, needed for object i/o
     ~Hist(); // Destructor
     void SetDraw(Plot *p);
+    Bool_t IsForeground();
 
-//    void DoAnalyzeDt();
+    void DoAnalyzeDt();
     void DoAnalyzeQDC();
     void SetNeutronField(Double_t monitorCounts, Double_t monitorRelUnc, Double_t monitorTreal, Double_t l = 1500, Double_t Dl = 1);
-    void SetNatoms(Double_t *nAt, Double_t *DnAt);
-//    void SetAvBg(Double_t *avBg, Double_t *DavBg);
-    void AnalyzeDtPeak(Int_t i_ch, Int_t lim0, Int_t lim1, Int_t lim2, Int_t lim3);
-    void UncorrectedCrossSection(Int_t i_ch);
     Double_t GetPeakLow(Int_t i_ch);
     Double_t GetPeakUp(Int_t i_ch);
-//    Double_t GetNumberEvents(int i);
+    void GetLimits(Double_t n = 3);
+//    void SetAvBg(Double_t *avBg, Double_t *DavBg);
+    void AnalyzeDtBg(Int_t i);
+    void AnalyzeDtPeak(Int_t i);
     Double_t GetNevents(Int_t i);
 
 //    Double_t SFRate[NumHist]; // SF rates assuming efficiency==100%
 //    Double_t DSFRate[NumHist];
 //    Double_t NIFRate[NumHist]; // NIF rates assuming efficiency==100%
 //    Double_t DNIFRate[NumHist];
+    string Name;
     Double_t t_live; // times
     Double_t t_real;
+    Int_t t_start;
+    Int_t t_stop;
     TH1I *pHDtG[NumHist];
     Double_t t_mon;
     Double_t NeutronFlux[NumHist];
     Double_t DNeutronFlux[NumHist];
     Double_t DstatNeutronFlux[NumHist];
+    Int_t RunNr;
     Double_t eInt[NumHist]; // intrinsic detection efficiency
     Double_t DeInt[NumHist];
     Double_t PedQDC[NumHist]; // extrema positions
@@ -65,15 +69,12 @@ public:
     Double_t DnNIF[NumHist];
     Double_t nSF[NumHist];
     Double_t DnSF[NumHist];
-    Double_t uncCS[NumHist];
-    Double_t DuncCS[NumHist];
 private:
     // run parameters
     Bool_t CommentFlag;
     string Setup; // measurement setup. Possible values are "NIF", "SB", "SF".
     Bool_t UFC; // UFC==kFALSE: Analyze PuFC. UFC==kTRUE: Analyze UFC.
     string FilePath;
-    string Name;
     TFile *file;
     Bool_t Draw;
     Plot *plot;
@@ -81,13 +82,12 @@ private:
     Double_t Yield,   DYield;
     Double_t L,       DL;
     // analysis parameters
-    Double_t ToF_low;
-    Double_t ToF_up;
-    Double_t Dt_min;
-    Double_t Dt_max;
+    Double_t DtPeakLow[NumCh];
+    Double_t DtPeakUp[NumCh];
+    Double_t DtBgLow;
+    Double_t DtBgUp;
+    Int_t lim[4][NumCh]; // integration limits' bin numbers
     // Variables
-    Double_t nAtoms[NumHist];
-    Double_t DnAtoms[NumHist];
     Double_t avBg[NumHist]; // average constant background
     Double_t DavBg[NumHist];
     Double_t CutUsed[NumHist];

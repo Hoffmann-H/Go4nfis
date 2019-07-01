@@ -10,13 +10,13 @@ class UFC : public FC
 public:
     UFC(Bool_t draw);
     ~UFC();
-    void AnalyzeQDC() override;
+//    void AnalyzeQDC() override;
     void HardCodedThresholds() override;
-    void AnalyzeDtBG() override;
+//    void AnalyzeDtBG() override;
     void GetNatoms() override;
     void IsoVec() override;
-    void GetExpT() override;
-    void Calibrate();
+//    void GetExpT() override;
+//    void Calibrate();
 //    void CalcCS(Int_t i);
 
 

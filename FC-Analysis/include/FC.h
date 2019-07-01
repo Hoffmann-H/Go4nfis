@@ -2,12 +2,14 @@
 #define FC_H
 
 #include <string>
+#include "Run.h"
 #include "Hist.h"
 #include "AnaSim.h"
 #include "Plot.h"
 
-#define NumHist 8
-#define NumRuns 5
+#define NumCh 8
+#define MaxRuns 5
+#define MaxHist 10
 
 using namespace std;
 
@@ -15,42 +17,48 @@ class FC
 {
 public:
     string Name;
-    string SimPath;
+//    string SimPath;
     Bool_t CommentFlag;
     Bool_t DrawSingle, DrawMulti;
     Plot *plot;
 //    Int_t ScatterMethod;
     Int_t FgRuns;
     Int_t BgRuns;
-    Hist *pHFG[NumRuns];
-    Hist *pHBG[NumRuns];
+    Run* pR[2 * MaxRuns];
+    Int_t nHist;
+    Hist *pH[2*MaxHist];
+    Double_t FgMon;
+    Double_t BgMon;
     AnaSim *sim;
     FC(); //Double_t nFieldFG, Double_t DnFieldFG, Double_t nFieldBG, Double_t DnFieldBG);
     ~FC();
 
     // virtual methods: Differences between FC's
-    virtual void AnalyzeQDC() = 0;//{}
     virtual void HardCodedThresholds() = 0;//{} // hard-code parameters
+//    virtual void AnalyzeQDC() = 0;//{}
 //    virtual void GetDistance(Int_t i) = 0;//{} // hard-code parameters
 //    virtual void GetSimTransmission(Int_t i) = 0;//{} // hard-code parameters
 //    virtual void GetSimScattering(Int_t i) = 0;//{} // hard-code parameters
-    virtual void AnalyzeDtBG() = 0;//{cout << "virtual FC::AnalyzeDtBG. Don't call me" << endl;}
+//    virtual void AnalyzeDtBG() = 0;//{cout << "virtual FC::AnalyzeDtBG. Don't call me" << endl;}
+//    virtual void GetExpT() = 0;
     virtual void GetNatoms() = 0;
     virtual void IsoVec() = 0;
-    virtual void GetExpT() = 0;
-    void ExpTrans();
     void InitVar(Bool_t draw);
-    void GetLimits(Double_t n = 3);
+    void UseHists(Int_t start, Int_t stop, string setup, Int_t run);
+    void UseHist(string file_name, string setup, Int_t run);
     void AnalyzeDt();
-    void ScatCorrDiff();
-    void ScatCorrFit();
-    void ScatCorrSim();
     void CrossSection();
+    void RegisterHists();
+    void Stability();
+//    void ScatCorrDiff();
+//    void ScatCorrFit();
+    void ScatCorrSim();
+//    void ExpTrans();
     void GetSimFg();
-    void GetSimBg();
+//    void GetSimBg();
     void Corrections();
-    void CompareShadowCone();
-    void CompareTransmission();
+//    void CompareShadowCone();
+//    void CompareTransmission();
 
     // Workflow variables
     Bool_t DoneQDC,
@@ -72,33 +80,32 @@ public:
     Double_t u;
     Double_t Area;
     Double_t DArea;
-    Double_t nAtoms[NumHist];
-    Double_t DnAtoms[NumHist];
-    Double_t sd[NumHist]; // Distance source-detector
-    Double_t Dsd[NumHist];
+    Double_t nAtoms[NumCh];
+    Double_t DnAtoms[NumCh];
+    Double_t sd[NumCh]; // Distance source-detector
+    Double_t Dsd[NumCh];
 
     // TimeDiff integration parameters
-    Double_t DtPeakLow[NumHist];
-    Double_t DtPeakUp[NumHist];
+    Double_t DtPeakLow[NumCh];
+    Double_t DtPeakUp[NumCh];
     Double_t DtBgLow;
     Double_t DtBgUp;
 
     // Analysis
-    Int_t lim[4][NumHist]; // integration limits' bin numbers
-    Double_t avBg[NumHist]; // average fission background per livetime and Dt bin
-    Double_t DavBg[NumHist];
-    Double_t nFG[NumHist]; // fission count correlated with Neutron pulse
-    Double_t DnFG[NumHist];
-    Double_t nBG[NumHist];
-    Double_t DnBG[NumHist];
-    Double_t nFlux[NumHist];
-    Double_t DnFlux[NumHist];
-//    Double_t cFG[NumHist]; // fission count Constant in time
-//    Double_t DcFG[NumHist];
-//    Double_t cBG[NumHist];
-//    Double_t DcBG[NumHist];
-//    Double_t nfDirect[NumHist]; // number of fissions induced by direct neutrons
-//    Double_t DnfDirect[NumHist];
+    Double_t avBg[NumCh]; // average fission background per livetime and Dt bin
+    Double_t DavBg[NumCh];
+    Double_t nFG[NumCh]; // fission count correlated with Neutron pulse
+    Double_t DnFG[NumCh];
+    Double_t nBG[NumCh];
+    Double_t DnBG[NumCh];
+    Double_t nFlux[NumCh];
+    Double_t DnFlux[NumCh];
+//    Double_t cFG[NumCh]; // fission count Constant in time
+//    Double_t DcFG[NumCh];
+//    Double_t cBG[NumCh];
+//    Double_t DcBG[NumCh];
+//    Double_t nfDirect[NumCh]; // number of fissions induced by direct neutrons
+//    Double_t DnfDirect[NumCh];
     Double_t sIsoVec; // correction subtrahend for isotope vector
     Double_t DsIsoVec;
     Double_t fIsoVec; // correction factor for isotope vector
@@ -107,16 +114,16 @@ public:
     Double_t DfTS[NumCh];
     Double_t uT[NumCh]; // NIF over SF rate
     Double_t DuT[NumCh];
-    Double_t ExpT[NumHist]; // Experimental transmission factor
-    Double_t DExpT[NumHist];
-    Double_t SimT[NumHist]; // Simulated transmission factor
-    Double_t DSimT[NumHist];
-    Double_t pDirect[NumHist][3]; // Direct portion: ratio of direct to all fissions
-    Double_t DpDirect[NumHist][3]; // 2nd index: 0 Experimental, 1 one sim, 2 shadow cone sim
-    Double_t uCS[NumHist]; // un-corrected, raw cross section
-    Double_t DuCS[NumHist];
-    Double_t CS[NumHist]; // corrected cross section
-    Double_t DCS[NumHist];
+    Double_t ExpT[NumCh]; // Experimental transmission factor
+    Double_t DExpT[NumCh];
+    Double_t SimT[NumCh]; // Simulated transmission factor
+    Double_t DSimT[NumCh];
+    Double_t pDirect[NumCh][3]; // Direct portion: ratio of direct to all fissions
+    Double_t DpDirect[NumCh][3]; // 2nd index: 0 Experimental, 1 one sim, 2 shadow cone sim
+    Double_t uCS[NumCh]; // un-corrected, raw cross section
+    Double_t DuCS[NumCh];
+    Double_t CS[NumCh]; // corrected cross section
+    Double_t DCS[NumCh];
 
 private:
     void SaveToFile(string path, TObject *pObj);

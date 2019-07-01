@@ -58,13 +58,13 @@ PuFC::PuFC(Bool_t draw)
     k++;
     pR[k] = new Run("PuFC", "SB", k - FgRuns);
     FgMon += pR[k]->SetNeutronField(28646613.7419, 0.0014, 18331.64);
-    UseHists(194, 201, "SB", k);
-//    UseHist("PuFC_BG_MS10", "SB", k);
+//    UseHists(194, 201, "SB", k);
+    UseHist("PuFC_BG_MS10", "SB", k);
     k++;
     pR[k] = new Run("PuFC", "SB", k - FgRuns);
     FgMon += pR[k]->SetNeutronField(4757385.125897, 0.0014, 3098.89);
-    UseHists(202, 203, "SB", k);
-//    UseHist("PuFC_BG_MS11", "SB", k);
+//    UseHists(202, 203, "SB", k);
+    UseHist("PuFC_BG_MS11", "SB", k);
     k++;
     BgRuns = k - FgRuns;
 /////////////////////////////////////////////////////////////////////////////////////////

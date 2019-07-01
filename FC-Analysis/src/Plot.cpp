@@ -668,15 +668,15 @@ void Plot::Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1,
     pHpeak->Draw("same");
 //    g->Draw("same");
 //    pH->Draw("same");
-    sprintf(name, "(n,f) events: %.0f +- %.0f", nf, Dnf);
+    sprintf(name, "(n,f): %.0f +- %.0f", nf, Dnf);
     TText *tnf = new TText();
     tnf->SetNDC();
     tnf->DrawText(0.5, 0.8, name);
     sprintf(name, "SF background: %.2f events / ns", level / 4.0);
     TText *tbg = new TText();
     tbg->SetNDC();
-    tbg->DrawText(0.2, 0.2, name);
-    sprintf(name, "%i Fission fragments", ff);
+//    tbg->DrawText(0.2, 0.2, name);
+    sprintf(name, "%i Spaltfragmente", ff);
     TText *tff = new TText();
     tff->SetNDC();
     tff->DrawText(0.4, 0.9, name);
@@ -685,7 +685,29 @@ void Plot::Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1,
 }
 
 
-//void Plot::
+void Plot::Stability(Int_t i, Int_t nHist, Double_t *rNIF, Double_t *DrNIF)
+{
+    Double_t X[nHist];
+    Double_t Xerr[nHist];
+    for (Int_t j = 0; j < nHist; j++)
+    {
+        X[j] = j;
+        Xerr[j] = 0;
+    }
+    char name[64] = "";
+    sprintf(name, "cStab_%i", i+1);
+    TCanvas *C = new TCanvas(name, "Stability", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    TGraphErrors *g = new TGraphErrors(nHist, X, rNIF, Xerr, DrNIF);
+    sprintf(name, "gStab_%i", i+1);
+    g->SetName(name);
+    g->SetTitle("(n,f)-Rate Stabilitaet; File nr; Rate [1/s]");
+    g->SetLineColor(kRed);
+    g->SetLineWidth(lw);
+    g->Draw("ap");
+    C->Modified();
+    C->Update();
+}
 
 
 void Plot::TvsE(Int_t ch, TH2F *pH2TvsE, Double_t binToFmin, Double_t binToFmax, Int_t directN)

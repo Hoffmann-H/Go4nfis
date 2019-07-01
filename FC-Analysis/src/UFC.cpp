@@ -5,36 +5,63 @@ UFC::UFC(Bool_t draw)
 {
     Name = "UFC";
     cout << endl << "Creating fission chamber " << Name << endl;
-    CommentFlag = kFALSE;
+    CommentFlag = kTRUE;
     InitVar(draw);
     InitUVar();
-/*
-    12371470
-    12876188
-    14226964
-    27941726
-    9962706
-
-    13815794
-*/
-
+/////////////////////////////////////////////////////////////////////////////////////////
+//    pR[0] = new Run("UFC", "Open", 0);
+//    FgMon = pR[0]->SetNeutronField(9509138+12371470+12876188+27941726+9962706, 0.0014, 7880.71+11193.57+10940.15+22636.3+8291.89);
+//    UseHist("UFC_NIF", "Open", 0);
 //    FgRuns = 1;
-//    pHFG[0] = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "Open", "UFC", 0);
-//    pHFG[0]->SetNeutronField(72661227.5811, 0.0014, 61012.07);
+//    pR[1] = new Run("UFC", "SB", 0);
+//    BgMon = pR[1]->SetNeutronField(13815794, 0.0014, 11395.49);
+//    UseHist("UFC_SB", "SB", 1);
+//    BgRuns = 1;
+/////////////////////////////////////////////////////////////////////////////////////////
+    Int_t k = 0;
+    FgMon = 0;
+    pR[k] = new Run("UFC", "Open", k);
+    FgMon += pR[k]->SetNeutronField(9509137.9391, 0.0014, 7880.71);
+//    UseHists(2, 2, "Open", k);
+    UseHist("UFC_FG_MS20_2", "Open", k);
+    k++;
+    pR[k] = new Run("UFC", "Open", k);
+    FgMon += pR[k]->SetNeutronField(12371469.5909, 0.0014, 11193.57);
+//    UseHists(4, 4, "Open", k);
+    UseHist("UFC_FG_MS20_3", "Open", k);
+    k++;
+    pR[k] = new Run("UFC", "Open", k);
+    FgMon += pR[k]->SetNeutronField(12876188.3535, 0.0014, 10940.15);
+//    UseHists(5, 5, "Open", k);
+    UseHist("UFC_FG_MS20_4", "Open", k);
+    k++;
+    pR[k] = new Run("UFC", "Open", k);
+    FgMon += pR[k]->SetNeutronField(27941726.1118, 0.0014, 22636.3);
+    UseHists(7, 8, "Open", k);
+//    UseHist("UFC_FG_MS21_2", "Open", k);
+    k++;
+    pR[k] = new Run("UFC", "Open", k);
+    FgMon += pR[k]->SetNeutronField(9962705.5858, 0.0014, 8291.89);
+//    UseHists(9, 10, "Open", k);
+    UseHist("UFC_FG_MS21_3", "Open", k);
+    k++;
+    FgRuns = k;
+    BgMon = 0;
+    pR[k] = new Run("UFC", "SB", k - FgRuns);
+    BgMon += pR[k]->SetNeutronField(14226964.0879, 0.0014, 11456.44);
+//    UseHists(6, 6, "SB", k);
+    UseHist("UFC_BG_MS20_5", "SB", k);
+    k++;
+    pR[k] = new Run("UFC", "SB", k - FgRuns);
+    BgMon += pR[k]->SetNeutronField(13815793.6783, 0.0014, 11395.49);
+    UseHists(12, 13, "SB", k);
+//    UseHist("UFC_BG_MS21_4", "SB", k);
+    k++;
+    BgRuns = k - FgRuns;
+/////////////////////////////////////////////////////////////////////////////////////////
 
-    FgRuns = 3;
-    pHFG[0] = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_2.root", "Open", "UFC", 0);
-    pHFG[0]->SetNeutronField(9509137.9391, 0.0014, 7880.71);
-    pHFG[1] = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_3.root", "Open", "UFC", 1);
-    pHFG[1]->SetNeutronField(12371469.5909, 0.0014, 11193.57);
-    pHFG[2] = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS20_4.root", "Open", "UFC", 2);
-    pHFG[2]->SetNeutronField(12876188.3535, 0.0014, 10940.15);
-    pHFG[3] = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_FG_MS21_2.root", "Open", "UFC", 3);
-    pHFG[3]->SetNeutronField(27941726.1118, 0.0014, 22636.3);
+    RegisterHists();
 
-    BgRuns = 1;
-    pHBG[0] = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root", "SB", "UFC", 0);
-    pHBG[0]->SetNeutronField(14226964.0879, 0.0014, 11456.44);
     cout << "Created " << Name << endl;
 }
 
@@ -100,90 +127,90 @@ void UFC::HardCodedThresholds(){
 }
 
 
-void UFC::AnalyzeQDC()
-{// Calculate the average QDC minimum position
-    if (CommentFlag)
-        cout << endl << "Calculate QDC thesholds" << endl;
-    Double_t avCut[NumHist];
-    Double_t DavCut[NumHist];
+//void UFC::AnalyzeQDC()
+//{// Calculate the average QDC minimum position
+//    if (CommentFlag)
+//        cout << endl << "Calculate QDC thesholds" << endl;
+//    Double_t avCut[NumHist];
+//    Double_t DavCut[NumHist];
 
-    for (Int_t j = 0; j < FgRuns; j++)
-        pHBG[j]->DoAnalyzeQDC();
-    for (Int_t j = 0; j < BgRuns; j++)
-        pHFG[j]->DoAnalyzeQDC();
+//    for (Int_t j = 0; j < FgRuns; j++)
+//        pHBG[j]->DoAnalyzeQDC();
+//    for (Int_t j = 0; j < BgRuns; j++)
+//        pHFG[j]->DoAnalyzeQDC();
 
-    for (int i = 0; i < NumHist; i++)
-    {
-        Double_t w[FgRuns + BgRuns]; // weights
-        Double_t wSum = 0;
-        avCut[i] = 0;
-        for (Int_t j = 0; j < FgRuns; j++)
-        {
-            w[j] = pHFG[j]->GetNevents(i);
-            avCut[i] += w[j] * pHFG[j]->CutQDC[i];
-            wSum += w[j];
-        }
-        for (Int_t j = 0; j < BgRuns; j++)
-        {
-            w[FgRuns + j] = pHBG[j]->GetNevents(i);
-            avCut[i] += w[FgRuns + j] * pHBG[j]->CutQDC[i];
-            wSum += w[FgRuns + j];
-        }
-        avCut[i] /= wSum;
-        DavCut[i] = 0;
-        for (Int_t j = 0; j < FgRuns; j++)
-            DavCut[i] += w[j] * pow(pHFG[j]->CutQDC[i] - avCut[i], 2);
-        for (Int_t j = 0; j < BgRuns; j++)
-            DavCut[i] += w[FgRuns + j] * pow(pHBG[j]->CutQDC[i] - avCut[i], 2);
-        DavCut[i] = sqrt(DavCut[i] / wSum);
-        if (CommentFlag)
-            cout << " ch " << i+1 << ": " << avCut[i] << "+-" << DavCut[i] << endl;
-    }
-    cout << "QDC thresholds: " << avCut[0] << " " << avCut[1] << " " << avCut[2] << " " << avCut[3] << " " <<
-                                  avCut[4] << " " << avCut[5] << " " << avCut[6] << " " << avCut[7] << endl;
-    cout << "Done: QDC thresholds" << endl;
-    DoneQDC = kTRUE;
-}
+//    for (int i = 0; i < NumHist; i++)
+//    {
+//        Double_t w[FgRuns + BgRuns]; // weights
+//        Double_t wSum = 0;
+//        avCut[i] = 0;
+//        for (Int_t j = 0; j < FgRuns; j++)
+//        {
+//            w[j] = pHFG[j]->GetNevents(i);
+//            avCut[i] += w[j] * pHFG[j]->CutQDC[i];
+//            wSum += w[j];
+//        }
+//        for (Int_t j = 0; j < BgRuns; j++)
+//        {
+//            w[FgRuns + j] = pHBG[j]->GetNevents(i);
+//            avCut[i] += w[FgRuns + j] * pHBG[j]->CutQDC[i];
+//            wSum += w[FgRuns + j];
+//        }
+//        avCut[i] /= wSum;
+//        DavCut[i] = 0;
+//        for (Int_t j = 0; j < FgRuns; j++)
+//            DavCut[i] += w[j] * pow(pHFG[j]->CutQDC[i] - avCut[i], 2);
+//        for (Int_t j = 0; j < BgRuns; j++)
+//            DavCut[i] += w[FgRuns + j] * pow(pHBG[j]->CutQDC[i] - avCut[i], 2);
+//        DavCut[i] = sqrt(DavCut[i] / wSum);
+//        if (CommentFlag)
+//            cout << " ch " << i+1 << ": " << avCut[i] << "+-" << DavCut[i] << endl;
+//    }
+//    cout << "QDC thresholds: " << avCut[0] << " " << avCut[1] << " " << avCut[2] << " " << avCut[3] << " " <<
+//                                  avCut[4] << " " << avCut[5] << " " << avCut[6] << " " << avCut[7] << endl;
+//    cout << "Done: QDC thresholds" << endl;
+//    DoneQDC = kTRUE;
+//}
 
 
-void UFC::AnalyzeDtBG()
-{   // Calculate average fission background per livetime and Dt bin
-    if (!DoneLimits)
-        GetLimits();
-    cout << endl << "Analyzing ToF background..." << endl;
+//void UFC::AnalyzeDtBG()
+//{   // Calculate average fission background per livetime and Dt bin
+//    if (!DoneLimits)
+//        GetLimits();
+//    cout << endl << "Analyzing ToF background..." << endl;
 
-    if (CommentFlag)
-        cout << "Ch   counts   tBin   avBg" << endl;
-    for (int i = 0; i < NumHist; i++)
-    {
-        // Integrate background
-        Double_t counts = 0;
-        Double_t tBin = 0;
-        for (Int_t j = 0; j < FgRuns; j++)
-        {
-            counts += pHFG[j]->pHDtG[i]->Integral(lim[0][i], lim[3][i]) - pHFG[j]->pHDtG[i]->Integral(lim[1][i], lim[2][i]);
-            tBin += pHFG[j]->t_live * (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
-        }
-        for (Int_t j = 0; j < BgRuns; j++)
-        {
-            counts += pHBG[j]->pHDtG[i]->Integral(lim[0][i], lim[3][i]) - pHBG[j]->pHDtG[i]->Integral(lim[1][i], lim[2][i]);
-            tBin += pHBG[j]->t_live * (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
-        }
-        avBg[i] = counts / tBin;
-        DavBg[i] = sqrt(counts) / tBin;
+//    if (CommentFlag)
+//        cout << "Ch   counts   tBin   avBg" << endl;
+//    for (int i = 0; i < NumHist; i++)
+//    {
+//        // Integrate background
+//        Double_t counts = 0;
+//        Double_t tBin = 0;
+//        for (Int_t j = 0; j < FgRuns; j++)
+//        {
+//            counts += pHFG[j]->pHDtG[i]->Integral(lim[0][i], lim[3][i]) - pHFG[j]->pHDtG[i]->Integral(lim[1][i], lim[2][i]);
+//            tBin += pHFG[j]->t_live * (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
+//        }
+//        for (Int_t j = 0; j < BgRuns; j++)
+//        {
+//            counts += pHBG[j]->pHDtG[i]->Integral(lim[0][i], lim[3][i]) - pHBG[j]->pHDtG[i]->Integral(lim[1][i], lim[2][i]);
+//            tBin += pHBG[j]->t_live * (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
+//        }
+//        avBg[i] = counts / tBin;
+//        DavBg[i] = sqrt(counts) / tBin;
 
-        if (CommentFlag)
-            cout << " " << i+1 << "  " << counts << "  " << tBin << "  " << avBg[i] << "+-" << DavBg[i] << endl;
-    }
-    DoneDtBG = kTRUE;
-    cout << "Done: ToF background" << endl;
-}
+//        if (CommentFlag)
+//            cout << " " << i+1 << "  " << counts << "  " << tBin << "  " << avBg[i] << "+-" << DavBg[i] << endl;
+//    }
+//    DoneDtBG = kTRUE;
+//    cout << "Done: ToF background" << endl;
+//}
 
 
 void UFC::GetNatoms()
 {
-    if (!DoneDt)
-        AnalyzeDt();
+//    if (!DoneDt)
+//        AnalyzeDt();
     cout << endl << "Calculating effective number of U atoms..." << endl;
 
     for (int i = 0; i < NumHist; i++)
@@ -199,10 +226,8 @@ void UFC::GetNatoms()
         Dn238[i] = n238[i] * sqrt( pow(Dfrac238 / frac238, 2) +
                                    pow(DemA[i] / emA[i], 2) ); // Statistical uncertainties
     }
-    for (Int_t j = 0; j < FgRuns; j++)
-        pHFG[j]->SetNatoms(nAtoms, DnAtoms);
-    for (Int_t j = 0; j < BgRuns; j++)
-        pHBG[j]->SetNatoms(nAtoms, DnAtoms);
+    for (Int_t k = 0; k < FgRuns + BgRuns; k++)
+        pR[k]->SetNatoms(nAtoms, DnAtoms);
     cout << "Done: effective number of U atoms" << endl;
     DoneNatoms = kTRUE;
 }
@@ -210,10 +235,10 @@ void UFC::GetNatoms()
 
 void UFC::IsoVec()
 {
-    if (!DoneNatoms)
-        GetNatoms();
-    if (!DoneDt)
-        AnalyzeDt();
+//    if (!DoneNatoms)
+//        GetNatoms();
+//    if (!DoneDt)
+//        AnalyzeDt();
     cout << endl << "UFC::IsoVec() calculating isotope vector correction..." << endl;
 
     fIsoVec = 1.0 / frac235;
@@ -234,62 +259,62 @@ void UFC::IsoVec()
 }
 
 
-void UFC::GetExpT()
-{
-    cout << endl << "UFC::GetExpT() experimental transmission" << endl;
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        uT[i] = nFG[i] / emA[i];
-        DuT[i] = sqrt( pow(DnFG[i] / nFG[i], 2) +
-                       pow(DemA[i] / emA[i], 2) ) * uT[i];
-    }
-}
+//void UFC::GetExpT()
+//{
+//    cout << endl << "UFC::GetExpT() experimental transmission" << endl;
+//    for (Int_t i = 0; i < NumCh; i++)
+//    {
+//        uT[i] = nFG[i] / emA[i];
+//        DuT[i] = sqrt( pow(DnFG[i] / nFG[i], 2) +
+//                       pow(DemA[i] / emA[i], 2) ) * uT[i];
+//    }
+//}
 
 
-void UFC::Calibrate()
-{
-    if (!DoneDt)
-        AnalyzeDt();
-    if (!DoneSimFg)
-        GetSimFg();
-    cout << endl << "U atom number Calibration..." << endl;
+//void UFC::Calibrate()
+//{
+//    if (!DoneDt)
+//        AnalyzeDt();
+//    if (!DoneSimFg)
+//        GetSimFg();
+//    cout << endl << "U atom number Calibration..." << endl;
 
-    // IAEA cross section standards
-    Double_t sCS235 = 2.12623431;
-    Double_t DsCS235 = 0.015082;
-    Double_t sCS238 = 1.23462382;
-    Double_t DsCS238 = 0.0098885;
+//    // IAEA cross section standards
+//    Double_t sCS235 = 2.12623431;
+//    Double_t DsCS235 = 0.015082;
+//    Double_t sCS238 = 1.23462382;
+//    Double_t DsCS238 = 0.0098885;
 
-    // cross section of isotope mixture
-    Double_t effCS = frac235 * sCS235 + frac238 * sCS238;
-    Double_t DeffCS = sqrt( pow(Dfrac235 * sCS235, 2) +
-                            pow(frac235 * DsCS235, 2) +
-                            pow(Dfrac238 * sCS238, 2) +
-                            pow(frac238 * DsCS238, 2) );
+//    // cross section of isotope mixture
+//    Double_t effCS = frac235 * sCS235 + frac238 * sCS238;
+//    Double_t DeffCS = sqrt( pow(Dfrac235 * sCS235, 2) +
+//                            pow(frac235 * DsCS235, 2) +
+//                            pow(Dfrac238 * sCS238, 2) +
+//                            pow(frac238 * DsCS238, 2) );
 
-    Double_t area[NumCh];
-    Double_t Darea[NumCh];
+//    Double_t area[NumCh];
+//    Double_t Darea[NumCh];
 
-    cout << " Ch   raw atoms   corrected atoms   eff mass density [10^-6 g/cm^2]" << endl;
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        Double_t rawAtoms = nFG[i] / (tFG * effCS * nFlux[i]) * 1.E22;
-        nAtoms[i] = fTS[i] * rawAtoms;
-        DnAtoms[i] = nAtoms[i] * sqrt( pow(DnFG[i] / nFG[i], 2) +
-                              pow(DeffCS / effCS, 2) +
-                              pow(DnFlux[i] / nFlux[i], 2) +
-                              pow(DfTS[i] / fTS[i], 2) );
-        area[i] = nAtoms[i] * M * u / emA[i];
-        Darea[i] = DnAtoms[i] / nAtoms[i] * area[i];
-        emA[i] = nAtoms[i] * M * u / Area * 1.E8;
-        DemA[i] = emA[i] * DnAtoms[i] / nAtoms[i];
-        Double_t Dsyst = emA[i] * sqrt( pow(DM / M, 2) +
-                                       pow(DArea / Area, 2) );
+//    cout << " Ch   raw atoms   corrected atoms   eff mass density [10^-6 g/cm^2]" << endl;
+//    for (Int_t i = 0; i < NumCh; i++)
+//    {
+//        Double_t rawAtoms = nFG[i] / (tFG * effCS * nFlux[i]) * 1.E22;
+//        nAtoms[i] = fTS[i] * rawAtoms;
+//        DnAtoms[i] = nAtoms[i] * sqrt( pow(DnFG[i] / nFG[i], 2) +
+//                              pow(DeffCS / effCS, 2) +
+//                              pow(DnFlux[i] / nFlux[i], 2) +
+//                              pow(DfTS[i] / fTS[i], 2) );
+//        area[i] = nAtoms[i] * M * u / emA[i];
+//        Darea[i] = DnAtoms[i] / nAtoms[i] * area[i];
+//        emA[i] = nAtoms[i] * M * u / Area * 1.E8;
+//        DemA[i] = emA[i] * DnAtoms[i] / nAtoms[i];
+//        Double_t Dsyst = emA[i] * sqrt( pow(DM / M, 2) +
+//                                       pow(DArea / Area, 2) );
 
-        cout << " " << i+1 << "   " << rawAtoms << "   " << nAtoms[i] << "+-" << DnAtoms[i] << "   " << emA[i] << "+-" << DemA[i] << "(stat)+-" << Dsyst << "(syst)"<< endl;
-    }
-    cout << "Done: U atom number calibration" << endl;
-    if (!DrawSingle)
-        return;
-    plot->CalibrateUFC(emA, DemA, area, Darea);
-}
+//        cout << " " << i+1 << "   " << rawAtoms << "   " << nAtoms[i] << "+-" << DnAtoms[i] << "   " << emA[i] << "+-" << DemA[i] << "(stat)+-" << Dsyst << "(syst)"<< endl;
+//    }
+//    cout << "Done: U atom number calibration" << endl;
+//    if (!DrawSingle)
+//        return;
+//    plot->CalibrateUFC(emA, DemA, area, Darea);
+//}
