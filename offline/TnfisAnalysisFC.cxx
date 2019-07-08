@@ -1,3 +1,4 @@
+#include <time.h>
 #include "TnfisAnalysisFC.h"
 #include "TnfisUnpackEvent.h"
 
@@ -65,6 +66,8 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
     //get number of trigger events in readout event
     UInt_t NumTrigEvt = pCounter->GetTotal();
     pTarget->SetNumTrigEvents(NumTrigEvt);
+    Int_t time = (Int_t) pCounter->GetAbsTime().GetSec();
+//    cout << time << endl;
 
     //loop over all trigger events in the readout event
     for (UInt_t event=0; event < pCounter->GetTotal(); event++)
@@ -211,23 +214,24 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                             if (CommentFlag)
                                 cout << "ch " << channel << ": QDC pulse height " << QDCl << " within gate. Filling pH2AnaDt_g." << endl;
                             pHistFC->pH1AnaDtHZDR_g[channel]->Fill(TimeDiff);
+                            pHistFC->pH2DtTime[channel]->Fill(TimeDiff, (Int_t)time);
                             //pHistFC->pH2AnaDt_g->Fill(TimeDiff, channel);
                             pHistFC->pH1AnaQDCl[channel]->Fill(QDCl);
 
                             //FF-QDC spectra with gate on ToF
-                            if (pConToF[channel]->Test(TimeDiff))
-                              //n-induced fission
-                                pHistFC->pH1AnaQDCl_NIF[channel]->Fill(QDCl);
-                            else
-                              //spontaneous fission
-                                pHistFC->pH1AnaQDCl_SF[channel]->Fill(QDCl);
+//                            if (pConToF[channel]->Test(TimeDiff))
+//                              //n-induced fission
+//                                pHistFC->pH1AnaQDCl_NIF[channel]->Fill(QDCl);
+//                            else
+//                              //spontaneous fission
+//                                pHistFC->pH1AnaQDCl_SF[channel]->Fill(QDCl);
                         }
-                        else
-                        {
-                            if (CommentFlag)
-                                cout << "ch " << channel << ": QDC pulse height " << QDCl << " refused." << endl; //*/
-                            pHistFC->pH1AnaDtHZDR_r[channel]->Fill(TimeDiff);
-                        } // if (pConQDC[channel]->Test(QDCl))
+//                        else
+//                        { // pulse-height refused
+//                            if (CommentFlag)
+//                                cout << "ch " << channel << ": QDC pulse height " << QDCl << " refused." << endl; //*/
+//                            pHistFC->pH1AnaDtHZDR_r[channel]->Fill(TimeDiff);
+//                        } // if (pConQDC[channel]->Test(QDCl))
                     } //if (pPreAmp[channel]->GetFirstHit(event) != 0)
 //                    else
 //                        cout << "No Fission Chamber hit!" << endl;
@@ -298,7 +302,7 @@ void TnfisFCAnalysis::MakeConditions()
         Double_t tof_mean[]  = {67725, 67252, 67156, 67311, 67307, 67267, 67221, 67222}; // PuFC
         Double_t tof_width[] = {115,   94,    90,    84,    90,    96,    86,    94}; // PuFC
 
-//        // Channel              1      2      3      4      5      6      7      8
+        // Channel              1      2      3      4      5      6      7      8
 //        Double_t qdc_min[]   = {212,   470,   207,   206,   199,   152,   184,   124}; // UFC
 //        Double_t tof_mean[]  = {73202, 73016, 72674, 72864, 72863, 72828, 72793, 72776}; // UFC
 //        Double_t tof_width[] = {134,   119,   117,   118,   118,   116,   115,   116}; // UFC

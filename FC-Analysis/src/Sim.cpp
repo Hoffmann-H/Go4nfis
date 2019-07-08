@@ -21,7 +21,7 @@ Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t 
     DoneDirect = kFALSE;
 
     // output settings
-    CommentFlag = kTRUE; // set manually
+    CommentFlag = kFALSE; // set manually
     DrawSingle = draw_flag;
     DrawMulti = kFALSE;
 

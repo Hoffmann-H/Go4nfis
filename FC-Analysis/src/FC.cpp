@@ -99,76 +99,72 @@ void FC::RegisterHists()
 
 void FC::Stability()
 {
-    char name[64] = "";
-    sprintf(name, "%s (n,f)-Rate; #font[12]{t}; Rate [1/s]", Name.c_str());
-    TMultiGraph *mg1 = new TMultiGraph("mgStabNIF", name);
-    sprintf(name, "%s Kanal", Name.c_str());
-    TLegend *l1 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
-    sprintf(name, "%s Spontanspaltrate; #font[12]{t}; Rate [1/s]", Name.c_str());
-    TMultiGraph *mg2 = new TMultiGraph("mgStabSF", name);
-    sprintf(name, "%s Kanal", Name.c_str());
-    TLegend *l2 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
-    TGraphErrors *g1[NumCh];
-    TGraphErrors *g2[NumCh];
-    Double_t X[nHist];
-    Double_t Xerr[nHist];
-    for (Int_t j = 0; j < nHist; j++)
-    {
-        X[j] = 0.5*((Double_t)pH[j]->t_start + (Double_t)pH[j]->t_stop)/* - 1.4011E+09*/; // TODO: Insert time here
-        Xerr[j] = 0.5*((Double_t)pH[j]->t_stop - (Double_t)pH[j]->t_start);
-        if (CommentFlag)
-            cout << pH[j]->t_start << ", " << pH[j]->t_stop << " -> " << X[j] << "+-" << Xerr[j] << endl;
-    }
-//    if (CommentFlag)
-//        cout << " Ch   Hist   rNIF   rSF" << endl;
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        Double_t rNIF[nHist];
-        Double_t DrNIF[nHist];
-        Double_t rSF[nHist];
-        Double_t DrSF[nHist];
-        for (Int_t j = 0; j < nHist; j++)
-        {
-            rNIF[j] = pH[j]->nNIF[i] / pH[j]->t_live;
-            DrNIF[j] = pH[j]->DnNIF[i] / pH[j]->t_live;
-            rSF[j] = pH[j]->nSF[i] / pH[j]->t_live;
-            DrSF[j] = pH[j]->DnSF[i] / pH[j]->t_live;
-//            if (CommentFlag)
-//                cout << " " << i+1 << "   " << pH[j]->Name << "   " << rNIF[j] << "+-" << DrNIF[j] << "   " << rSF[j] << "+-" << DrSF[j] << endl;
-        }
-        g1[i] = new TGraphErrors(nHist, X, rNIF, Xerr, DrNIF);
-        sprintf(name, "gStabNIF_%i", i+1);
-        g1[i]->SetName(name);
-        g1[i]->SetLineColor(i);
-        g1[i]->SetLineWidth(2);
-        mg1->Add(g1[i]);
-        sprintf(name, "%i", i+1);
-        l1->AddEntry(g1[i], name);
-        g2[i] = new TGraphErrors(nHist, X, rSF, Xerr, DrSF);
-        sprintf(name, "gStabSF_%i", i+1);
-        g2[i]->SetName(name);
-        g2[i]->SetLineColor(i);
-        g2[i]->SetLineWidth(2);
-        mg2->Add(g2[i]);
-        sprintf(name, "%i", i+1);
-        l2->AddEntry(g2[i], name);
-    }
-    TCanvas *c1 = new TCanvas("cStabNIF", "Stability", 200, 10, 700, 500);
-    gPad->SetTicks(1, 1);
-    mg1->Draw("AP");
-    mg1->GetXaxis()->SetTimeDisplay(1);
-    mg1->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01 00:00:00s0");
-    l1->Draw();
-    c1->Modified();
-    c1->Update();
-    TCanvas *c2 = new TCanvas("cStabSF", "Stability", 200, 10, 700, 500);
-    gPad->SetTicks(1, 1);
-    mg2->Draw("AP");
-    mg2->GetXaxis()->SetTimeDisplay(1);
-    mg2->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01 00:00:00s0");
-    l2->Draw();
-    c2->Modified();
-    c2->Update();
+    cout << Name << " FC::Stability()" << endl;
+    // Prepare time axis
+//    Int_t t_start = 1400569200;
+//    Int_t t_end = 1401703200;
+//    Int_t tbins = 1890;
+//    Int_t tstep = (t_end - t_start) / tbins;
+
+    // Data arrays
+//    Double_t rSF[tbins];
+//    Double_t DrSF[tbins];
+//    Double_t rNIF[tbins];
+//    Double_t DrNIF[tbins];
+//    Int_t start, stop;
+//    Double_t X[tbins];
+//    Double_t Xerr[tbins];
+
+    // Graphics...
+//    char name[64] = "";
+//    sprintf(name, "%s (n,f)-Rate; #font[12]{t}; Rate [1/s]", Name.c_str());
+//    TMultiGraph *mg1 = new TMultiGraph("mgStabNIF", name);
+//    sprintf(name, "%s Kanal", Name.c_str());
+//    TLegend *l1 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
+//    sprintf(name, "%s Spontanspaltrate; #font[12]{t}; Rate [1/s]", Name.c_str());
+//    TMultiGraph *mg2 = new TMultiGraph("mgStabSF", name);
+//    sprintf(name, "%s Kanal", Name.c_str());
+//    TLegend *l2 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
+//    TGraphErrors *g1[NumCh];
+//    TGraphErrors *g2[NumCh];
+
+//    Int_t i = 0;
+//    for (Int_t t = 0; t < tbins; t++)
+//    {
+//        start = t * tstep + 1;
+//        stop = start + tstep;
+//        cout << "t " << t << " " << start << "-" << stop << endl;
+//        X[t] = 0.5 * (start + stop);
+//        Xerr[t] = 0;
+//        rSF[t] = 0;
+//        DrSF[t] = 0;
+//        rNIF[t] = 0;
+//        DrNIF[t] = 0;
+//        for (Int_t j = 0; j < /*nHist*/1; j++)
+//        {
+//            rNIF[t] += pH[j]->NIFvsTime(i, start, stop);
+//            DrNIF[t] += pH[j]->DNIFvsTime(i, start, stop);
+//            rSF[t] += pH[j]->SFvsTime(i, start, stop);
+//            cout << " j " << j << " " << rNIF[t] << "+-" << DrNIF[t] << endl;
+//        }
+//        DrSF[t] = sqrt(rSF[t]);
+//    }
+//    g1[i] = new TGraphErrors(nHist, X, rNIF, Xerr, DrNIF);
+//    g1[i]->SetName(name);
+//    g1[i]->SetLineColor(i);
+//    g1[i]->SetLineWidth(2);
+//    mg1->Add(g1[i]);
+//    sprintf(name, "%i", i+1);
+//    l1->AddEntry(g1[i], name);
+//    //}
+//    TCanvas *c1 = new TCanvas("cStabNIF", "Stability", 200, 10, 700, 500);
+//    gPad->SetTicks(1, 1);
+//    mg1->Draw("AP");
+//    mg1->GetXaxis()->SetTimeDisplay(1);
+//    mg1->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01 00:00:00s0");
+//    l1->Draw();
+//    c1->Modified();
+//    c1->Update();
 }
 
 
@@ -588,4 +584,79 @@ void FC::Corrections()
 //Double_t FC::func_peak(Double_t *x, Double_t *par)
 //{
 //    return par[0] * exp( - pow((x[0] - par[1]) / par[2], 2)) + par[3];
+//}
+
+
+//void FC::Stability()
+//{
+//    char name[64] = "";
+//    sprintf(name, "%s (n,f)-Rate; #font[12]{t}; Rate [1/s]", Name.c_str());
+//    TMultiGraph *mg1 = new TMultiGraph("mgStabNIF", name);
+//    sprintf(name, "%s Kanal", Name.c_str());
+//    TLegend *l1 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
+//    sprintf(name, "%s Spontanspaltrate; #font[12]{t}; Rate [1/s]", Name.c_str());
+//    TMultiGraph *mg2 = new TMultiGraph("mgStabSF", name);
+//    sprintf(name, "%s Kanal", Name.c_str());
+//    TLegend *l2 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
+//    TGraphErrors *g1[NumCh];
+//    TGraphErrors *g2[NumCh];
+//    Double_t X[nHist];
+//    Double_t Xerr[nHist];
+//    for (Int_t j = 0; j < nHist; j++)
+//    {
+//        X[j] = 0.5*((Double_t)pH[j]->t_start + (Double_t)pH[j]->t_stop)/* - 1.4011E+09*/; // TODO: Insert time here
+//        Xerr[j] = 0.5*((Double_t)pH[j]->t_stop - (Double_t)pH[j]->t_start);
+//        if (CommentFlag)
+//            cout << pH[j]->t_start << ", " << pH[j]->t_stop << " -> " << X[j] << "+-" << Xerr[j] << endl;
+//    }
+////    if (CommentFlag)
+////        cout << " Ch   Hist   rNIF   rSF" << endl;
+//    for (Int_t i = 0; i < NumCh; i++)
+//    {
+//        Double_t rNIF[nHist];
+//        Double_t DrNIF[nHist];
+//        Double_t rSF[nHist];
+//        Double_t DrSF[nHist];
+//        for (Int_t j = 0; j < nHist; j++)
+//        {
+//            rNIF[j] = pH[j]->nNIF[i] / pH[j]->t_live;
+//            DrNIF[j] = pH[j]->DnNIF[i] / pH[j]->t_live;
+//            rSF[j] = pH[j]->nSF[i] / pH[j]->t_live;
+//            DrSF[j] = pH[j]->DnSF[i] / pH[j]->t_live;
+////            if (CommentFlag)
+////                cout << " " << i+1 << "   " << pH[j]->Name << "   " << rNIF[j] << "+-" << DrNIF[j] << "   " << rSF[j] << "+-" << DrSF[j] << endl;
+//        }
+//        g1[i] = new TGraphErrors(nHist, X, rNIF, Xerr, DrNIF);
+//        sprintf(name, "gStabNIF_%i", i+1);
+//        g1[i]->SetName(name);
+//        g1[i]->SetLineColor(i);
+//        g1[i]->SetLineWidth(2);
+//        mg1->Add(g1[i]);
+//        sprintf(name, "%i", i+1);
+//        l1->AddEntry(g1[i], name);
+//        g2[i] = new TGraphErrors(nHist, X, rSF, Xerr, DrSF);
+//        sprintf(name, "gStabSF_%i", i+1);
+//        g2[i]->SetName(name);
+//        g2[i]->SetLineColor(i);
+//        g2[i]->SetLineWidth(2);
+//        mg2->Add(g2[i]);
+//        sprintf(name, "%i", i+1);
+//        l2->AddEntry(g2[i], name);
+//    }
+//    TCanvas *c1 = new TCanvas("cStabNIF", "Stability", 200, 10, 700, 500);
+//    gPad->SetTicks(1, 1);
+//    mg1->Draw("AP");
+//    mg1->GetXaxis()->SetTimeDisplay(1);
+//    mg1->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01 00:00:00s0");
+//    l1->Draw();
+//    c1->Modified();
+//    c1->Update();
+//    TCanvas *c2 = new TCanvas("cStabSF", "Stability", 200, 10, 700, 500);
+//    gPad->SetTicks(1, 1);
+//    mg2->Draw("AP");
+//    mg2->GetXaxis()->SetTimeDisplay(1);
+//    mg2->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01 00:00:00s0");
+//    l2->Draw();
+//    c2->Modified();
+//    c2->Update();
 //}

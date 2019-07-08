@@ -5,7 +5,7 @@ PuFC::PuFC(Bool_t draw)
 {
     Name = "PuFC";
     cout << endl << "Creating fission chamber " << Name << endl;
-    CommentFlag = kFALSE;
+    CommentFlag = kTRUE;
     InitVar(draw);
     InitPuVar();
 
@@ -48,23 +48,23 @@ PuFC::PuFC(Bool_t draw)
     BgMon = 0;
 //    pR[k] = new Run("PuFC", "SB", k - FgRuns);
 //    FgMon += pR[k]->SetNeutronField(219560.406192, 0.0025, 140.45);
-//    UseHists(191, 191, "SB", k);
-////    UseHist("PuFC_BG_MS8", "SB", k);
+////    UseHists(191, 191, "SB", k);
+//    UseHist("PuFC_BG_MS8", "SB", k);
 //    k++;
     pR[k] = new Run("PuFC", "SB", k - FgRuns);
     BgMon += pR[k]->SetNeutronField(3623068.621401, 0.0015, 2287.18);
-    UseHists(192, 192, "SB", k);
-//    UseHist("PuFC_BG_MS9", "SB", k);
+//    UseHists(192, 192, "SB", k);
+    UseHist("PuFC_BG_MS9", "SB", k);
     k++;
     pR[k] = new Run("PuFC", "SB", k - FgRuns);
     FgMon += pR[k]->SetNeutronField(28646613.7419, 0.0014, 18331.64);
-    UseHists(194, 201, "SB", k);
-//    UseHist("PuFC_BG_MS10", "SB", k);
+//    UseHists(194, 201, "SB", k);
+    UseHist("PuFC_BG_MS10", "SB", k);
     k++;
     pR[k] = new Run("PuFC", "SB", k - FgRuns);
     FgMon += pR[k]->SetNeutronField(4757385.125897, 0.0014, 3098.89);
-    UseHists(202, 203, "SB", k);
-//    UseHist("PuFC_BG_MS11", "SB", k);
+//    UseHists(202, 203, "SB", k);
+    UseHist("PuFC_BG_MS11", "SB", k);
     k++;
     BgRuns = k - FgRuns;
 /////////////////////////////////////////////////////////////////////////////////////////

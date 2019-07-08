@@ -1251,7 +1251,7 @@ void DrawEval(TFile* fCom)
 
     TCanvas* c3 = new TCanvas("eps", "eps", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
-    TMultiGraph* mg3 = new TMultiGraph();https://web.telegram.org/#/im?p=@freifahren_DD
+    TMultiGraph* mg3 = new TMultiGraph();
     mg3->SetTitle("Efficiencies; Deposit; Ratio");
     TLegend* l3 = new TLegend(0.6, 0.2, 0.85, 0.70, "Fission fragments");
 
@@ -1424,13 +1424,407 @@ void DrawCompareDt(TFile* fPu, TFile* fU, string Setup)
 //}
 
 
+void GetStability(string file, string FC, TMultiGraph* mg1, TMultiGraph* mg2, Int_t chStart = 0, Int_t chStop = 7, TLegend* l = 0, Int_t comp = 0)
+{
+    char name[64] = "";
+    Int_t l0 = 159;
+    Int_t l1[8], l2[8];
+    Int_t l3 = 1649;
+    if (!strcmp(FC.c_str(), "PuFC"))
+    {
+        Int_t L1[] = {522, 474, 465, 480, 480, 476, 471, 471};
+        Int_t L2[] = {722, 674, 665, 680, 680, 676, 671, 671};
+        for (Int_t i = 0; i < 8; i++)
+        {
+            l1[i] = L1[i];
+            l2[i] = L2[i];
+        }
+    } else {
+        Int_t L1[] = {1069, 1051, 1016, 1035, 1035, 1032, 1028, 1027};
+        Int_t L2[] = {1269, 1251, 1216, 1235, 1235, 1232, 1228, 1227};
+        for (Int_t i = 0; i < 8; i++)
+        {
+            l1[i] = L1[i];
+            l2[i] = L2[i];
+        }
+    }
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", file.c_str());
+    TFile* f1 = TFile::Open(name);
+    sprintf(name, "/Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    TH1D* h2 = (TH1D*)f1->Get(name);
+
+    for (Int_t i = chStart; i <= chStop; i++)
+    {
+        sprintf(name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H2DtGvsTime_%i", i+1);
+        TH2I* h1 = (TH2I*)f1->Get(name);
+        Int_t tBins = h1->GetNbinsY();
+        Int_t tStart = h1->GetYaxis()->GetBinLowEdge(1);
+        Int_t tEnd = h1->GetYaxis()->GetBinLowEdge(tBins + 1);
+//        cout << tStart << "-" << tEnd << endl;
+        Int_t tStep = 900;
+        Int_t tPoints = (tEnd - tStart) / tStep;
+//        cout << tPoints << " << " << tBins << endl;
+        Double_t X[tPoints];
+        Double_t Xerr[tPoints];
+        Double_t rNIF[tPoints];
+        Double_t DrNIF[tPoints];
+        Double_t rSF[tPoints];
+        Double_t DrSF[tPoints];
+        Double_t nNIF, DnNIF, nSF, DnSF;
+
+        for (Int_t t = 0; t < tPoints; t++)
+        {
+            Int_t start = t * h2->GetNbinsX() / tPoints;
+            Int_t stop = start + h2->GetNbinsX() / tPoints - 1;
+            Double_t tLive = h2->Integral(start, stop);
+
+            start = t * tBins / tPoints;
+            stop = start + tBins / tPoints - 1;
+            X[t] = tStart + t * tStep + tStep / 2 + 100*i;
+            Xerr[t] = 0;
+            if (tLive > 0)
+            {
+//                cout << t << " " << strcmp(file.c_str(), "SF") << endl;
+                if (strcmp(file.c_str(), "SF"))
+                { // if beam on
+                    Double_t PeakInt = h1->Integral(l1[i], l2[i], start, stop);
+                    Double_t UgInt = h1->Integral(l0, l1[i] - 1, start, stop) + h1->Integral(l2[i] + 1, l3, start, stop);
+                    nNIF = PeakInt - (l2[i]-l1[i]+1.0) / (l3-l2[i]+l1[i]-l0) * UgInt;
+                    DnNIF = sqrt( PeakInt + pow((l2[i]-l1[i]+1) / (l3-l2[i]+l1[i]-l0), 2) * UgInt );
+                } else { // SF measurement - no neutrons - no (n,f)
+                    nNIF = 0;
+                    DnNIF = 0;
+                }
+                Double_t Int = h1->Integral(0, h1->GetNbinsX()+1, start, stop);
+                nSF = Int - nNIF;//Int - h1->Integral(l1[i], l2[i], start, stop);//
+                DnSF = sqrt( nSF );
+                rNIF[t] = nNIF / tLive;
+                DrNIF[t] = DnNIF / tLive;
+                rSF[t] = nSF / tLive;
+                DrSF[t] = DnSF / tLive;
+//                cout << t << ", " << start << "-" << stop << ", " << X[t] - 1400000000 << "+-" << Xerr[t] << ", " << rSF[t] << "+-" << DrSF[t] << endl;
+            } else {
+                rNIF[t] = 0;
+                DrNIF[t] = 0;
+                rSF[t] = 0;
+                DrSF[t] = 0;
+            }
+        }
+        TGraphErrors* ge1 = new TGraphErrors(tPoints, X, rNIF, Xerr, DrNIF);
+        sprintf(name, "%s_%s_%i", FC.c_str(), file.c_str(), i+1);
+        ge1->SetName(name);
+        ge1->SetLineColorAlpha(comp ? 2 : i+1, 0.5);
+        ge1->SetMarkerColorAlpha(0, 0.0);
+        ge1->SetLineWidth(1);
+        mg1->Add(ge1);
+        TGraphErrors* ge2 = new TGraphErrors(tPoints, X, rSF, Xerr, DrSF);
+        sprintf(name, "%s_%s_%i", FC.c_str(), file.c_str(), i+1);
+        ge2->SetName(name);
+        ge2->SetLineColorAlpha(comp ? 3 : i+1, 0.5);
+        ge2->SetMarkerColorAlpha(0, 0.0);
+        ge2->SetLineWidth(1);
+        mg2->Add(ge2);
+        if (l != 0)
+        {
+            if (comp == 1)
+            {
+                l->AddEntry(ge1, "(n,f)");
+                l->AddEntry(ge2, "(s,f)");
+            } else {
+                sprintf(name, "%i", i+1);
+                l->AddEntry(ge1, name);
+            }
+        }
+    }
+}
+
+
+void DrawStability(Int_t i)
+{
+    char name[64] = "";
+    TMultiGraph *mg1 = new TMultiGraph("mg_sr", "Spaltrate; #font[12]{t}; Rate [1/s]");
+    sprintf(name, "Deposit %i", i+1);
+    TLegend *l = new TLegend(0.8, 0.7, 1.0, 0.9, name);
+
+    GetStability("UFC_NIF", "UFC", mg1, mg1, i, i, l, 1);
+    GetStability("UFC_SB", "UFC", mg1, mg1, i, i, 0, 1);
+    GetStability("NIF", "PuFC", mg1, mg1, i, i, 0, 1);
+    GetStability("SB", "PuFC", mg1, mg1, i, i, 0, 1);
+    GetStability("SF", "PuFC", mg1, mg1, i, i, 0, 1);
+
+    sprintf(name, "Stab_%i", i+1);
+    TCanvas *c = new TCanvas(name, "(n,f) Stability", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    mg1->Draw("AP");
+    mg1->GetXaxis()->SetTimeDisplay(1);
+    mg1->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01");
+    l->Draw();
+    c->Modified();
+    c->Update();
+}
+
+
+void DrawStability()
+{
+    TMultiGraph *mg1 = new TMultiGraph("mg_nf", "(n,f)-Rate; #font[12]{t}; Rate [1/s]");
+    TMultiGraph *mg2 = new TMultiGraph("mg_sf", "UG-Rate; #font[12]{t}; Rate [1/s]");
+    TLegend *l = new TLegend(0.9, 0.5, 1.0, 1.0, "Deposit");
+
+    Int_t chStart = 0, chStop = 7;
+    GetStability("UFC_NIF", "UFC", mg1, mg2, chStart, chStop, l, 0);
+    GetStability("UFC_SB", "UFC", mg1, mg2, chStart, chStop);
+//    GetStability("NIF", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("SB", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("SF", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("UFC_FG_MS20_2", "UFC", mg1, mg2, chStart, chStop, l, 0);
+//    GetStability("UFC_FG_MS20_3", "UFC", mg1, mg2, chStart, chStop);
+//    GetStability("UFC_FG_MS20_4", "UFC", mg1, mg2, chStart, chStop);
+//    GetStability("UFC_BG_MS20_5", "UFC", mg1, mg2, chStart, chStop);
+//    GetStability("UFC_FG_MS21_2", "UFC", mg1, mg2, chStart, chStop);
+//    GetStability("UFC_FG_MS21_3", "UFC", mg1, mg2, chStart, chStop);
+//    GetStability("UFC_BG_MS21_4", "UFC", mg1, mg2, chStart, chStop);
+//    GetStability("PuFC_FG_MS4", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("PuFC_FG_MS5", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("PuFC_FG_MS6", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("PuFC_FG_MS6", "PuFC", mg1, mg2, chStart, chStop);
+////    GetStability("PuFC_BG_MS8", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("PuFC_BG_MS9", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("PuFC_BG_MS10", "PuFC", mg1, mg2, chStart, chStop);
+//    GetStability("PuFC_BG_MS11", "PuFC", mg1, mg2, chStart, chStop);
+
+    TCanvas *c1 = new TCanvas("Stab1", "(n,f) Stability", 200, 10, 700, 500);
+//    l->Draw();
+    TPad *p1 = new TPad("p1", "(n,f)", 0.0, 0.5, 1.0, 1.0);
+    gPad->SetTicks(1, 1);
+    p1->Draw();
+    p1->cd();
+    mg1->Draw("AP");
+    mg1->GetXaxis()->SetTimeDisplay(1);
+    mg1->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01");
+    c1->cd();
+    TPad *p2 = new TPad("p2", "n field", 0.0, 0.0, 1.0, 0.5);
+    p2->Draw();
+    p2->cd();
+    mg2->Draw("AP");
+    mg2->GetXaxis()->SetTimeDisplay(1);
+    mg2->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01 00:00:00s0");
+
+    c1->Modified();
+    c1->Update();
+
+//    TCanvas *c2 = new TCanvas("Stab2", "(s,f) Stability", 200, 10, 700, 500);
+//    gPad->SetTicks(1, 1);
+//    l->Draw();
+//    c2->Modified();
+//    c2->Update();
+}
+
+
+void GetPeak(Int_t i, TH1I* pH, string FC, Int_t left, Int_t right, Double_t* nif, Double_t* Dnif)
+{
+    char name[64] = "";
+    Int_t l0 = 159;
+    Int_t l1;
+    Int_t l2;
+    Int_t l3 = 1649;
+    if (!strcmp(FC.c_str(), "PuFC")) // if PuFC
+    {
+        Int_t m[] = {572, 524, 515, 530, 530, 526, 521, 521};
+        l1 = m[i] - left;
+        l2 = m[i] + right;
+    } else {
+        Int_t m[] = {1119, 1101, 1066, 1085, 1085, 1082, 1078, 1077};
+        l1 = m[i] - left;
+        l2 = m[i] + right;
+    }
+    Double_t PeakInt = pH->Integral(l1, l2);
+    Double_t UgInt = pH->Integral(l0, l3) - PeakInt;
+    *nif = PeakInt - (l2-l1+1.0) / (l3-l2+l1-l0) * UgInt;
+    *Dnif = sqrt( PeakInt + pow((l2-l1+1) / (l3-l2+l1-l0), 2) * UgInt );
+}
+
+
+void DrawPeak(TFile* f, string FC)
+{
+    char name[64] = "";
+    TMultiGraph* mg = new TMultiGraph("mgPeak", "ToF Peak Integration; Breite [ns]; Peak");
+    sprintf(name, "%s Deposit", FC.c_str());
+    TLegend *l = new TLegend(0.9, 0.5, 1.0, 1.0, name);
+    TGraphErrors* ge[8];
+    Int_t W[] = {20, 40, 60, 80, 100, 120, 140, 160, 180, 200,
+                 220, 240, 260, 280, 300, 320, 340, 360, 380, 400,
+                 420, 440, 460, 480, 500, 520, 540, 560, 580, 600
+//                 620, 640, 660, 680, 700, 720, 740, 760, 780, 800,
+//                 820, 840, 860, 880, 900, 920, 940, 960, 980, 1000
+                }; // width samples
+    Int_t n = sizeof(W) / sizeof(W[0]);
+    Double_t X[n];
+    Double_t Xerr[n];
+    Double_t avNIF[n];
+    Double_t DavNIF[n];
+    for (Int_t j = 0; j < n; j++)
+    {
+        X[j] = W[j] / 4.0;
+        Xerr[j] = 0;
+        avNIF[j] = 0;
+        DavNIF[j] = 0;
+    }
+
+    for (Int_t i = 0; i < 8; i++)
+    {
+        sprintf(name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+        TH1I* pH = (TH1I*)f->Get(name);
+        Double_t NIF[n];
+        Double_t DNIF[n];
+        for (Int_t j = 0; j < n; j++)
+        {
+            GetPeak(i, pH, FC, 60, W[j], &NIF[j], &DNIF[j]);
+            avNIF[j] += NIF[j] / 8;
+            DavNIF[j] = sqrt( pow(DavNIF[j], 2) + pow(DNIF[j] / 8, 2) );
+//            cout << W[j] << ", " << NIF[j] << "+-" << DNIF[j] << endl;
+        }
+        ge[i] = new TGraphErrors(n, X, NIF, Xerr, DNIF);
+        sprintf(name, "gPeak_%i", i+1);
+        ge[i]->SetName(name);
+        ge[i]->SetLineColorAlpha(i+2, 0.5);
+        ge[i]->SetLineWidth(1);
+        ge[i]->SetMarkerColorAlpha(i+2, 0.5);
+        ge[i]->SetMarkerStyle(20);
+        ge[i]->SetMarkerSize(2);
+        sprintf(name, "%i", i+1);
+        l->AddEntry(ge[i], name);
+        mg->Add(ge[i]);
+    }
+    TGraphErrors* av = new TGraphErrors(n, X, avNIF, Xerr, DavNIF);
+    av->SetName("gPeak_av");
+    av->SetLineWidth(2);
+    av->SetLineColor(1);
+    l->AddEntry(av, "av");
+    mg->Add(av);
+
+    TCanvas* c = new TCanvas("cPeak", "Test Integration Limits", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    mg->Draw("AP");
+    l->Draw();
+    c->Modified();
+    c->Update();
+}
+
+
+void GetLRUg(Int_t i, TH1I* pH, string FC, Int_t left, Int_t right, Double_t* lrUg, Double_t* DlrUg)
+{
+    char name[64] = "";
+    Int_t l0 = 159;
+    Int_t l1;
+    Int_t l2;
+    Int_t l3 = 1649;
+    Double_t lInt, rInt, lBins, rBins; // left/right integrals and interval length
+    if (!strcmp(FC.c_str(), "PuFC")) // if PuFC
+    {
+        Int_t m[] = {572, 524, 515, 530, 530, 526, 521, 521};
+        l1 = m[i] - left;
+        l2 = m[i] + right;
+        lInt = pH->Integral(l0, l1 - 1) + pH->Integral(l3 - 499, l3);
+        rInt = pH->Integral(l2 + 1, l3 - 500);
+        lBins = l1 - l0 + 500;
+        rBins = l3 - 500 - l2;
+    } else {
+        Int_t m[] = {1119, 1101, 1066, 1085, 1085, 1082, 1078, 1077};
+        l1 = m[i] - left;
+        l2 = m[i] + right;
+        lInt = pH->Integral(l0, l1 - 1);
+        rInt = pH->Integral(l2 + 1, l3);
+        lBins = l1 - l0;
+        rBins = l3 - l2;
+    }
+//    if ()
+    Double_t lUg = lInt / lBins;
+    Double_t rUg = rInt / rBins;
+    Double_t DlUg = sqrt(lInt) / lBins;
+    Double_t DrUg = sqrt(rInt) / rBins;
+//    cout << pH->GetBinLowEdge(l0) << " " << pH->GetBinLowEdge(l1) << endl;
+//    TF1* fl = new TF1("lUg", "[0]", pH->GetBinLowEdge(l0), pH->GetBinLowEdge(l1));
+//    pH->Fit("lUg", "LRQ0");
+//    TF1* fr = new TF1("rUg", "[0]", pH->GetBinLowEdge(l2+1), pH->GetBinLowEdge(l3+1));
+//    pH->Fit("rUg", "LRQ0");
+//    cout << " l " << left  << ", " << lUg << "+-" << DlUg << " / " << fl->GetParameter(0) << "+-" << fl->GetParError(0) << endl
+//         << " r " << right << ", " << rUg << "+-" << DrUg <<  " / " << fr->GetParameter(0) << "+-" << fr->GetParError(0) << endl;
+    *lrUg = rUg - lUg;
+    *DlrUg = sqrt( pow(DlUg, 2) + pow(DrUg, 2) );
+}
+
+
+void DrawLRUg(TFile* f, string FC)
+{
+    char name[64] = "";
+    TMultiGraph* mg = new TMultiGraph("mgLR", "R-L Background Difference; Breite [ns]; R-L [1/s]");
+    sprintf(name, "%s Deposit", FC.c_str());
+    TLegend *l = new TLegend(0.9, 0.5, 1.0, 1.0, name);
+    TGraphErrors* ge[8];
+    Int_t W[] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400}; // width samples
+    Int_t n = sizeof(W) / sizeof(W[0]);
+    Double_t X[n];
+    Double_t Xerr[n];
+    Double_t avLRUg[n];
+    Double_t DavLRUg[n];
+    for (Int_t j = 0; j < n; j++)
+    {
+        X[j] = W[j] / 4.0;
+        Xerr[j] = 0;
+        avLRUg[j] = 0;
+        DavLRUg[j] = 0;
+    }
+
+    for (Int_t i = 0; i < 8; i++)
+    {
+        sprintf(name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+        TH1I* pH = (TH1I*)f->Get(name);
+        Double_t LRUg[n];
+        Double_t DLRUg[n];
+        for (Int_t j = 0; j < n; j++)
+        {
+            GetLRUg(i, pH, FC, 60, W[j], &LRUg[j], &DLRUg[j]);
+            avLRUg[j] += LRUg[j] / n;
+            DavLRUg[j] = sqrt(pow(DavLRUg[j], 2) + pow(DLRUg[j] / n, 2));
+//            cout << W[j] << ", " << NIF[j] << "+-" << DNIF[j] << endl;
+        }
+        ge[i] = new TGraphErrors(n, X, LRUg, Xerr, DLRUg);
+        sprintf(name, "gLR_%i", i+1);
+        ge[i]->SetName(name);
+        ge[i]->SetLineColorAlpha(i+2, 0.5);
+        ge[i]->SetLineWidth(1);
+        ge[i]->SetMarkerColorAlpha(i+2, 0.5);
+        ge[i]->SetMarkerStyle(20);
+        ge[i]->SetMarkerSize(2);
+        sprintf(name, "%i", i+1);
+        l->AddEntry(ge[i], name);
+        mg->Add(ge[i]);
+    }
+    TGraphErrors* av = new TGraphErrors(n, X, avLRUg, Xerr, DavLRUg);
+    av->SetName("gLR_av");
+    av->SetLineColorAlpha(1, 1.0);
+    av->SetLineWidth(2);
+    av->SetMarkerColorAlpha(1, 1.0);
+    l->AddEntry(av, "av");
+    mg->Add(av);
+
+    TCanvas* c = new TCanvas("cLR", "Test Backgrounds", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    mg->Draw("AP");
+    l->Draw();
+    c->Modified();
+    c->Update();
+}
+
+
 int DrawSingle(TFile* f, TFile* fCom, string FC, string Setup)
 { // Draw all pictures concerning one single file
+    DrawLRUg(f, FC);
 //    DrawQDCfit(f, FC, Setup);
 //    DrawQDCeff(f, FC, Setup);
 //    DrawQDCres(f, FC, Setup);
 //    DrawDtInt(f, FC, Setup);
-    DrawDtUg(f, fCom, FC, Setup);
+//    DrawDtUg(f, fCom, FC, Setup);
 //    DrawDtRate(f, FC, Setup);
 //    DrawDtPeak(f, fCom, FC, Setup);
 
@@ -1440,17 +1834,16 @@ int DrawSingle(TFile* f, TFile* fCom, string FC, string Setup)
 
 int DrawPics()
 {
-
 //    gStyle->SetCanvasPreferGL();
 
     TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
     TFile* fSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root");
-    TFile* fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root");
+//    TFile* fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root");
     TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
     TFile* fUSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root");
     TFile* fCom = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/Evaluation.root");
     /// single pics
-    DrawSingle(fNIF, fCom, "PuFC", "NIF");
+//    DrawSingle(fNIF, fCom, "PuFC", "NIF");
 //    DrawSingle(fSB, fCom, "PuFC", "SB");
 //    DrawSingle(fSF, fCom, "PuFC", "SF");
 //    DrawSingle(fUNIF, fCom, "UFC", "NIF");
@@ -1471,5 +1864,12 @@ int DrawPics()
 //    DrawDtComp(fNIF, fSB, fUNIF, fUSB, 4);
 //    DrawDtFC(fNIF, fSB, "PuFC", 10);
 //    DrawDtFC(fUNIF, fUSB, "UFC", 10);
+
+    DrawStability();
+//    for (Int_t i = 0; i < 8; i++)
+//        DrawStability(i);
+//    DrawPeak(fNIF, "PuFC");
+//    DrawPeak(fUNIF, "UFC");
+
     return 1;
 }

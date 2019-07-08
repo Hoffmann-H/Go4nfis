@@ -244,7 +244,7 @@ void Hist::AnalyzeDtPeak(Int_t i)
     Double_t UgInt = pHDtG[i]->Integral(lim[0][i], lim[3][i]) - PeakInt;
     avBg[i] = UgInt / (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
     DavBg[i] = sqrt(UgInt) / (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
-    cout << "DEBUG: ch " << i+1 << "; lim " << lim[0][i] << ", " << lim[1][i] << ", " << lim[2][i] << ", " << lim[3][i] << "; PeakInt " << PeakInt << ", " << "avBg " << avBg[i] << "+-" << DavBg[i] << ", NIF " << nNIF[i] << ", SF " << nSF[i] << endl;
+//    cout << "DEBUG: ch " << i+1 << "; lim " << lim[0][i] << ", " << lim[1][i] << ", " << lim[2][i] << ", " << lim[3][i] << "; PeakInt " << PeakInt << ", " << "avBg " << avBg[i] << "+-" << DavBg[i] << ", NIF " << nNIF[i] << ", SF " << nSF[i] << endl;
     nNIF[i] = PeakInt - (lim[2][i] - lim[1][i] + 1) * avBg[i];
     DnNIF[i] = sqrt( PeakInt + pow((lim[2][i]-lim[1][i]+1) * DavBg[i], 2) );
     nSF[i] = pHDtG[i]->Integral() - nNIF[i];

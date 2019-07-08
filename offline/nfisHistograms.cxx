@@ -220,7 +220,7 @@ void nfisHistograms::DefineRawQDC(const char* step_name, const char* dir_name,
 
         ////QDC (low gain) vs Time
         sprintf(obj_name,"%s/low/QDCvsTime/H2%sQDCvsTime_%i", path_name,
-                step_name, i_ch);
+                step_name, i_ch+1);
         sprintf(obj_title,"QDCS(low) vs Time channel %i", i_ch+1);
         pH2QDCTime[i_ch]   = (TH2I *) MakeTH2('I',obj_name,obj_title,
                                             350,0.,350.,
@@ -328,6 +328,20 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
             obj_name[256] = "",
             obj_title[256] = "";
 
+    //determine start and stop time of experiment
+    UInt_t t_start = pParGlobal->ExpStart->GetSec();
+    UInt_t t_end   = pParGlobal->ExpEnd->GetSec();
+    //calculate the beam time in seconds
+    UInt_t tdiff = t_end-t_start;
+    //calculate number of bins
+    UInt_t tbins = 18900;
+//    UInt_t tbins = tdiff/pParGlobal->ReadoutPeriod;
+
+    //define ToF bins
+    Double_t tof_min = 62000;
+    Double_t tof_max = 80000;
+    Int_t tof_bins = 1800;
+
     //define directory structure of histograms
     if (strcmp(dir_name, "")==0)
         sprintf(path_name,"%s", step_name);
@@ -349,7 +363,7 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
         sprintf(obj_name,"%s/TimeDiff/H1AnaHZDRDt_%i", path_name, i_ch+1);
         sprintf(obj_title,"Time Diff to Acc (coarse bin), channel %i", i_ch+1);
         pH1AnaDtHZDR[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
-                                            107000,-535000.,535000.,
+                                            tof_bins, tof_min, tof_max,
                                            "#font[12]{t} / ch", "counts");
 
         ////TimeDiff to acc (pulse heigt gated)
@@ -357,16 +371,25 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
         sprintf(obj_title,"Time Diff to Acc (coarse bin, pulse height gate),"
                           " channel %i", i_ch+1);
         pH1AnaDtHZDR_g[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
-                                            107000,-535000.,535000.,
+                                            tof_bins, tof_min, tof_max,
                                            "#font[12]{t} / ch", "counts");
 
-        ////TimeDiff to acc (pulse heigt refused)
-        sprintf(obj_name,"%s/TimeDiff/PH-Gated/H1AnaHZDRDtR_%i", path_name, i_ch+1);
-        sprintf(obj_title,"Time Diff to Acc (coarse bin, pulse height refused),"
-                          " channel %i", i_ch+1);
-        pH1AnaDtHZDR_r[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
-                                            107000,-535000.,535000.,
-                                           "#font[12]{t} / ch", "counts");
+//        ////TimeDiff to acc (pulse heigt refused)
+//        sprintf(obj_name,"%s/TimeDiff/PH-Gated/H1AnaHZDRDtR_%i", path_name, i_ch+1);
+//        sprintf(obj_title,"Time Diff to Acc (coarse bin, pulse height refused),"
+//                          " channel %i", i_ch+1);
+//        pH1AnaDtHZDR_r[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
+//                                            18000,62000.,80000.,
+//                                           "#font[12]{t} / ch", "counts");
+
+        ///TimeDiff to acc (pulse height gated) vs Time
+        sprintf(obj_name, "%s/TimeDiff/PH-Gated/H2DtGvsTime_%i", path_name, i_ch+1);
+        sprintf(obj_title, "Time Diff to Acc vs Time, channel %i", i_ch+1);
+        cout << "Channel " << i_ch+1 << ", t " << t_start << " - " << t_end << endl;
+        pH2DtTime[i_ch] = (TH2I *) MakeTH2('I', obj_name, obj_title,
+                                           tof_bins, tof_min, tof_max,
+                                           tbins, t_start, t_end,
+                                           "#font[12]{Q} / ch", "#font[12]{t}");
 
         ////QDC (low gain)
         sprintf(obj_name,"%s/QDC/low/H1AnaQDCl_%i", path_name, i_ch+1);
@@ -376,21 +399,21 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
                                             NumQDCReg,0,NumQDCReg,"#font[12]{Q} / ch",
                                            "counts");
 
-        ////QDC (low gain, ToF gated, neutron-induced fissions)
-        sprintf(obj_name,"%s/QDC/low/ToF_gated/NIF/H1AnaQDCl_NIF_%i", path_name, i_ch+1);
-        sprintf(obj_title,"QDC (low gain, ToF gated, n-induced fission), channel %i", i_ch+1);
+//        ////QDC (low gain, ToF gated, neutron-induced fissions)
+//        sprintf(obj_name,"%s/QDC/low/ToF_gated/NIF/H1AnaQDCl_NIF_%i", path_name, i_ch+1);
+//        sprintf(obj_title,"QDC (low gain, ToF gated, n-induced fission), channel %i", i_ch+1);
 
-        pH1AnaQDCl_NIF[i_ch]   = (TH1I *) MakeTH1('I',obj_name,obj_title,
-                                            NumQDCReg,0,NumQDCReg,"#font[12]{Q} / ch",
-                                           "counts");
+//        pH1AnaQDCl_NIF[i_ch]   = (TH1I *) MakeTH1('I',obj_name,obj_title,
+//                                            NumQDCReg,0,NumQDCReg,"#font[12]{Q} / ch",
+//                                           "counts");
 
-        ////QDC (low gain, ToF gated, spontaneous fission)
-        sprintf(obj_name,"%s/QDC/low/ToF_gated/SF/H1AnaQDCl_SF_%i", path_name, i_ch+1);
-        sprintf(obj_title,"QDC (low gain, ToF gated, spontaneous), channel %i", i_ch+1);
+//        ////QDC (low gain, ToF gated, spontaneous fission)
+//        sprintf(obj_name,"%s/QDC/low/ToF_gated/SF/H1AnaQDCl_SF_%i", path_name, i_ch+1);
+//        sprintf(obj_title,"QDC (low gain, ToF gated, spontaneous), channel %i", i_ch+1);
 
-        pH1AnaQDCl_SF[i_ch]   = (TH1I *) MakeTH1('I',obj_name,obj_title,
-                                            NumQDCReg,0,NumQDCReg,"#font[12]{Q} / ch",
-                                           "counts");
+//        pH1AnaQDCl_SF[i_ch]   = (TH1I *) MakeTH1('I',obj_name,obj_title,
+//                                            NumQDCReg,0,NumQDCReg,"#font[12]{Q} / ch",
+//                                           "counts");
 
         ////QDC (low gain, ungated, self triggered )
         sprintf(obj_name,"%s/QDC/low/trig/H1AnaQDCl_trig_%i", path_name, i_ch+1);

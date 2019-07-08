@@ -27,7 +27,7 @@ AnaSim::AnaSim(string fc, Bool_t use_track_id, Plot *p)
         DrawSingle = kFALSE;
         DrawMulti = kFALSE;
 //    }
-    CommentFlag = kTRUE;
+    CommentFlag = kFALSE;
 
     cout << "Done: Create simulation analysis instance for " << FC << ", " << Setup << endl;
 }

@@ -42,6 +42,10 @@ public:
 //    void SetAvBg(Double_t *avBg, Double_t *DavBg);
     void AnalyzeDtBg(Int_t i);
     void AnalyzeDtPeak(Int_t i);
+    void Stability(Int_t i, TGraphErrors *ge1, TGraphErrors *ge2, Int_t tbins = 1890);
+    Double_t SFvsTime(Int_t i, Int_t start, Int_t stop);
+    Double_t NIFvsTime(Int_t i, Int_t start, Int_t stop);
+    Double_t DNIFvsTime(Int_t i, Int_t start, Int_t stop);
     Double_t GetNevents(Int_t i);
 
 //    Double_t SFRate[NumHist]; // SF rates assuming efficiency==100%
@@ -54,6 +58,7 @@ public:
     Int_t t_start;
     Int_t t_stop;
     TH1I *pHDtG[NumHist];
+    TH2I *pHDtGvsT[NumHist];
     Double_t t_mon;
     Double_t NeutronFlux[NumHist];
     Double_t DNeutronFlux[NumHist];
@@ -102,6 +107,7 @@ private:
     // Methods
     TH1I* GetTH1I(const char *hname);
     TH1D* GetTH1D(const char *hname);
+    TH2I* GetTH2I(const char *hname);
     TGo4WinCond* GetWinCond(const char* hname);
     void SaveToFile(string path, TObject *pObj);
 //    void SaveTo(string path, string name);

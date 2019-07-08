@@ -11,6 +11,7 @@
 #include "Xsection.h"
 #include "PuFC.h"
 #include "UFC.h"
+#include "Run.h"
 #include "Plot.h"
 
 using namespace std;
@@ -22,16 +23,24 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
-//    Plot *p = new Plot("UFC", "Open", 0);
-//    p->Source_E();
-
-//    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF", "UFC");
+//    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "NIF", "PuFC", "FG", 0);
+    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF", "UFC", "FG", 0);
+//    h->Stability(0, 0, 0);
 //    h->SetDraw(p);
 //    h->DoAnalyzeQDC();
 
-//    PuFC *fc = new PuFC(0);
-    UFC *ufc = new UFC(1);
-    ufc->Calibrate();
+//    Run *r = new Run("PuFC", "Open");
+//    r->UseHist(159);
+
+//    Plot *p = new Plot("UFC", "Open", 0);
+//    p->Source_E();
+
+//    UFC *fc = new UFC(0);
+//    fc->GetNatoms();
+//    fc->CrossSection();
+//    fc->Corrections();
+//    UFC *ufc = new UFC(1);
+//    ufc->Corrections();
 
 //    Xsection *xs = new Xsection();
 //    xs->RelativeCS();

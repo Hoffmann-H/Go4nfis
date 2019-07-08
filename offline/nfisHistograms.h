@@ -71,9 +71,9 @@ public:
             *pH1AnaDtHZDR_g[NumHZDRFC],                             //PH-gated
             *pH1AnaDtHZDR_r[NumHZDRFC];                             //PH-refused
 
-    TH1I    *pH1AnaQDCl[NumQDC], *pH1AnaQDCl_SF[NumQDC], *pH1AnaQDCl_NIF[NumQDC], *pH1AnaQDCl_trig[NumQDC];
+    TH1I    *pH1AnaQDCl[NumQDC], *pH1AnaQDCl_trig[NumQDC]; //, *pH1AnaQDCl_SF[NumQDC], *pH1AnaQDCl_NIF[NumQDC]
 
-    TH2I    *pH2AnaHit, *pH2AnaDt, *pH2AnaDt_g;
+    TH2I    *pH2AnaHit, *pH2AnaDt, *pH2AnaDt_g, *pH2DtTime[NumHZDRFC];
 
     /*/calibration step
     TH1I    *pH1CalDtHZDR[NumHZDRFC],  *pH1CalDtHZDRSum;

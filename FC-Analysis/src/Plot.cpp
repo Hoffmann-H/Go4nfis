@@ -662,6 +662,16 @@ void Plot::Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1,
     sprintf(name, "Bg-subtracted time spectrum, ch.%i; TDC channel; Fissions", ch+1);
     pHbg->SetTitle(name);
     pHbg->Draw();
+    pHbg->GetYaxis()->SetTickLength(0);
+    pHbg->GetYaxis()->SetLabelColor(0);
+    pHbg->GetYaxis()->SetTitleColor(0);
+    Double_t x = pHbg->GetXaxis()->GetXmin();
+    Double_t ymin = pHbg->GetMinimum();
+    Double_t ymax = pHbg->GetMaximum();
+//    cout << x << "  " << ymin << "  " << ymax << endl;
+    TGaxis *axis = new TGaxis(x, ymin, x, ymax, ymin + level, ymax + level, 509, "");
+    axis->SetTitle("Fissions");
+    axis->Draw();
     g->Draw("same");
     pHpeak->SetLineWidth(0);
     pHpeak->SetFillColorAlpha(kBlue, 0.25);

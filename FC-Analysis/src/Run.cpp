@@ -23,7 +23,7 @@ Run::Run(string FC, string setup, Int_t nr, Bool_t draw)
         nSF[i] = 0;
         DnSF[i] = 0;
     }
-    cout << "Created Run " << Name << endl;
+    cout << endl << "Created Run " << Name << endl;
 }
 
 
@@ -71,7 +71,7 @@ Double_t Run::SetNeutronField(Double_t monitor, Double_t unc_rel, Double_t t_rea
 
 void Run::GetHist(Hist *hist)
 {
-    if (CommentFlag)
+//    if (CommentFlag)
         cout << endl << Name << " getting " << hist->Name << endl << " Ch   (n,f)   SF   t_live" << endl;
     for (Int_t i = 0; i < NumCh; i++)
     {
@@ -80,7 +80,7 @@ void Run::GetHist(Hist *hist)
         nSF[i] += hist->nSF[i];
         DnSF[i] += hist->DnSF[i];
         t_live = hist->t_live;
-        if (CommentFlag)
+//        if (CommentFlag)
             cout << " " << i+1 << "   " << nNIF[i] << "+-" << DnNIF[i] << "   " << nSF[i] << "+-" << DnSF[i] << "   " << t_live << endl;
     }
 }
@@ -118,6 +118,7 @@ void Run::SetNatoms(Double_t *nAt, Double_t *DnAt)
 
 void Run::CrossSection(Int_t i)
 {
+//    cout << nNIF[i] << "+-" << DnNIF[i] << endl;
     uncCS[i] = 1.E22 * nNIF[i] / (t_live * nAtoms[i] * NeutronFlux[i]);
     DuncCS[i] = uncCS[i] * sqrt( pow(DnNIF[i] / nNIF[i], 2) +
                                        pow(DnAtoms[i] / nAtoms[i], 2) +
