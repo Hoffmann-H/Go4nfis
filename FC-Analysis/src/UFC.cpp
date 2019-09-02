@@ -1,69 +1,31 @@
 #include "UFC.h"
 using namespace std;
 
-UFC::UFC(Bool_t draw)
+UFC::UFC(Bool_t two_runs, Bool_t draw)
 {
     Name = "UFC";
     cout << endl << "Creating fission chamber " << Name << endl;
     CommentFlag = kTRUE;
     InitVar(draw);
     InitUVar();
-/////////////////////////////////////////////////////////////////////////////////////////
-//    pR[0] = new Run("UFC", "Open", 0);
-//    FgMon = pR[0]->SetNeutronField(9509138+12371470+12876188+27941726+9962706, 0.0014, 7880.71+11193.57+10940.15+22636.3+8291.89);
-//    pR[0]->SetToF("UFC_NIF");
-//    pR[0]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-//    FgRuns = 1;
-//    pR[1] = new Run("UFC", "SB", 0);
-//    BgMon = pR[1]->SetNeutronField(13815794, 0.0014, 11395.49);
-//    pR[1]->SetToF("UFC_SB");
-//    pR[1]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-//    BgRuns = 1;
-/////////////////////////////////////////////////////////////////////////////////////////
-    Int_t k = 0;
-    FgMon = 0;
-    pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(9509137.9391, 0.0014, -7880.71, 20140520, 194248);
-    pR[k]->SetToF("UFC_FG_MS20_2");
-    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    k++;
-    pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(12371469.5909, 0.0014, -11193.57, 20140520, 231755);
-    pR[k]->SetToF("UFC_FG_MS20_3");
-    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    k++;
-    pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(12876188.3535, 0.0014, -10940.15, 20140521, 22206);
-    pR[k]->SetToF("UFC_FG_MS20_4");
-    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    k++;
-    pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(27941726.1118, 0.0014, -22636.3, 20140521, 130959);
-    pR[k]->SetToF("UFC_FG_MS21_2");
-    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    k++;
-    pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(9962705.5858, 0.0014, -8291.89, 20140521, 175919);
-    pR[k]->SetToF("UFC_FG_MS21_3");
-    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    k++;
-    FgRuns = k;
-    BgMon = 0;
-    pR[k] = new Run("UFC", "SB", k - FgRuns);
-    BgMon += pR[k]->SetNeutronField(14226964.0879, 0.0014, -11456.44, 20140521, 55753);
-    pR[k]->SetToF("UFC_BG_MS20_5");
-    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    k++;
-    pR[k] = new Run("UFC", "SB", k - FgRuns);
-    BgMon += pR[k]->SetNeutronField(13815793.6783, 0.0014, -11395.49, 20140521, 212715);
-    pR[k]->SetToF("UFC_BG_MS21_4");
-    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    k++;
-    BgRuns = k - FgRuns;
-/////////////////////////////////////////////////////////////////////////////////////////
 
-//    RegisterHists();
-
+    if (two_runs)
+    {
+        ///////////////////////////////////////////////////////////////////////////////////////
+        Run("Open", "UFC_NIF", 9509137.9391+12371469.5909+12876188.3535+27941726.1118+9962705.5858, 0.0014, 7880.71+11193.57+10940.15+22636.3+8291.89);
+        Run("SB", "UFC_SB", 14226964.0879+13815794, 0.0014, 11456.44+11395.49);
+        ///////////////////////////////////////////////////////////////////////////////////////
+    } else {
+        ///////////////////////////////////////////////////////////////////////////////////////
+        Run("Open", "UFC_FG_MS20_2", 9509137.9391, 0.0014, 7880.71);
+        Run("Open", "UFC_FG_MS20_3", 12371469.5909, 0.0014, 11193.57);
+        Run("Open", "UFC_FG_MS20_4", 12876188.3535, 0.0014, 10940.15);
+        Run("Open", "UFC_FG_MS21_2", 27941726.1118, 0.0014, 22636.3);
+        Run("Open", "UFC_FG_MS21_3", 9962705.5858, 0.0014, 8291.89);
+        Run("SB", "UFC_BG_MS20_5", 14226964.0879, 0.0014, 11456.44);
+        Run("SB", "UFC_BG_MS21_4", 13815793.6783, 0.0014, 11395.49);
+        ///////////////////////////////////////////////////////////////////////////////////////
+    }
     cout << "Created " << Name << endl;
 }
 
@@ -77,6 +39,7 @@ UFC::~UFC()
 void UFC::InitUVar()
 {
     cout << endl << "Initializing U variables.." << endl;
+    SetLimits(12, 50);
     // isotope fractions
     Double_t frac233 = 0.0000011;
     Double_t Dfrac233 = 0.0000005;

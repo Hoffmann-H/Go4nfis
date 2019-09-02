@@ -8,7 +8,7 @@ using namespace std;
 class UFC : public FC
 {
 public:
-    UFC(Bool_t draw);
+    UFC(Bool_t two_runs, Bool_t draw);
     ~UFC();
 //    void AnalyzeQDC() override;
     void HardCodedThresholds() override;

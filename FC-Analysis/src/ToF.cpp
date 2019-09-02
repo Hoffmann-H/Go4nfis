@@ -4,15 +4,17 @@
 
 using namespace std;
 
-ToF::ToF(string file_name, string fc, string setup, string name)
+ToF::ToF(string file_name, string fc, string setup)
 {
-    FilePath = file_name;
+    std::stringstream s;
+    s << "/home/hoffma93/Programme/Go4nfis/offline/results/" << file_name << ".root";
+    FilePath = s.str();
     FC = fc;
     Setup = setup;
 //    std::stringstream s;
 //    s << FC << "_" << Setup;
 //    Name = s.str();
-    Name = name;
+    Name = file_name;
     PuFC = strcmp(FC.c_str(), "UFC");
     Save = kTRUE;
     if (!strcmp(setup.c_str(), "SF"))
@@ -20,7 +22,7 @@ ToF::ToF(string file_name, string fc, string setup, string name)
         SpontaneousFission();
         return;
     }
-    OpenToF(file_name);
+    OpenToF(FilePath);
 //    MakeLimits(12, 37); //12.0821, 36.7100);//
 
 //    Print();
@@ -161,7 +163,7 @@ void ToF::SetLimits(Int_t *pl0, Int_t *pl1, Int_t *pl2, Int_t *pl3)
         l2[i] = pl2[i];
 //        cout << " " << i+1 << "   " << l0 << "   " << l1[i] << "   " << l2[i] << "   " << l3 << endl;
     }
-    cout << "Done: limits" << endl;
+    cout << "Done: ToF limits" << endl;
     FitBackground();
     SubtractBackground();
     InducedFission();
@@ -300,6 +302,7 @@ void ToF::FitBackground(Int_t  i)
     reject = kFALSE;
     SaveToFile("Analysis/ToF/BG/Total", fTotal[i]);
 
+//    cout << "   " << pH1Dt[i]->Integral(l0, l1[i]-1) << " " << pH1Dt[i]->Integral(l2[i], l3-1) << " " << l0 << l1[i] << l2[i] << l3 << endl;
     ug[i] = (pH1Dt[i]->Integral(l0, l1[i]-1) + pH1Dt[i]->Integral(l2[i], l3-1)) / (l1[i] - l0 + l3 - l2[i]);
     Dug[i] = sqrt(pH1Dt[i]->Integral(l0, l1[i]-1) + pH1Dt[i]->Integral(l2[i], l3-1)) / (l1[i] - l0 + l3 - l2[i]);
 

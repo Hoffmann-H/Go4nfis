@@ -8,8 +8,7 @@
 #include "Plot.h"
 
 #define NumCh 8
-#define MaxRuns 5
-#define MaxHist 10
+#define MaxRuns 10
 
 using namespace std;
 
@@ -17,16 +16,18 @@ class FC
 {
 public:
     string Name;
-//    string SimPath;
     Bool_t CommentFlag;
     Bool_t DrawSingle, DrawMulti;
     Plot *plot;
-//    Int_t ScatterMethod;
     Int_t FgRuns;
     Int_t BgRuns;
-    Run* pR[2 * MaxRuns];
-    Int_t nHist;
-    Hist *pH[2*MaxHist];
+    Int_t nRuns;
+    ToF *pToF[MaxRuns];
+    Double_t MonitorCounts[MaxRuns];
+    Double_t DMonitorCounts[MaxRuns];
+    Double_t MonitorTime[MaxRuns];
+    Double_t nFluence[NumCh][MaxRuns];
+    Double_t DnFluence[NumCh][MaxRuns];
     TH1D *pHtLive;
     Double_t FgMon;
     Double_t BgMon;
@@ -46,7 +47,9 @@ public:
     virtual void DrawStability() = 0;
     virtual void IsoVec() = 0;
     void InitVar(Bool_t draw);
+    void Run(string setup, string tof_file, Double_t monitor, Double_t Dmonitor, Double_t tmonitor);
     void SetLimits(Int_t left = 12, Int_t right = 37);
+    void NeutronField();
 //    void UseHists(Int_t start, Int_t stop, string setup, Int_t run);
 //    void UseHist(string file_name, string setup, Int_t run);
 //    void AnalyzeDt();
@@ -67,6 +70,7 @@ public:
     Bool_t DoneQDC,
            DoneThresholds,
            DoneLimits,
+           DoneNeutronField,
            DoneNatoms,
            DoneDtBG,
            DoneDt,

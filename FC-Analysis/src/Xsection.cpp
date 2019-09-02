@@ -6,7 +6,7 @@ Xsection::Xsection(Bool_t draw)
 {
     CommentFlag = kFALSE;
     Draw = draw;
-    Pu = new PuFC(Draw);
+    Pu = new PuFC(0, Draw);
 //    cout << endl << "DEBUG: Neutron flux PuFC Open ch 1: " << Pu->pHFG[0]->NeutronFlux[0] << endl;
 //    U = new UFC(Draw);
     simPu = new AnaSim("PuFC", 1, 0);

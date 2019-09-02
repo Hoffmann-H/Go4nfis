@@ -24,9 +24,14 @@ void FC::InitVar(Bool_t draw)
         plot = new Plot(Name, "Open");
     FgRuns = 0;
     BgRuns = 0;
+    nRuns = 0;
+    FgMon = 0;
+    BgMon = 0;
     DoneQDC = kFALSE;
     DoneThresholds = kFALSE;
     DoneLimits = kFALSE;
+    DoneNeutronField = kFALSE;
+    cout << "DoneNeutronField: " << DoneNeutronField << endl;
     DoneNatoms = kFALSE;
     DoneDtBG = kFALSE;
     DoneDt = kFALSE;
@@ -41,7 +46,6 @@ void FC::InitVar(Bool_t draw)
     Area = 4300; // in mm^2
     DArea = 120;
 
-    SetLimits();
     cout << "Done: common variables" << endl;
 }
 
@@ -76,6 +80,194 @@ void FC::SetLimits(Int_t left, Int_t right)
         }
     }
     cout << "Done: limits" << endl;
+}
+
+
+void FC::Run(string setup, string tof_file, Double_t monitor, Double_t dmonitor, Double_t tmonitor)
+{
+    cout << endl << Name << " going to create ToF instance " << tof_file << endl;
+    MonitorCounts[nRuns] = monitor;
+    DMonitorCounts[nRuns] = monitor * dmonitor;
+    MonitorTime[nRuns] = tmonitor;
+    pToF[nRuns] = new ToF(tof_file, this->Name, setup);
+    pToF[nRuns]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
+    if (!strcmp(setup.c_str(), "Open") || !strcmp(setup.c_str(), "FG") || !strcmp(setup.c_str(), "NIF"))
+    {
+        FgRuns++;
+        FgMon += monitor;
+    } else {
+        BgRuns++;
+        BgMon += monitor;
+    }
+    nRuns++;
+}
+
+
+void FC::NeutronField()
+{
+    Double_t Yield = 2.158821152E4;
+    Double_t DYield = 543.3;
+    for (Int_t k = 0; k < nRuns; k++)
+    {
+        for (Int_t i = 0; i < NumCh; i++)
+        {
+            nFluence[i][k] = Yield * MonitorCounts[k] / pow(sd[i], 2);
+            DnFluence[i][k] = sqrt( pow(DYield * MonitorCounts[k] / (sd[i]*sd[i]), 2) +
+                                    pow(Yield * DMonitorCounts[k] / (sd[i]*sd[i]), 2) +
+                                    pow(Yield * MonitorCounts[k] * 2*Dsd[i] / (sd[i]*sd[i]*sd[i]), 2) );
+        }
+    }
+    DoneNeutronField = kTRUE;
+}
+
+
+void FC::ScatCorrSim()
+{
+//    if (!DoneDt)
+//        AnalyzeDt();
+    if (!DoneSimFg)
+        GetSimFg();
+    cout << endl << "Scattering correction: Simulation" << endl;
+
+    DoneScatCorr = kTRUE;
+    cout << "Done: Scattering correction" << endl;
+}
+
+
+void FC::CrossSection()
+{// Calculate cross section from uncorrected numbers.
+ // Need: fluence of incident neutrons
+ //       efficient number of target atoms
+ //       number of (n,f) events
+//    if (!DoneDt)
+//        AnalyzeDt();
+    if (!DoneNatoms)
+        GetNatoms();
+    if (!DoneNeutronField)
+        NeutronField();
+
+    cout << endl << "Uncorrected cross section..." << endl;
+    Double_t avCS = 0; // average cross section
+    Double_t D2avCS = 0;
+    Double_t avFG;
+    Double_t D2avFG;
+    Double_t avBG;
+    Double_t D2avBG;
+    for (int i = 0; i < NumCh; i++)
+    {
+        cout << " Channel " << i+1 << endl;
+        if (CommentFlag)
+            cout << "  " << nAtoms[i] << "+-" << DnAtoms[i] << " atoms" << endl
+                 << "  Run \t\t (n,f)-counts \t n-Fluence[mm^-2] \t t_live[s]  t_mon[s] \t sigma[b]" << endl;
+        avFG = 0;
+        D2avFG = 0;
+        avBG = 0;
+        D2avBG = 0;
+
+        // Cross section ////////////////////////////////////////////////////////////
+        //  weighting with monitor counts
+        for (Int_t k = 0; k < nRuns; k++)
+        {
+//            cout << nFluence[i][k] << "\t" << nAtoms[i] << endl;
+            Double_t sigma = pToF[k]->nf[i] / nFluence[i][k] / nAtoms[i] * 1.E22;// * MonitorTime[k] / pToF[k]->t_live;
+//            cout << sigma << endl;
+            Double_t Dsigma = sqrt( pow(pToF[k]->Dnf[i] / pToF[k]->nf[i], 2) +
+                                    pow(DnFluence[i][k] / nFluence[i][k], 2) +
+                                    pow(DnAtoms[i] / nAtoms[i], 2) ) * sigma;
+            if (CommentFlag)
+                cout << "  " << pToF[k]->GetName() << "\t " << pToF[k]->nf[i] << "+-" << pToF[k]->Dnf[i] << "\t " << nFluence[i][k] << "+-" << DnFluence[i][k] << "\t " << pToF[k]->t_live << "\t " << MonitorTime[k] << "\t " << sigma << "+-" << Dsigma << endl;
+
+            if (k < FgRuns)
+            {
+                avFG += MonitorCounts[k] / FgMon * sigma;
+                D2avFG += pow(MonitorCounts[k] / FgMon * Dsigma, 2);
+            } else {
+                avBG += MonitorCounts[k] / BgMon * sigma;
+                D2avBG += pow(MonitorCounts[k] / BgMon * Dsigma, 2);
+            }
+        }
+        pDirect[i][0] = 1.0 - avBG / avFG;
+        DpDirect[i][0] = sqrt( D2avBG / pow(avFG, 2) + D2avFG * pow(avBG / avFG / avFG, 2) );
+
+        uCS[i] = avFG;
+        D2uCS[i] = D2avFG; //D2avFG / pow(nAtoms[i] / 1.E22, 2) + pow(avFG * DnAtoms[i] / 1.E22, 2) / pow(nAtoms[i] / 1.E22, 4);
+        avCS += uCS[i] / NumCh;
+        D2avCS += D2uCS[i] / NumCh / NumCh;
+        cout << "  raw CS = " << uCS[i] << "+-" << sqrt(D2uCS[i]) << " barn" << endl;
+    }
+    cout << "Average: sigma = " << avCS << "+-" << sqrt(D2avCS) << endl;
+    DoneRawCS = kTRUE;
+    cout << "Done: raw cross section" << endl;
+}
+
+
+void FC::GetSimFg()
+{
+    cout << endl << "Simulation results requested. Starting " << Name << " foreground simulation analysis..." << endl;
+    sim = new AnaSim(Name, 1, plot);
+    sim->Corrections();
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        fTS[i] = sim->F[i];
+        DfTS[i] = sim->DF[i];
+        pDirect[i][1] = sim->S[i];
+        DpDirect[i][1] = sim->DS[i];
+        SimT[i] = sim->T[i];
+        DSimT[i] = sim->DT[i];
+    }
+    DoneSimFg = kTRUE;
+    cout << "Done: Got foreground simulation" << endl;
+}
+
+
+void FC::Corrections()
+{
+    if (!DoneRawCS)
+        CrossSection();
+    if (!DoneScatCorr)
+        ScatCorrSim();
+    if (!DoneIso)
+        IsoVec();
+    cout << endl << "Corrections..." << endl;
+//    cout << "Ch   F   Isotopes" << endl;
+//    for (int i = 0; i < NumCh; i++)
+//    {
+//        cout << i+1 << "   ";
+//        cout << 1 / Transm[i] << "   ";
+//        cout << InScat[i] << "   ";
+//        cout << fIsoVec - sIsoVec / InScat[i] * Transm[i] / uCS[i] << "" << endl;
+//    }
+    if (strcmp(Name.c_str(), "UFC"))
+        cout << "eval CS(14.97 MeV) = " << sim->Fg->gPu242->Eval(14.97) << "+-" << sim->Fg->DgPu242->Eval(14.97) << endl;
+    else
+        cout << "eval CS(14.97 MeV) = " << sim->Fg->gU235->Eval(14.97) << "+-" << sim->Fg->DgU235->Eval(14.97) << endl;
+    cout << "Ch   uncorrected CS   corrected CS" << endl;
+    Double_t sUCS = 0, sCS = 0, D2UCS = 0, D2CS = 0;
+    for (int i = 0; i < NumCh; i++)
+    {
+        CS[i] = fTS[i] * uCS[i] * fIsoVec - sIsoVec;
+        Double_t uncert[] = {DfIsoVec * fTS[i] * uCS[i],
+                             fIsoVec * DfTS[i] * uCS[i],
+                             fIsoVec * fTS[i] * sqrt(D2uCS[i]),
+                             DsIsoVec
+                            };
+        DCS[i] = sqrt( pow(uncert[0], 2) +
+                       pow(uncert[1], 2) +
+                       pow(uncert[2], 2) +
+                       pow(uncert[3], 2) );
+        cout << " " << i+1 << ",  " << uCS[i] << "+-" << sqrt(D2uCS[i]) << " barn,  " << CS[i] << "+-" << DCS[i] << " barn" << endl;
+//        cout << "  unc: f " << uncert[0] << ", TS " << uncert[1] << ", u " << uncert[2] << ", s " << uncert[3] << endl;
+        sUCS += uCS[i];
+        D2UCS += D2uCS[i];
+        sCS += CS[i];
+        D2CS += pow(DCS[i], 2);
+    }
+    cout << "Average: " << sUCS / 8 << "+-" << sqrt(D2UCS) / 8 << "    " << sCS / 8 << "+-" << sqrt(D2CS) / 8 << endl;
+    DoneCorrections = kTRUE;
+    cout << "Done: Corrections" << endl;
+//    if (!DrawSingle)
+//        return;
+//    plot->Result(uCS, DuCS, CS, DCS);
 }
 
 
@@ -366,101 +558,6 @@ void FC::Stability()
 //}
 
 
-void FC::ScatCorrSim()
-{
-//    if (!DoneDt)
-//        AnalyzeDt();
-    if (!DoneSimFg)
-        GetSimFg();
-    cout << endl << "Scattering correction: Simulaion" << endl;
-
-    DoneScatCorr = kTRUE;
-    cout << "Done: Scattering correction" << endl;
-}
-
-
-void FC::CrossSection()
-{// Calculate cross section from uncorrected numbers.
- // Need: fluence of incident neutrons
- //       efficient number of target atoms
- //       number of (n,f) events
-//    if (!DoneDt)
-//        AnalyzeDt();
-    if (!DoneNatoms)
-        GetNatoms();
-    cout << endl << "Uncorrected cross section..." << endl;
-    Double_t avCS = 0; // average cross section
-    Double_t D2avCS = 0;
-    Double_t avFG;
-    Double_t D2avFG;
-    Double_t avBG;
-    Double_t D2avBG;
-    for (int i = 0; i < NumCh; i++)
-    {
-        cout << " Chanel " << i+1 << endl;
-        if (CommentFlag)
-            cout << "  " << nAtoms[i] << "+-" << DnAtoms[i] << " atoms" << endl
-                 << "  Run   t_live[s]   (n,f)-rate[s^-1]   n-Flux[mm^-2 s^-1]   N*sigma[mm^2]" << endl;
-        avFG = 0;
-        D2avFG = 0;
-        avBG = 0;
-        D2avBG = 0;
-
-        // Cross section ////////////////////////////////////////////////////////////
-        //  weighting with monitor counts
-        for (Int_t k = 0; k < FgRuns + BgRuns; k++)
-        {
-//            if (CommentFlag)
-                cout << "  " << pR[k]->Name << "   " << pR[k]->t_live << "   " << pR[k]->pToF->GetnfRate(i) << "+-" << pR[k]->pToF->GetDnfRate(i) << "   " << pR[k]->NeutronFlux[i] << "+-" << pR[k]->DstatNeutronFlux[i] << "   " << pR[k]->GetnfoverPhi(i) << "+-" << pR[k]->GetDnfoverPhi(i) << endl;
-            if (pR[k]->IsForeground())
-            {
-                avFG += pR[k]->Monitor / FgMon * pR[k]->GetnfoverPhi(i);
-                D2avFG += pow(pR[k]->Monitor / FgMon * pR[k]->GetDnfoverPhi(i), 2);
-//                cout << "   " << pR[k]->DuncCS[i] << "  " << pR[k]->t_live / tFG * pR[k]->DuncCS[i] << "  " << D2avFG << endl;
-            }
-            else
-            {
-                avBG += pR[k]->Monitor / BgMon * pR[k]->GetnfoverPhi(i);
-                D2avBG += pow(pR[k]->Monitor / BgMon * pR[k]->GetDnfoverPhi(i), 2);
-            }
-        }
-        pDirect[i][0] = 1.0 - avBG / avFG;
-        DpDirect[i][0] = sqrt( D2avBG / pow(avFG, 2) + D2avFG * pow(avBG / avFG / avFG, 2) );
-//        if (CommentFlag)
-//            cout << "   nFlux " << pHFG->NeutronFlux[i] << "+-" << pHFG->DNeutronFlux[i] << "mm^-2 s^-1" << endl <<
-//                    "   nAtoms " << nAtoms[i] << "+-" << DnAtoms[i] << endl <<
-//                    "   Foreground " << nFg1[i] << "+-" << DnFg1[i]  << " s^-1" << endl;
-        uCS[i] = avFG / nAtoms[i] * 1.E22;
-        D2uCS[i] = D2avFG / pow(nAtoms[i] / 1.E22, 2) + pow(avFG * DnAtoms[i] / 1.E22, 2) / pow(nAtoms[i] / 1.E22, 4);
-        avCS += uCS[i] / NumCh;
-        D2avCS += D2uCS[i] / NumCh / NumCh;
-        cout << "  raw CS = " << uCS[i] << "+-" << sqrt(D2uCS[i]) << " barn" << endl;
-    }
-    cout << "Average: sigma = " << avCS << "+-" << sqrt(D2avCS) << endl;
-    DoneRawCS = kTRUE;
-    cout << "Done: raw cross section" << endl;
-}
-
-
-void FC::GetSimFg()
-{
-    cout << endl << "Simulation results requested. Starting " << Name << " foreground simulation analysis..." << endl;
-    sim = new AnaSim(Name, 1, plot);
-    sim->Corrections();
-    for (Int_t i = 0; i < NumCh; i++)
-    {
-        fTS[i] = sim->F[i];
-        DfTS[i] = sim->DF[i];
-        pDirect[i][1] = sim->S[i];
-        DpDirect[i][1] = sim->DS[i];
-        SimT[i] = sim->T[i];
-        DSimT[i] = sim->DT[i];
-    }
-    DoneSimFg = kTRUE;
-    cout << "Done: Got foreground simulation" << endl;
-}
-
-
 //void FC::GetSimBg()
 //{
 //    if (!DoneSimFg)
@@ -474,57 +571,6 @@ void FC::GetSimFg()
 //    }
 //    DoneSimBg = kTRUE;
 //}
-
-
-void FC::Corrections()
-{
-    if (!DoneRawCS)
-        CrossSection();
-    if (!DoneScatCorr)
-        ScatCorrSim();
-    if (!DoneIso)
-        IsoVec();
-    cout << endl << "Corrections..." << endl;
-//    cout << "Ch   F   Isotopes" << endl;
-//    for (int i = 0; i < NumCh; i++)
-//    {
-//        cout << i+1 << "   ";
-//        cout << 1 / Transm[i] << "   ";
-//        cout << InScat[i] << "   ";
-//        cout << fIsoVec - sIsoVec / InScat[i] * Transm[i] / uCS[i] << "" << endl;
-//    }
-    if (strcmp(Name.c_str(), "UFC"))
-        cout << "eval CS(14.97 MeV) = " << sim->Fg->gPu242->Eval(14.97) << "+-" << sim->Fg->DgPu242->Eval(14.97) << endl;
-    else
-        cout << "eval CS(14.97 MeV) = " << sim->Fg->gU235->Eval(14.97) << "+-" << sim->Fg->DgU235->Eval(14.97) << endl;
-    cout << "Ch   uncorrected CS   corrected CS" << endl;
-    Double_t sUCS = 0, sCS = 0, D2UCS = 0, D2CS = 0;
-    for (int i = 0; i < NumCh; i++)
-    {
-        CS[i] = fTS[i] * uCS[i] * fIsoVec - sIsoVec;
-        Double_t uncert[] = {DfIsoVec * fTS[i] * uCS[i],
-                             fIsoVec * DfTS[i] * uCS[i],
-                             fIsoVec * fTS[i] * sqrt(D2uCS[i]),
-                             DsIsoVec
-                            };
-        DCS[i] = sqrt( pow(uncert[0], 2) +
-                       pow(uncert[1], 2) +
-                       pow(uncert[2], 2) +
-                       pow(uncert[3], 2) );
-        cout << " " << i+1 << ",  " << uCS[i] << "+-" << sqrt(D2uCS[i]) << " barn,  " << CS[i] << "+-" << DCS[i] << " barn" << endl;
-//        cout << "  unc: f " << uncert[0] << ", TS " << uncert[1] << ", u " << uncert[2] << ", s " << uncert[3] << endl;
-        sUCS += uCS[i];
-        D2UCS += D2uCS[i];
-        sCS += CS[i];
-        D2CS += pow(DCS[i], 2);
-    }
-    cout << "Average: " << sUCS / 8 << "+-" << sqrt(D2UCS) / 8 << "    " << sCS / 8 << "+-" << sqrt(D2CS) / 8 << endl;
-    DoneCorrections = kTRUE;
-    cout << "Done: Corrections" << endl;
-//    if (!DrawSingle)
-//        return;
-//    plot->Result(uCS, DuCS, CS, DCS);
-}
 
 
 //void FC::CompareShadowCone()

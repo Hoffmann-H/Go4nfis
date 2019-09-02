@@ -1,7 +1,7 @@
 #include "PuFC.h"
 using namespace std;
 
-PuFC::PuFC(Bool_t draw)
+PuFC::PuFC(Bool_t two_runs, Bool_t draw)
 {
     Name = "PuFC";
     cout << endl << "Creating fission chamber " << Name << endl;
@@ -9,70 +9,23 @@ PuFC::PuFC(Bool_t draw)
     InitVar(draw);
     InitPuVar();
 
-/////////////////////////////////////////////////////////////////////////////////////////87976.7);//
-    pR[0] = new Run("PuFC", "Open", 0);
-    FgMon = pR[0]->SetNeutronField(27492078.81+33478369.95+30916955.27+54792678.94, 0.0014, 16794.37+20286.24+18736.55+34490.15, 0, 0);
-    pR[0]->SetToF("NIF");
-    pR[0]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    FgRuns = 1;
-    pR[1] = new Run("PuFC", "SB", 0);
-    BgMon = pR[1]->SetNeutronField(3623068.621401+28646613.7419+4757385.125897, 0.0015, 2287.18+18331.64+3098.89, 0, 0);
-    cout << "Check 2" << endl;
-    pR[1]->SetToF("SB");
-    pR[1]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-    BgRuns = 1;
-/////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////////////////////////////////////////
-//    Int_t k = 0;
-//    FgMon = 0;
-//    pR[k] = new Run("PuFC", "Open", k);
-//    FgMon += pR[k]->SetNeutronField(27492078.81, 0.0014, 16794.37, 20140526, 142036);
-//    pR[k]->SetToF("PuFC_FG_MS4");
-//    k++;
-//    pR[k] = new Run("PuFC", "Open", k);
-//    FgMon += pR[k]->SetNeutronField(33478369.95, 0.0014, 20286.24, 20140526, 190200);
-//    pR[k]->SetToF("PuFC_FG_MS5");
-//    k++;
-//    pR[k] = new Run("PuFC", "Open", k);
-//    FgMon += pR[k]->SetNeutronField(30916955.27, 0.0014, 18736.55, 20140527, 4444);
-//    pR[k]->SetToF("PuFC_FG_MS6");
-//    k++;
-//    pR[k] = new Run("PuFC", "Open", k);
-//    FgMon += pR[k]->SetNeutronField(54792678.94, 0.0014, 34490.15, 20140527, 55722);
-//    pR[k]->SetToF("PuFC_FG_MS7");
-//    k++;
-//    FgRuns = k;
-
-//    BgMon = 0;
-////    pR[k] = new Run("PuFC", "SB", k - FgRuns);
-////    FgMon += pR[k]->SetNeutronField(219560.406192, 0.0025, 140.45, 20140527, 160321);
-////    pR[k]->SetToF("PuFC_BG_MS8");
-////    k++;
-//    pR[k] = new Run("PuFC", "SB", k - FgRuns);
-//    BgMon += pR[k]->SetNeutronField(3623068.621401, 0.0015, 2287.18, 20140527, 160425);
-//    pR[k]->SetToF("PuFC_BG_MS9");
-//    k++;
-//    pR[k] = new Run("PuFC", "SB", k - FgRuns);
-//    FgMon += pR[k]->SetNeutronField(28646613.7419, 0.0014, -18331.64, 20140527, 222215);
-//    pR[k]->SetToF("PuFC_BG_MS10");
-//    k++;
-//    pR[k] = new Run("PuFC", "SB", k - FgRuns);
-//    FgMon += pR[k]->SetNeutronField(4757385.125897, 0.0014, 3098.89, 20140527, 225636);
-//    pR[k]->SetToF("PuFC_BG_MS11");
-//    k++;
-//    BgRuns = k - FgRuns;
-//    for (Int_t j = 0; j < k; j++)
-//        pR[j]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
-/////////////////////////////////////////////////////////////////////////////////////////
-
-    pRSF = new Run("PuFC","SF", 0);
-    pRSF->SetToF("SF");
-
-//    RegisterHists();
-//    cout << " Run " << pRSF->Name << endl;
-//    cout << "  Hist " << pHSF->Name << endl;
-
+    if (two_runs)
+    {
+        ///////////////////////////////////////////////////////////////////////////////////////
+        Run("Open", "NIF", 27492078.81+33478369.95+30916955.27+54792678.94, 0.0014, 16794.37+20286.24+18736.55+34490.15);
+        Run("SB", "SB", 3623068.621401+28646613.7419+4757385.125897, 0.0015, 2287.18+18331.64+3098.89);
+        ///////////////////////////////////////////////////////////////////////////////////////
+    } else {
+        ///////////////////////////////////////////////////////////////////////////////////////
+        Run("Open", "PuFC_FG_MS4", 27492078.81, 0.0014, 16794.37);
+        Run("Open", "PuFC_FG_MS5", 33478369.95, 0.0014, 20286.24);
+        Run("Open", "PuFC_FG_MS6", 30916955.27, 0.0014, 18736.55);
+        Run("Open", "PuFC_FG_MS7", 54792678.94, 0.0014, 34490.15);
+        Run("SB", "PuFC_BG_MS9", 3623068.621401, 0.0015, 2287.18);
+        Run("SB", "PuFC_BG_MS10", 28646613.7419, 0.0014, 18331.64);
+        Run("SB", "PuFC_BG_MS11", 4757385.125897, 0.0014, 3098.89);
+        ///////////////////////////////////////////////////////////////////////////////////////
+    }
     cout << endl << "Created " << Name << endl;
 }
 
@@ -103,6 +56,7 @@ PuFC::~PuFC()
 void PuFC::InitPuVar()
 {
     cout << endl << "Initializing Pu variables.." << endl;
+    SetLimits();
     PuSFT2 = 6.76E10 * 365.24*24*60*60; // Pu-242 spontaneaus fission half-life period in s
     DPuSFT2 = 7E8 * 365.24*24*60*60;
 //    MonitorFG = 146680082.972163; // MS#4 - MS#7

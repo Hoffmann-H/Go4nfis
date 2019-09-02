@@ -40,21 +40,20 @@ int main(int argc, char **argv)
 //    h->SetDraw(p);
 //    h->DoAnalyzeQDC();
 
-//    Run *r = new Run("PuFC", "Open");
-//    r->SetToF("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
-
 //    Plot *p = new Plot("UFC", "Open", 0);
 //    p->Source_E();
 
-//    PuFC *fc = new PuFC(0);
+//    PuFC *fc = new PuFC(1, 0);
 //    fc->GetNatoms();
 //    fc->DrawStability();
 //    fc->CrossSection();
 //    fc->Corrections();
-//    UFC *ufc = new UFC(0);
+
+    UFC *ufc = new UFC(0, 0);
+    cout << ufc->FgRuns << " + " << ufc->BgRuns << endl;
 //    ufc->IsoVec();
 //    ufc->CrossSection();
-//    ufc->Corrections();
+    ufc->Corrections();
 
 //    Xsection *xs = new Xsection();
 //    xs->RelativeCS();

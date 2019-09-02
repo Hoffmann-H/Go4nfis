@@ -10,7 +10,7 @@ using namespace std;
 class ToF
 {
 public:
-    ToF(string file_name, string fc, string setup, string name);
+    ToF(string file_name, string fc, string setup);
     ~ToF();
     string GetFCname();
     Bool_t IsPuFC();
@@ -18,11 +18,15 @@ public:
     void SetLimits(Int_t *l0, Int_t *l1, Int_t *l2, Int_t *l3);
     Double_t GetnfRate(Int_t i) {return nf[i] / t_live;}
     Double_t GetDnfRate(Int_t i) {return Dnf[i] / t_live;}
+    string GetName() {return Name;}
     void DrawDtCh(Int_t i);
     void DrawDtCh();
     void DrawDt(Int_t i);
     void DrawDt();
     void DrawPeakLim(Int_t l, Int_t r_start, Int_t r_stop, Int_t r_step);
+    Double_t nf[NumCh]; // neutron-induced fissions
+    Double_t Dnf[NumCh];
+    Double_t t_live;
 
 private:
     TH1F* TH1ItoTH1F(TH1I* pH);
@@ -57,13 +61,10 @@ private:
     TF1* fZero[NumCh];
     Double_t ug[NumCh];
     Double_t Dug[NumCh];
-    Double_t nf[NumCh]; // neutron-induced fissions
-    Double_t Dnf[NumCh];
     Double_t unf[NumCh]; // manually implemented neutron-induced fissions
     Double_t Dunf[NumCh];
     Double_t sf[NumCh];
     Double_t Dsf[NumCh];
-    Double_t t_live;
 };
 
 #endif

@@ -79,10 +79,7 @@ Double_t Run::SetNeutronField(Double_t monitor, Double_t unc_rel, Double_t t_rea
 
 void Run::SetToF(string name)
 {
-    std::stringstream s;
-    s << "/home/hoffma93/Programme/Go4nfis/offline/results/" << name << ".root";
-    cout << endl << Name << " going to create ToF instance " << s.str() << endl;
-    pToF = new ToF(s.str(), FC, Setup, name);
+    pToF = new ToF(name, FC, Setup);
 }
 
 
