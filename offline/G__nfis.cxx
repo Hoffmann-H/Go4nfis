@@ -157,7 +157,7 @@ namespace ROOT {
       ::TnfisFCAnalysis *ptr = 0;
       static ::TVirtualIsAProxy* isa_proxy = new ::TInstrumentedIsAProxy< ::TnfisFCAnalysis >(0);
       static ::ROOT::TGenericClassInfo 
-         instance("TnfisFCAnalysis", ::TnfisFCAnalysis::Class_Version(), "TnfisAnalysisFC.h", 22,
+         instance("TnfisFCAnalysis", ::TnfisFCAnalysis::Class_Version(), "TnfisAnalysisFC.h", 23,
                   typeid(::TnfisFCAnalysis), ::ROOT::Internal::DefineBehavior(ptr, ptr),
                   &::TnfisFCAnalysis::Dictionary, isa_proxy, 4,
                   sizeof(::TnfisFCAnalysis) );
@@ -349,7 +349,7 @@ namespace ROOT {
       ::TnfisAnaFC *ptr = 0;
       static ::TVirtualIsAProxy* isa_proxy = new ::TInstrumentedIsAProxy< ::TnfisAnaFC >(0);
       static ::ROOT::TGenericClassInfo 
-         instance("TnfisAnaFC", ::TnfisAnaFC::Class_Version(), "TnfisAnalysisFC.h", 89,
+         instance("TnfisAnaFC", ::TnfisAnaFC::Class_Version(), "TnfisAnalysisFC.h", 91,
                   typeid(::TnfisAnaFC), ::ROOT::Internal::DefineBehavior(ptr, ptr),
                   &::TnfisAnaFC::Dictionary, isa_proxy, 4,
                   sizeof(::TnfisAnaFC) );
@@ -381,7 +381,7 @@ namespace ROOT {
       ::TnfisAnaPreAmp *ptr = 0;
       static ::TVirtualIsAProxy* isa_proxy = new ::TInstrumentedIsAProxy< ::TnfisAnaPreAmp >(0);
       static ::ROOT::TGenericClassInfo 
-         instance("TnfisAnaPreAmp", ::TnfisAnaPreAmp::Class_Version(), "TnfisAnalysisFC.h", 109,
+         instance("TnfisAnaPreAmp", ::TnfisAnaPreAmp::Class_Version(), "TnfisAnalysisFC.h", 111,
                   typeid(::TnfisAnaPreAmp), ::ROOT::Internal::DefineBehavior(ptr, ptr),
                   &::TnfisAnaPreAmp::Dictionary, isa_proxy, 4,
                   sizeof(::TnfisAnaPreAmp) );
@@ -445,7 +445,7 @@ namespace ROOT {
       ::TnfisAnaFCEvent *ptr = 0;
       static ::TVirtualIsAProxy* isa_proxy = new ::TInstrumentedIsAProxy< ::TnfisAnaFCEvent >(0);
       static ::ROOT::TGenericClassInfo 
-         instance("TnfisAnaFCEvent", ::TnfisAnaFCEvent::Class_Version(), "TnfisAnalysisFC.h", 68,
+         instance("TnfisAnaFCEvent", ::TnfisAnaFCEvent::Class_Version(), "TnfisAnalysisFC.h", 70,
                   typeid(::TnfisAnaFCEvent), ::ROOT::Internal::DefineBehavior(ptr, ptr),
                   &::TnfisAnaFCEvent::Dictionary, isa_proxy, 4,
                   sizeof(::TnfisAnaFCEvent) );
@@ -2087,10 +2087,10 @@ namespace {
 0
     };
     static const char* includePaths[] = {
-"/opt/go4-5.2.0/include",
-"/opt/go4-5.2.0",
-"/opt/root/root-6.06.06/include",
-"/gpfs/home/hoffma93/Go4nfis/offline/",
+"/opt/go4-5.2.0http/include",
+"/opt/go4-5.2.0http",
+"/opt/root/root-6.06.06http/include",
+"/gpfs/home/hoffma93/Programme/Go4nfis/offline/",
 0
     };
     static const char* fwdDeclCode = R"DICTFWDDCLS(

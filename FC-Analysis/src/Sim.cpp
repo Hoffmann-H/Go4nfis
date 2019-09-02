@@ -19,6 +19,7 @@ Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t 
     DoneEwidth = kFALSE;
     DoneTwidth = kFALSE;
     DoneDirect = kFALSE;
+    DoneCalc = kFALSE;
 
     // output settings
     CommentFlag = kFALSE; // set manually
@@ -59,7 +60,7 @@ void Sim::OpenHists()
         // Open Ekin vs ToF
         sprintf(name, "/%s/ToFvsEkin/%s_ToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), i+1);
         cout << " " << name << endl;
-        pH2TvsE[i][0] = (TH2F*)f->Get(name);
+        pH2TvsE[i][0] = (TH2F*) f->Get(name);
         sprintf(name, "/%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
         pH2TvsE[i][1] = (TH2F*) f->Get(name);
     }
@@ -74,11 +75,11 @@ void Sim::SetDistances()
     if (strcmp(FC.c_str(), "UFC"))
         // PuFC
         for (int i = 0; i < NumCh; i++)
-            Distance[i] = 1.6990 - i * 0.0205;
+            Distance[i] = 1.7092 - i * 0.0205;
     else
         // UFC
         for (int i = 0; i < NumCh; i++)
-            Distance[i] = 1.6299 - i * 0.0108;
+            Distance[i] = 1.6342 - i * 0.0105;
     cout << " Ch   Distance/m" << endl;
     for (int i = 0; i < NumCh; i++)
         cout << " " << i+1 << "   " << Distance[i] << endl;
@@ -137,6 +138,7 @@ void Sim::GetEwidth()
 {
     cout << endl << "Getting source's energy width..." << endl;
     char name[64] = "/home/hoffma93/Programme/ROOT/Data/Source_E.dat";
+//    char name[64] = "/home/hoffma93/Programme/ROOT/Data/nELBE_E.dat";
     TGraph *gE = new TGraph(name);
     cout << "Source energy spectrum at " << name << endl;
 
@@ -229,19 +231,19 @@ void Sim::Projections()
             Double_t ymax = pH2TvsE[i][0]->GetYaxis()->GetBinLowEdge(NbinsX + 1);
             sprintf(name, "%s_%s_ProjT_%i", FC.c_str(), Setup.c_str(), i+1);
             pH1Tproj[i][0] = new TH1F(name, name, NbinsX, xmin, xmax);
-            sprintf(name, "%s, %s, Time profile, Ch.%i; t / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
+            sprintf(name, "%s, %s, Time profile, Ch.%i; #font[12]{t} / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
             pH1Tproj[i][0]->SetTitle(name);
             sprintf(name, "%s_%s_ProjT_Sc_%i", FC.c_str(), Setup.c_str(), i+1);
             pH1Tproj[i][1] = new TH1F(name, name, NbinsX, xmin, xmax);
-            sprintf(name, "%s, %s, Time profile, scattered, Ch.%i; t / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
+            sprintf(name, "%s, %s, Time profile, scattered, Ch.%i; #font[12]{t} / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
             pH1Tproj[i][1]->SetTitle(name);
             sprintf(name, "%s_%s_ProjEeff_%i", FC.c_str(), Setup.c_str(), i+1);
             pH1Eeff[i][0] = new TH1F(name, name, NbinsY, ymin, ymax);
-            sprintf(name, "%s, %s, Effective neutron spectrum", FC.c_str(), Setup.c_str());
+            sprintf(name, "%s, %s, Effective neutron spectrum, Ch.%i; #font[12]{t} / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
             pH1Eeff[i][0]->SetTitle(name);
             sprintf(name, "%s_%s_ProjEeff_Sc_%i", FC.c_str(), Setup.c_str(), i+1);
             pH1Eeff[i][1] = new TH1F(name, name, NbinsY, ymin, ymax);
-            sprintf(name, "%s, %s, Effective scattered neutron spectrum", FC.c_str(), Setup.c_str());
+            sprintf(name, "%s, %s, Effective scattered neutron spectrum, Ch.%i; #font[12]{t} / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
             pH1Eeff[i][1]->SetTitle(name);
             for (Int_t binE = 0; binE <= binEmax; binE++)
             {
@@ -259,8 +261,22 @@ void Sim::Projections()
                         pH1Tproj[i][1]->AddBinContent(binT, w * pH2TvsE[i][0]->GetBinContent(binT, binE));
                 }
             } // for(binE)
+            SaveToFile("Analysis/EffEnergy", pH1Eeff[i][0]);
+            SaveToFile("Analysis/EffEnergy/Scattered", pH1Eeff[i][1]);
+            SaveToFile("Analysis/EffToF", pH1Tproj[i][0]);
+            SaveToFile("Analysis/EffToF/Scattered", pH1Tproj[i][1]);
             plot->DtPeakForm(i, pH1Tproj[i][1], pH1Tproj[i][0], Emin, nProj[i]);
 //            plot->Eproj(i, pH1Eeff[i][1], pH1Eeff[i][0], nProj[i]);
+        } else {
+            cout << "Error loading hists? Try DrawMulti = kTRUE" << endl;
+            sprintf(name, "Analysis/EffToF/%s_%s_ProjT_%i", FC.c_str(), Setup.c_str(), i+1);
+            pH1Tproj[i][0] = (TH1F*) f->Get(name);
+            sprintf(name, "Analysis/EffToF/Scattered/%s_%s_ProjT_Sc_%i", FC.c_str(), Setup.c_str(), i+1);
+            pH1Tproj[i][1] = (TH1F*) f->Get(name);
+            sprintf(name, "Analysis/EffEnergy/%s_%s_ProjEeff_%i", FC.c_str(), Setup.c_str(), i+1);
+            pH1Eeff[i][0] = (TH1F*) f->Get(name);
+            sprintf(name, "Analysis/EffEnergy/Scattered/%s_%s_ProjEeff_Sc_%i", FC.c_str(), Setup.c_str(), i+1);
+            pH1Eeff[i][1] = (TH1F*) f->Get(name);
         } // if(Draw)
     } // for(i)
     cout << "Done: Projections" << endl;
@@ -431,6 +447,7 @@ void Sim::Calculate()
     ScatN();
     ScatEff();
     SigmaEff();
+    DoneCalc = kTRUE;
 }
 
 
@@ -459,4 +476,158 @@ void Sim::PrintEffN()
         }
         cout << endl;
     }
+}
+
+
+void Sim::SimToF()
+{
+    Projections();
+    char name[64] = "";
+    char title[128] = "";
+
+    /// simulation properties
+    Double_t AccPulseLength = 7.0; // ns
+    Double_t TimeResolution = 2.5; // ns
+    Int_t NbinsProj = pH1Tproj[0][0]->GetNbinsX();
+    Double_t ProjBinWidth = pH1Tproj[0][1]->GetXaxis()->GetBinWidth(1);
+    Int_t AccPulseBins = AccPulseLength / ProjBinWidth;
+    cout << endl << "Simulating ToF spectra..." << endl
+         << " Acc. pulse length: " << AccPulseLength << " ns" << endl
+         << " Time resolution: " << TimeResolution << " ns" << endl
+         << " Original bins: " << NbinsProj << endl
+         << " Original bin width: " << ProjBinWidth << endl
+         << " Acc. pulse bins: " << AccPulseBins << endl;
+
+    /// experimental properties - depending on FC
+    TFile* fExp; // experimental data analysis file for right time offset
+    Double_t t0 = 42;
+    Double_t tm[NumCh];
+    Double_t t3 = 402;
+    if (PuFC)
+    {
+        if (!strcmp(Setup.c_str(), "FG") || !strcmp(Setup.c_str(), "Open"))
+        {
+            fExp = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+            cout << "PuFC, Open" << endl;
+        }
+        else
+            fExp = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root");
+        Double_t m[] = {139.7705, 128.2225, 125.879, 129.663, 129.5655, 128.589, 127.466, 127.49};
+        for (Int_t i = 0; i < NumCh; i++)
+            tm[i] = m[i];
+    } else {
+        if (!strcmp(Setup.c_str(), "FG") || !strcmp(Setup.c_str(), "Open"))
+            fExp = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
+        else
+            fExp = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root");
+        Double_t m[] = {273.4865, 268.945, 260.5955, 265.2345, 265.21, 264.3555, 263.501, 263.086};
+        for (Int_t i = 0; i < NumCh; i++)
+            tm[i] = m[i];
+    }
+    TH1I* pH1Exp[NumCh];
+    Double_t scale[NumCh];
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        sprintf(name, "Analysis/ToF/H1AnaHZDRDtG_%i", i+1);
+        pH1Exp[i] = (TH1I*) fExp->Get(name);
+        cout << pH1Exp[i]->GetName() << endl;
+        scale[i] = pH1Exp[i]->Integral(tm[i] - 25, tm[i] + 25) / pH1Tproj[i][0]->Integral();
+//        cout << pH1Exp[i]->Integral(tm[i] - 25, tm[i] + 25) << "  " << pH1Tproj[i][0]->Integral() << "  " << scale[i] << endl;
+    }
+    Double_t minToF = pH1Exp[0]->GetXaxis()->GetBinLowEdge(1);
+    Double_t maxToF = pH1Exp[0]->GetXaxis()->GetBinLowEdge(pH1Exp[0]->GetNbinsX() + 1);
+    Int_t NbinsToF = (maxToF - minToF) / ProjBinWidth; // use Tproj's bin width
+//    Int_t NbinsToF = pH1Exp[0]->GetNbinsX(); // use exp. data's bin width
+//    cout << " Sim. bins: " << NbinsToF << endl
+//         << " Sim. ToF range: " << minToF << "-" << maxToF << " ns" << endl;
+
+    /// Prepare simulated ToF histograms
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        sprintf(name, "%s_Dt_Ch.%i", FC.c_str(), i+1);
+        sprintf(title, "%s, Ch. %i, simulated ToF spectrum; #font[12]{t} [ns]; Counts", FC.c_str(), i+1);
+        pH1ToF[i][0] = new TH1F(name, title,  NbinsToF, minToF, maxToF);
+    }
+    cout << " Sim. bins: " << pH1ToF[0][0]->GetNbinsX() << endl
+         << " Sim. ToF range: " << pH1ToF[0][0]->GetBinLowEdge(1) << "-" << pH1ToF[0][0]->GetBinLowEdge(pH1ToF[0][0]->GetNbinsX()+1) << " ns" << endl;
+
+    /// create folding function
+    Double_t ampl = 1.0 / (Double_t)AccPulseBins / sqrt(2 * TMath::Pi()) * pH1ToF[0][0]->GetBinWidth(1) / TimeResolution;
+    cout << " Ampl: " << ampl << endl;
+    TF1* g = new TF1("fG", "gaus", -440, 440);
+    g->SetParameters(ampl, 0, TimeResolution);
+
+    /// fold
+    for (Int_t i = 0; i < 1/*NumCh*/; i++)
+    {
+        Int_t ProjMaxBin = pH1Tproj[i][0]->GetMaximumBin();
+        Double_t ProjMax = pH1Tproj[i][0]->GetBinCenter(ProjMaxBin);
+//        cout << ProjMax << " -> " << tm[i] << endl;
+        for (Int_t j = 1; j <= NbinsToF; j++)
+        {
+            Double_t t0 = pH1ToF[i][0]->GetBinCenter(j); // ToF sampling point
+//            cout << t0 << endl;
+            Double_t sum = 0;
+            for (Int_t k = 1; k < NbinsProj - AccPulseBins; k++)
+            {
+                Double_t t1 = 0.5 * (pH1Tproj[i][0]->GetBinCenter(k) + pH1Tproj[i][0]->GetBinCenter(k + AccPulseBins));
+//                cout << " " << t1;
+                sum += g->Eval(t1 - t0 + tm[i] - ProjMax) * pH1Tproj[i][0]->Integral(k, k + AccPulseBins - 1);
+            }
+//            cout << j << "  " << t0 << "  " << sum << endl;
+            pH1ToF[i][0]->SetBinContent(j, scale[i] * sum);
+        }
+//        cout << NbinsToF << endl;
+//        SaveToFile("Analysis/TimeDiff", pH1ToF[i][0]);
+    }
+
+    /// Draw
+    cout << pH1Exp[0]->GetName() << ", " << pH1ToF[0][0]->GetName() << endl;
+    TLegend *l = new TLegend(0.6, 0.6, 0.8, 0.8);
+    l->AddEntry(pH1Exp[0], "Experiment");
+    l->AddEntry(pH1ToF[0][0], "Simulation");
+    TCanvas *c1 = new TCanvas("cSimToF", "Simulated ToF spectrum", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    pH1Exp[0]->SetStats(0);
+    sprintf(title, "%s, %s, #Delta#font[12]{t} ch.%i; #Delta#font[12]{t} [ns]; counts/ns", FC.c_str(), Setup.c_str(), 1);
+    pH1Exp[0]->SetTitle(title);
+    pH1Exp[0]->GetXaxis()->SetLabelSize(0.06);
+    pH1Exp[0]->GetXaxis()->SetTitleSize(0.07);
+    pH1Exp[0]->GetXaxis()->SetTitleOffset(0.7);
+    pH1Exp[0]->GetYaxis()->SetLabelSize(0.06);
+    pH1Exp[0]->GetYaxis()->SetTitleSize(0.07);
+    pH1Exp[0]->GetYaxis()->SetTitleOffset(0.6);
+    pH1Exp[0]->Draw("hist");
+    pH1ToF[0][0]->Scale(10);
+    pH1ToF[0][0]->SetLineColor(kRed);
+    pH1ToF[0][0]->Draw("same hist");
+    l->Draw();
+    c1->Modified();
+    c1->Update();
+    c1->Draw();
+    cout << pH1Tproj[0][0]->Integral() << "  " << pH1ToF[0][0]->Integral() << endl;
+}
+
+
+void Sim::SaveToFile(string path, TObject *pObj)
+{   //saves a TObject into the selected file fname
+    cout << "Saving " << pObj->GetName() << " to " << path << endl;
+    TFile* f = TFile::Open(FileName.c_str(), "UPDATE");
+    TDirectory *EvalDir;
+    TObject *pGraph;
+    pGraph = (TObject*) pObj;
+    string GraphName = pGraph->GetName();
+    //check if folder "Analysis" already exists, otherwise create it
+    if (f->Get(path.c_str())!=0)
+        EvalDir = (TDirectory*) f->Get(path.c_str());
+    else
+    {   cout << "Creating " << path << endl;
+        f->mkdir(path.c_str(), "Folder containing offline Analysis objects");
+        EvalDir = f->GetDirectory(path.c_str());
+    }
+    EvalDir->cd();
+    if (EvalDir->Get(GraphName.c_str())!=0)
+        EvalDir->Delete((GraphName+";*").c_str());
+    pGraph->Clone()->Write();
+    f->Save(); f->Close();
 }

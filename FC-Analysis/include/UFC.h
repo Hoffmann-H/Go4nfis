@@ -14,6 +14,7 @@ public:
     void HardCodedThresholds() override;
 //    void AnalyzeDtBG() override;
     void GetNatoms() override;
+    void DrawStability() override;
     void IsoVec() override;
 //    void GetExpT() override;
 //    void Calibrate();

@@ -119,6 +119,7 @@ void Plot::Source_E_v0(TGraph *g, Double_t E, Double_t DE)
 //    TGraph *g = new TGraph("/gpfs/home/hoffma93/Programme/ROOT/Data/Source_E.dat");
     TCanvas *c = new TCanvas("Source_E", "Source_E", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
+    gPad->SetLogy(1);
 //    sprintf(name, "E = %.2f +- %.2f MeV", E, DE);
     TLegend *l = new TLegend(0.3, 0.15, 0.7, 0.3, "E = <E> +- dE");
 
@@ -161,23 +162,23 @@ void Plot::Source_E_v1(TGraph *g, Double_t E, Double_t DE)
     char name[64] = "";
     TCanvas *c = new TCanvas("Source_E", "Source_E", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
-
-    g->SetNameTitle("Source_E", "Neutron Source Energy Spectrum");
+    gPad->SetLogx(1);
+    g->SetNameTitle("Source_E", "n#font[12]{ELBE} Neutron Energy Spectrum");
     g->GetXaxis()->SetTitle("#font[12]{E} / MeV");
     g->GetXaxis()->SetTitleSize(0.08);
     g->GetXaxis()->SetLabelSize(0.06);
-    g->GetXaxis()->SetTitleOffset(0.7);
+    g->GetXaxis()->SetTitleOffset(0.8);
     g->GetYaxis()->SetTitle("#font[12]{n}(#font[12]{E}) [a.u.]");
     g->GetYaxis()->SetTitleSize(0.08);
     g->GetYaxis()->SetLabelSize(0.06);
-    g->GetYaxis()->SetTitleOffset(0.6);
+    g->GetYaxis()->SetTitleOffset(0.7);
     g->SetLineWidth(lw);
 
     sprintf(name, "E = %.2f +- %.2f MeV", E, DE);
     TLegend *l = new TLegend(0.4, 0.2, 0.6, 0.3, name);
 
     g->Draw();
-    l->Draw();
+//    l->Draw();
     c->Modified();
     c->Update();
 }
@@ -644,7 +645,7 @@ void Plot::Dt(Int_t ch, TH1I *pH, Double_t nf, Double_t Dnf, Int_t l0, Int_t l1,
 {
 //    cout << "Plotting Dt..." << endl << "(n,f) " << nf << endl;
     char name[64] = "";
-    sprintf(name, "Dt_%i", ch+1);
+    sprintf(name, "Dt_%s_%i", Setup.c_str(), ch+1);
     TCanvas *C = new TCanvas(name, "Time differecne spectrum", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
     Int_t ff = pH->Integral();
@@ -735,7 +736,7 @@ void Plot::TvsE(Int_t ch, TH2F *pH2TvsE, Double_t binToFmin, Double_t binToFmax,
     gPad->SetLogz(1);
 //    gStyle->SetPalette(kRainBow);
     pH2TvsE->Rebin2D(1, 8);
-    sprintf(name, "Kanal %i; #font[12]{t} [ns]; #font[12]{E} [MeV]", ch+1);
+    sprintf(name, "Channel %i; #font[12]{t} [ns]; #font[12]{E} [MeV]", ch+1);
     pH2TvsE->SetTitle(name);
     pH2TvsE->SetTitleSize(0.08, "t");
     pH2TvsE->SetStats(0);
@@ -761,12 +762,12 @@ void Plot::TvsE(Int_t ch, TH2F *pH2TvsE, Double_t binToFmin, Double_t binToFmax,
 
     TText *tD = new TText();
     tD->SetNDC();
-    sprintf(name, "%i ankommende Neutronen", round_digits(directN, 3));
+    sprintf(name, "%i neutrons arriving", round_digits(directN, 3));
     tD->DrawText(0.3, 0.8, name);
     TText *tS = new TText();
     tS->SetNDC();
 //    char c = '%';
-    sprintf(name, "%.0f %% ungestreut", 100.0 * directN / (ScatteredN + (Double_t)directN));
+    sprintf(name, "%.0f %% unscattered", 100.0 * directN / (ScatteredN + (Double_t)directN));
     tS->DrawText(0.3, 0.5, name);
 
     C->Modified();

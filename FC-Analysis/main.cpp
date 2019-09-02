@@ -13,6 +13,7 @@
 #include "UFC.h"
 #include "Run.h"
 #include "Plot.h"
+#include "ToF.h"
 
 using namespace std;
 
@@ -23,23 +24,36 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
+//    string file_name = "/home/hoffma93/Programme/Go4nfis/offline/results/SF.root";
+//    string fc = "PuFC";
+//    string setup = "SF";
+//    ToF *tof = new ToF(file_name, fc, setup, "");
+//    tof->DrawPeakLim(12, 0, 50, 2);
+//    file_name = "/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root";
+//    fc = "UFC";
+//    ToF *tof = new ToF(file_name, fc, setup, "");
+//    tof->DrawPeakLim(12, 0, 50, 2);
+
 //    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "NIF", "PuFC", "FG", 0);
-    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF", "UFC", "FG", 0);
+//    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF", "UFC", "FG", 0);
 //    h->Stability(0, 0, 0);
 //    h->SetDraw(p);
 //    h->DoAnalyzeQDC();
 
 //    Run *r = new Run("PuFC", "Open");
-//    r->UseHist(159);
+//    r->SetToF("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
 
 //    Plot *p = new Plot("UFC", "Open", 0);
 //    p->Source_E();
 
-//    UFC *fc = new UFC(0);
+//    PuFC *fc = new PuFC(0);
 //    fc->GetNatoms();
+//    fc->DrawStability();
 //    fc->CrossSection();
 //    fc->Corrections();
-//    UFC *ufc = new UFC(1);
+//    UFC *ufc = new UFC(0);
+//    ufc->IsoVec();
+//    ufc->CrossSection();
 //    ufc->Corrections();
 
 //    Xsection *xs = new Xsection();
@@ -57,8 +71,9 @@ int main(int argc, char **argv)
 //    fc->CompareShadowCone();
 //    ufc->CompareTransmission();
 
-//    Sim *sim = new Sim("/home/hoffma93/Programme/Geant4-Work/builds/G4PuFCvsH19/results/4_ene/PuFC_Open_5E7.root", "PuFC", "Open", 1, 1);
+//    Sim *sim = new Sim("/home/hoffma93/Programme/Geant4-Work/builds/G4PuFCvsH19/results/4_ene/PuFC_Open_5E7.root", "PuFC", "Open", 1, 0);
 //    sim->Calculate();
+//    sim->SimToF();
 
 //    AnaSim *Pu = new AnaSim("PuFC", 1, 0);
 //    AnaSim *U = new AnaSim("UFC", 1, p);

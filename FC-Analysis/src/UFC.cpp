@@ -11,56 +11,58 @@ UFC::UFC(Bool_t draw)
 /////////////////////////////////////////////////////////////////////////////////////////
 //    pR[0] = new Run("UFC", "Open", 0);
 //    FgMon = pR[0]->SetNeutronField(9509138+12371470+12876188+27941726+9962706, 0.0014, 7880.71+11193.57+10940.15+22636.3+8291.89);
-//    UseHist("UFC_NIF", "Open", 0);
+//    pR[0]->SetToF("UFC_NIF");
+//    pR[0]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
 //    FgRuns = 1;
 //    pR[1] = new Run("UFC", "SB", 0);
 //    BgMon = pR[1]->SetNeutronField(13815794, 0.0014, 11395.49);
-//    UseHist("UFC_SB", "SB", 1);
+//    pR[1]->SetToF("UFC_SB");
+//    pR[1]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
 //    BgRuns = 1;
 /////////////////////////////////////////////////////////////////////////////////////////
     Int_t k = 0;
     FgMon = 0;
     pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(9509137.9391, 0.0014, 7880.71);
-//    UseHists(2, 2, "Open", k);
-    UseHist("UFC_FG_MS20_2", "Open", k);
+    FgMon += pR[k]->SetNeutronField(9509137.9391, 0.0014, -7880.71, 20140520, 194248);
+    pR[k]->SetToF("UFC_FG_MS20_2");
+    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
     k++;
     pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(12371469.5909, 0.0014, 11193.57);
-//    UseHists(4, 4, "Open", k);
-    UseHist("UFC_FG_MS20_3", "Open", k);
+    FgMon += pR[k]->SetNeutronField(12371469.5909, 0.0014, -11193.57, 20140520, 231755);
+    pR[k]->SetToF("UFC_FG_MS20_3");
+    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
     k++;
     pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(12876188.3535, 0.0014, 10940.15);
-//    UseHists(5, 5, "Open", k);
-    UseHist("UFC_FG_MS20_4", "Open", k);
+    FgMon += pR[k]->SetNeutronField(12876188.3535, 0.0014, -10940.15, 20140521, 22206);
+    pR[k]->SetToF("UFC_FG_MS20_4");
+    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
     k++;
     pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(27941726.1118, 0.0014, 22636.3);
-    UseHists(7, 8, "Open", k);
-//    UseHist("UFC_FG_MS21_2", "Open", k);
+    FgMon += pR[k]->SetNeutronField(27941726.1118, 0.0014, -22636.3, 20140521, 130959);
+    pR[k]->SetToF("UFC_FG_MS21_2");
+    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
     k++;
     pR[k] = new Run("UFC", "Open", k);
-    FgMon += pR[k]->SetNeutronField(9962705.5858, 0.0014, 8291.89);
-//    UseHists(9, 10, "Open", k);
-    UseHist("UFC_FG_MS21_3", "Open", k);
+    FgMon += pR[k]->SetNeutronField(9962705.5858, 0.0014, -8291.89, 20140521, 175919);
+    pR[k]->SetToF("UFC_FG_MS21_3");
+    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
     k++;
     FgRuns = k;
     BgMon = 0;
     pR[k] = new Run("UFC", "SB", k - FgRuns);
-    BgMon += pR[k]->SetNeutronField(14226964.0879, 0.0014, 11456.44);
-//    UseHists(6, 6, "SB", k);
-    UseHist("UFC_BG_MS20_5", "SB", k);
+    BgMon += pR[k]->SetNeutronField(14226964.0879, 0.0014, -11456.44, 20140521, 55753);
+    pR[k]->SetToF("UFC_BG_MS20_5");
+    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
     k++;
     pR[k] = new Run("UFC", "SB", k - FgRuns);
-    BgMon += pR[k]->SetNeutronField(13815793.6783, 0.0014, 11395.49);
-    UseHists(12, 13, "SB", k);
-//    UseHist("UFC_BG_MS21_4", "SB", k);
+    BgMon += pR[k]->SetNeutronField(13815793.6783, 0.0014, -11395.49, 20140521, 212715);
+    pR[k]->SetToF("UFC_BG_MS21_4");
+    pR[k]->SetLimits(&l0, &(l1[0]), &(l2[0]), &l3);
     k++;
     BgRuns = k - FgRuns;
 /////////////////////////////////////////////////////////////////////////////////////////
 
-    RegisterHists();
+//    RegisterHists();
 
     cout << "Created " << Name << endl;
 }
@@ -104,13 +106,31 @@ void UFC::InitUVar()
 //    DMonitorFG = MonitorFG * 0.0014;
 //    MonitorBG = 14226964.0879;
 //    DMonitorBG = MonitorBG * 0.0014;
-    
+
+    /// Distances..
+    /// Doppelspaltkammer_Sobiella.pdf
+    ///
+    /// Hinterstes Deposit richtig bemasst (bis Mitte Si):
+    /// Quelle - Deposit =
+    ///   (1500+-1) mm Quelle - Cover
+    /// + 2 mm Cover
+    /// + 132.400 mm front Flansch - center of last Si wafer
+    /// - 0.2 mm Front surface of last Si wafer
+    /// -> Last Deposit (nr 1, index 0): 134.2 mm after cover
+    ///
+    /// Falsche Abstaende von 5.4 mm. Richtige:
+    /// 100 um Tantal
+    /// 5 mm spacer
+    /// 400 um Si
+    /// 5 mm spacer
+    /// -> Distance btw Deposits: 10.5 mm
+
     Double_t L = 1500, DL = 1;
     Double_t ema[] = {365.2, 396.2, 400.4, 393, 403.9, 403.7, 406.6, 397.1}; // deposits' efficient Areal mass density. Unit: 10^-6 g / cm^2
     Double_t Dema[] = {1.7, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8, 1.8};
     for (int i = 0; i < NumHist; i++)
     {// Distances source-deposit
-        sd[i] = L + 119 - 10.8 * i;
+        sd[i] = L + 134.2 - 10.5 * i;
         Dsd[i] = DL;
         emA[i] = ema[i] * 1.E-8; // Unit: g/mm^2
         DemA[i] = Dema[i] * 1.E-8;
@@ -226,8 +246,8 @@ void UFC::GetNatoms()
         Dn238[i] = n238[i] * sqrt( pow(Dfrac238 / frac238, 2) +
                                    pow(DemA[i] / emA[i], 2) ); // Statistical uncertainties
     }
-    for (Int_t k = 0; k < FgRuns + BgRuns; k++)
-        pR[k]->SetNatoms(nAtoms, DnAtoms);
+//    for (Int_t k = 0; k < FgRuns + BgRuns; k++)
+//        pR[k]->SetNatoms(nAtoms, DnAtoms);
     cout << "Done: effective number of U atoms" << endl;
     DoneNatoms = kTRUE;
 }
@@ -251,11 +271,20 @@ void UFC::IsoVec()
 //    DfIsoVec = 0;
 //    sIsoVec = 0;
 //    DsIsoVec = 0;
+    Double_t sigma235 = 2.09;
+    Double_t F = sigma235 / (frac235 * sigma235 + frac238 * sigma238);
+    cout << "Factor " << F << ", x235 " << frac235 << ", x238 " << frac238 << endl;
     cout << "factor " << fIsoVec << "+-" << DfIsoVec << endl;
     cout << "subtrahend " << sIsoVec << "+-" << DsIsoVec << " barn" << endl;
 
     cout << "Done: IsoVec" << endl;
     DoneIso = kTRUE;
+}
+
+
+void UFC::DrawStability()
+{
+
 }
 
 

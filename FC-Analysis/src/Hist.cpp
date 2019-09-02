@@ -13,7 +13,7 @@ Hist::Hist(string file_path, string setup, string FC, string name, Int_t run_nr)
     CommentFlag = kFALSE;
     Setup = setup;
     UFC = strcmp(FC.c_str(), "PuFC");
-    Draw = kTRUE;
+    Draw = !kTRUE;
     Name = name;//FC.append("_").append(Setup.c_str()).append("_").append(to_string(nr + 1));
     RunNr = run_nr;
 
@@ -176,12 +176,12 @@ void Hist::SaveToFile(string path, TObject *pObj)
 
 void Hist::GetLimits(Double_t n)
 {   // Set integration limits to n sigma
-    cout << endl << Name << "opening integration limits..." << endl;
+    cout << endl << Name << " opening integration limits..." << endl;
     DtBgLow = 63600; // QDC channels
     DtBgUp = 78500;
     Double_t ChPerBin = pHDtG[0]->GetBinWidth(1);
     Double_t BinOffset = pHDtG[0]->GetBinCenter(1);
-    if (CommentFlag)
+//    if (CommentFlag)
         cout << " ChPerBin: " << ChPerBin << ", BinOffset: " << BinOffset << endl
              << "Ch   Peak   bins" << endl;
     for (int i = 0; i < NumCh; i++)
@@ -189,17 +189,17 @@ void Hist::GetLimits(Double_t n)
         Double_t ToF_low = GetPeakLow(i);
         Double_t ToF_up = GetPeakUp(i); // Limits for background are the same
         Double_t center = 0.5 * (ToF_low + ToF_up);
-        Double_t width = (ToF_up - ToF_low) / 6.0;
-        DtPeakLow[i] = center - n * width;
-        DtPeakUp[i] = center + n * width;
-        DtPeakLow[i] = center - 600;
-        DtPeakUp[i] = center + 1600;
+//        Double_t width = (ToF_up - ToF_low) / 6.0;
+//        DtPeakLow[i] = center - n * width;
+//        DtPeakUp[i] = center + n * width;
+        DtPeakLow[i] = center - 500;
+        DtPeakUp[i] = center + 1500;
 
         lim[0][i] = (DtBgLow - BinOffset) / ChPerBin;
         lim[1][i] = (DtPeakLow[i] - BinOffset) / ChPerBin;
         lim[2][i] = (DtPeakUp[i] - BinOffset) / ChPerBin;
         lim[3][i] = (DtBgUp - BinOffset) / ChPerBin;
-        if (CommentFlag)
+//        if (CommentFlag)
             cout << " " << i+1 << "   " << DtPeakLow[i] << " " << DtPeakUp[i] << "   " << lim[0][i] << " " << lim[1][i] << " " << lim[2][i] << " " << lim[3][i] << " " << endl;
     }
     cout << "Done: peak integration limits" << endl;
@@ -244,7 +244,7 @@ void Hist::AnalyzeDtPeak(Int_t i)
     Double_t UgInt = pHDtG[i]->Integral(lim[0][i], lim[3][i]) - PeakInt;
     avBg[i] = UgInt / (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
     DavBg[i] = sqrt(UgInt) / (lim[1][i] - lim[0][i] + lim[3][i] - lim[2][i]);
-    cout << "DEBUG: ch " << i+1 << "; lim " << lim[0][i] << ", " << lim[1][i] << ", " << lim[2][i] << ", " << lim[3][i] << "; PeakInt " << PeakInt << ", " << "avBg " << avBg[i] << "+-" << DavBg[i] << ", NIF " << nNIF[i] << ", SF " << nSF[i] << endl;
+//    cout << "DEBUG: ch " << i+1 << "; lim " << lim[0][i] << ", " << lim[1][i] << ", " << lim[2][i] << ", " << lim[3][i] << "; PeakInt " << PeakInt << ", " << "avBg " << avBg[i] << "+-" << DavBg[i] << ", NIF " << nNIF[i] << ", SF " << nSF[i] << endl;
     nNIF[i] = PeakInt - (lim[2][i] - lim[1][i] + 1) * avBg[i];
     DnNIF[i] = sqrt( PeakInt + pow((lim[2][i]-lim[1][i]+1) * DavBg[i], 2) );
     nSF[i] = pHDtG[i]->Integral() - nNIF[i];

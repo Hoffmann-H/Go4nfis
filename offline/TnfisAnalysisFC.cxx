@@ -186,8 +186,8 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                 {   channel = mult.fchzdr.ch[i_preAmp];
 
                     if (pHZDRPreAmp[channel]->GetFirstHit(event) != 0)
-                    {   Long_t TimeDiff = pHZDRPreAmp[channel]->GetFirstHit(event)-
-                                          pAccInput->GetFirstHit(event);
+                    {   Long_t TimeDiff = ( pHZDRPreAmp[channel]->GetFirstHit(event)-
+                                            pAccInput->GetFirstHit(event) - 62000) / 40.96;
 //                        cout << TimeDiff << endl;
                         Long_t QDCl = pHZDRPreAmp[channel]->GetQDCl(event);
                         Long_t QDCh = pHZDRPreAmp[channel]->GetQDCh(event);
@@ -286,6 +286,11 @@ void TnfisFCAnalysis::ResetEventStructure(Option_t *t)
         pHZDRPreAmpOut[i_preAmp]->Clear(t);
 }
 
+Double_t TnfisFCAnalysis::ChToNanosec(Double_t channel)
+{
+    return (channel - 62000) / 40.96;
+}
+
 //______________________________________________________________________________
 void TnfisFCAnalysis::MakeConditions()
 {
@@ -295,17 +300,17 @@ void TnfisFCAnalysis::MakeConditions()
 
     // define qdc and ToF conditions
     // ToF conditions estimated per Gaussian fit with constant background applied to H1AnaHZDRDtG[Channel]
+    // unit: QDC channels / TDC channels
 
+        // Channel              1        2        3        4        5        6        7        8
+        Double_t qdc_min[]   = {899.24,  853.668, 895.652, 849.393, 1046.41, 891.396, 906.123, 837.486}; // PuFC
+        Double_t tof_mean[]  = {67725,   67252,   67156,   67311,   67307,   67267,   67221,   67222}; // PuFC
+        Double_t tof_width[] = {115,     94,      90,      84,      90,      96,      86,      94}; // PuFC
 
-        // Channel              1      2      3      4      5      6      7      8
-        Double_t qdc_min[]   = {907,   853,   896,   849,   979,   892,   904,   837}; // PuFC
-        Double_t tof_mean[]  = {67725, 67252, 67156, 67311, 67307, 67267, 67221, 67222}; // PuFC
-        Double_t tof_width[] = {115,   94,    90,    84,    90,    96,    86,    94}; // PuFC
-
-        // Channel              1      2      3      4      5      6      7      8
-//        Double_t qdc_min[]   = {212,   470,   207,   206,   199,   152,   184,   124}; // UFC
-//        Double_t tof_mean[]  = {73202, 73016, 72674, 72864, 72863, 72828, 72793, 72776}; // UFC
-//        Double_t tof_width[] = {134,   119,   117,   118,   118,   116,   115,   116}; // UFC
+        // Channel              1        2        3        4        5        6        7        8
+//        Double_t qdc_min[]   = {220.396, 500.964, 219.016, 214.101, 199.19,  171.929, 169.046, 121.56}; // UFC
+//        Double_t tof_mean[]  = {73202,   73016,   72674,   72864,   72863,   72828,   72793,   72776}; // UFC
+//        Double_t tof_width[] = {134,     119,     117,     118,     118,     116,     115,     116}; // UFC
         
     Double_t qdc_max[]      = {4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096};
 
@@ -332,11 +337,11 @@ void TnfisFCAnalysis::MakeConditions()
         sprintf(HistNameDummy, "H1AnaHZDRDtG_%i", i_PMT+1);
 
         pConToF[i_PMT] = MakeWinCond(CondNameDummy,
-                                     tof_mean[i_PMT] - 3 * tof_width[i_PMT], tof_mean[i_PMT] + 3 * tof_width[i_PMT],
+                                     ChToNanosec(tof_mean[i_PMT] - 3 * tof_width[i_PMT]), ChToNanosec(tof_mean[i_PMT] + 3 * tof_width[i_PMT]),
                                      HistNameDummy);
 
         sprintf(CondNameDummy, "Analysis/ToF/ToF_Dt_Ch%i", i_PMT+1);
-        pConDt[i_PMT] = MakeWinCond(CondNameDummy, Dt_min, Dt_max, HistNameDummy);
+        pConDt[i_PMT] = MakeWinCond(CondNameDummy, ChToNanosec(Dt_min), ChToNanosec(Dt_max), HistNameDummy);
 
         //set initial thresholds
         pConToF[i_PMT]->ResetCounts();

@@ -27,6 +27,7 @@ public:
     Run* pR[2 * MaxRuns];
     Int_t nHist;
     Hist *pH[2*MaxHist];
+    TH1D *pHtLive;
     Double_t FgMon;
     Double_t BgMon;
     AnaSim *sim;
@@ -42,14 +43,16 @@ public:
 //    virtual void AnalyzeDtBG() = 0;//{cout << "virtual FC::AnalyzeDtBG. Don't call me" << endl;}
 //    virtual void GetExpT() = 0;
     virtual void GetNatoms() = 0;
+    virtual void DrawStability() = 0;
     virtual void IsoVec() = 0;
     void InitVar(Bool_t draw);
-    void UseHists(Int_t start, Int_t stop, string setup, Int_t run);
-    void UseHist(string file_name, string setup, Int_t run);
-    void AnalyzeDt();
+    void SetLimits(Int_t left = 12, Int_t right = 37);
+//    void UseHists(Int_t start, Int_t stop, string setup, Int_t run);
+//    void UseHist(string file_name, string setup, Int_t run);
+//    void AnalyzeDt();
     void CrossSection();
-    void RegisterHists();
-    void Stability();
+//    void RegisterHists();
+//    void Stability();
 //    void ScatCorrDiff();
 //    void ScatCorrFit();
     void ScatCorrSim();
@@ -92,14 +95,18 @@ public:
     Double_t DtBgUp;
 
     // Analysis
+    Int_t l0;
+    Int_t l1[NumCh];
+    Int_t l2[NumCh];
+    Int_t l3;
     Double_t avBg[NumCh]; // average fission background per livetime and Dt bin
     Double_t DavBg[NumCh];
     Double_t nFG[NumCh]; // fission count correlated with Neutron pulse
     Double_t DnFG[NumCh];
     Double_t nBG[NumCh];
     Double_t DnBG[NumCh];
-    Double_t nFlux[NumCh];
-    Double_t DnFlux[NumCh];
+//    Double_t nFlux[NumCh];
+//    Double_t DnFlux[NumCh];
 //    Double_t cFG[NumCh]; // fission count Constant in time
 //    Double_t DcFG[NumCh];
 //    Double_t cBG[NumCh];
@@ -121,7 +128,7 @@ public:
     Double_t pDirect[NumCh][3]; // Direct portion: ratio of direct to all fissions
     Double_t DpDirect[NumCh][3]; // 2nd index: 0 Experimental, 1 one sim, 2 shadow cone sim
     Double_t uCS[NumCh]; // un-corrected, raw cross section
-    Double_t DuCS[NumCh];
+    Double_t D2uCS[NumCh];
     Double_t CS[NumCh]; // corrected cross section
     Double_t DCS[NumCh];
 

@@ -1,5 +1,6 @@
 #include <string>
 #include "Plot.h"
+#include "TGraph.h"
 #include "TMath.h"
 #define NumCh 8
 #define m0 939.565 // MeV
@@ -33,6 +34,7 @@ public:
     TH1F *pH1Eproj[NumCh][2]; // time-gated projection on energy axis
     TH1F *pH1Eeff[NumCh][2];
     TH1F *pH1Tproj[NumCh][2];
+    TH1F *pH1ToF[NumCh][2];
     Double_t Emin, Emax;
     Int_t binEmin, binEmax;
     Double_t ToFmin[NumCh];
@@ -59,6 +61,7 @@ public:
     Double_t DeffN(Int_t ch, Int_t binElow, Int_t binEup, Int_t Sc = 0);
 
     void relSigma(Double_t E, Double_t &w, Double_t &Dw);
+    void SimToF();
 private:
     void OpenHists();
     void SetDistances();
@@ -72,6 +75,7 @@ private:
     void ScatN();
     void ScatEff();
     void SigmaEff();
+    void SaveToFile(string path, TObject *pObj);
 
     Double_t ToF(Double_t Ekin, Double_t FlightPath);
 
@@ -82,5 +86,6 @@ private:
             DoneEwidth,
             DoneTwidth,
             DoneProjections,
-            DoneDirect;
+            DoneDirect,
+            DoneCalc;
 };

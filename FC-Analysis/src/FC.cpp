@@ -38,135 +38,192 @@ void FC::InitVar(Bool_t draw)
     DoneTransmission = kFALSE;
 
     u = 1.660539E-24; // [g]
-    Area = 4300;
+    Area = 4300; // in mm^2
     DArea = 120;
+
+    SetLimits();
     cout << "Done: common variables" << endl;
 }
 
 
-void FC::UseHists(Int_t start, Int_t stop, string setup, Int_t run)
+void FC::SetLimits(Int_t left, Int_t right)
 {
-    char name[16] = "";
-    char file[128] = "";
-    for (Int_t num = start; num <= stop; num++)
+    // Intergation limits in bin numbers (1ns binning)
+    cout << endl << Name << " setting integration limits..." << endl;
+    l0 = 42;
+    l3 = 402;
+    cout << " ch   bin-nr" << endl;
+    if (!strcmp(Name.c_str(), "PuFC"))
     {
-        // Add zeros
-        if (num < 10)
-            sprintf(name, "lmd/00%i", num);
-        else if (num < 100)
-            sprintf(name, "lmd/0%i", num);
-        else
-            sprintf(name, "lmd/%i", num);
-        // Define file name
-        sprintf(file, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", name);
-        // Create Hist instance
-        pH[nHist] = new Hist(file, setup, Name, name, run);
-        nHist++;
+//        l1[NumCh];
+        Int_t m[] = {140, 128, 126, 129, 129, 128, 127, 127};
+//        l2[NumCh];
+        for (Int_t i = 0; i < NumCh; i++)
+        {
+            l1[i] = m[i] - left;
+            l2[i] = m[i] + right;
+            cout << " " << i+1 << "   " << l0 << "   " << l1[i] << "   " << l2[i] << "   " << l3 << endl;
+        }
+    } else {
+//        l1[NumCh];
+        Int_t m[] = {273, 269, 260, 265, 265, 264, 263, 263};
+//        l2[NumCh];
+        for (Int_t i = 0; i < NumCh; i++)
+        {
+            l1[i] = m[i] - left;
+            l2[i] = m[i] + right;
+            cout << " " << i+1 << "   " << l0 << "   " << l1[i] << "   " << l2[i] << "   " << l3 << endl;
+        }
     }
+    cout << "Done: limits" << endl;
 }
 
 
-void FC::UseHist(string file_name, string setup, Int_t run)
-{
-    char file[128] = "";
-    sprintf(file, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", file_name.c_str());
-    pH[nHist] = new Hist(file, setup, Name, file_name, run);
-    nHist++;
-}
+//void FC::UseHists(Int_t start, Int_t stop, string setup, Int_t run)
+//{
+//    char name[16] = "";
+//    char file[128] = "";
+//    for (Int_t num = start; num <= stop; num++)
+//    {
+//        // Add zeros
+//        if (num < 10)
+//            sprintf(name, "lmd/00%i", num);
+//        else if (num < 100)
+//            sprintf(name, "lmd/0%i", num);
+//        else
+//            sprintf(name, "lmd/%i", num);
+//        // Define file name
+//        sprintf(file, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", name);
+//        // Create Hist instance
+//        pH[nHist] = new Hist(file, setup, Name, name, run);
+//        nHist++;
+//    }
+//}
 
 
-void FC::RegisterHists()
-{
-    cout << endl << "Conclusion: Runs and Hists" << endl;
-    Int_t run = -1;
-    tFG = 0;
-    tBG = 0;
-    for (Int_t j = 0; j < nHist; j++)
-    {
-        if (pH[j]->RunNr != run)
-            cout << " Run " << pR[++run]->Name << endl;
-        pR[run]->GetHist(pH[j]);
-        cout << "  Hist " << pH[j]->Name << endl;
-        if (pH[j]->IsForeground())
-            tFG += pH[j]->t_live;
-        else
-            tBG += pH[j]->t_live;
-    }
-    if (DrawSingle)
-        Stability();
-}
+//void FC::UseHist(string file_name, string setup, Int_t run)
+//{
+//    char file[128] = "";
+//    sprintf(file, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", file_name.c_str());
+//    pH[nHist] = new Hist(file, setup, Name, file_name, run);
+//    nHist++;
+//}
 
 
+//void FC::RegisterHists()
+//{
+//    cout << endl << "Conclusion: Runs and Hists" << endl;
+//    Int_t run = -1;
+//    tFG = 0;
+//    tBG = 0;
+//    for (Int_t j = 0; j < nHist; j++)
+//    {
+//        if (pH[j]->RunNr != run)
+//            cout << " Run " << pR[++run]->Name << endl;
+//        pR[run]->GetHist(pH[j]);
+//        cout << "  Hist " << pH[j]->Name << endl;
+//        if (pH[j]->IsForeground())
+//            tFG += pH[j]->t_live;
+//        else
+//            tBG += pH[j]->t_live;
+//    }
+////    if (DrawSingle)
+////        Stability();
+//}
+
+/*
 void FC::Stability()
 {
+    if (!DoneNatoms)
+        GetNatoms();
     cout << Name << " FC::Stability()" << endl;
+    char name[64] = "";
+    char title[128] = "";
     // Prepare time axis
 //    Int_t t_start = 1400569200;
 //    Int_t t_end = 1401703200;
 //    Int_t tbins = 1890;
 //    Int_t tstep = (t_end - t_start) / tbins;
+    Int_t n = FgRuns + BgRuns;
 
     // Data arrays
-//    Double_t rSF[tbins];
-//    Double_t DrSF[tbins];
-//    Double_t rNIF[tbins];
-//    Double_t DrNIF[tbins];
+//    Double_t rSF[n];
+//    Double_t DrSF[n];
 //    Int_t start, stop;
-//    Double_t X[tbins];
-//    Double_t Xerr[tbins];
+    Double_t X[n];
+    Double_t Xerr[n];
+    Double_t M[n];
+    Double_t Merr[n];
+    Double_t rNIF[n];
+    Double_t DrNIF[n];
+    for (Int_t j = 0; j < n; j++)
+    {
+        cout << pR[j]->Name << ": " << pR[j]->tStart << " - " << pR[j]->tStop << endl;
+        X[j] = 0.5 * (pR[j]->tStart + pR[j]->tStop);
+        Xerr[j] = 0.5 * (pR[j]->tStop - pR[j]->tStart);
+        M[j] = pR[j]->Monitor / pR[j]->t_mon;
+        Merr[j] = pR[j]->DMonitor / pR[j]->t_mon;
+        rNIF[j] = 0; // average (n,f) rate
+        DrNIF[j] = 0;
+    }
+    TGraphErrors* gm = new TGraphErrors(n, X, M, Xerr, Merr);
+    sprintf(name, "%s N-Monitor; #font[12]{t}; Rate [1/s]", Name.c_str());
+    gm->SetNameTitle(Name.c_str(), name);
 
-    // Graphics...
-//    char name[64] = "";
-//    sprintf(name, "%s (n,f)-Rate; #font[12]{t}; Rate [1/s]", Name.c_str());
-//    TMultiGraph *mg1 = new TMultiGraph("mgStabNIF", name);
-//    sprintf(name, "%s Kanal", Name.c_str());
-//    TLegend *l1 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
-//    sprintf(name, "%s Spontanspaltrate; #font[12]{t}; Rate [1/s]", Name.c_str());
-//    TMultiGraph *mg2 = new TMultiGraph("mgStabSF", name);
-//    sprintf(name, "%s Kanal", Name.c_str());
-//    TLegend *l2 = new TLegend(0.9, 0.5, 1.0, 1.0, name);
-//    TGraphErrors *g1[NumCh];
-//    TGraphErrors *g2[NumCh];
+    Double_t sumAtoms = 0;
+    for (Int_t i = 0; i < NumCh; i++)
+        sumAtoms += nAtoms[i];
+    for (Int_t i = 0; i < NumCh; i++)
+    {
+        Double_t ratio[n];
+        Double_t Dratio[n];
+        cout << "Ch " << i+1;
+        for (Int_t j = 0; j < n; j++)
+        {
+            Double_t rate = pR[j]->nNIF[i] / pR[j]->t_live;
+            Double_t Drate = pR[j]->DnNIF[i] / pR[j]->t_live;
+            cout << "   " << pR[j]->DnNIF[i] / pR[j]->nNIF[i];
+            ratio[j] = rate / M[j];
+            Dratio[j] = ratio[j] * sqrt( pow(Drate/rate, 2) + pow(Merr[j]/M[j], 2) );
+            rNIF[j] += rate * nAtoms[i] / sumAtoms;
+            DrNIF[j] = sqrt( pow(DrNIF[j], 2) + pow(Drate * nAtoms[i] / sumAtoms, 2) );
+        }
+        cout << endl;
+        sprintf(name, "%s Deposit %i Stabilitaet; #font[12]{t}; (n,f) / Monitor", Name.c_str(), i+1);
+        TMultiGraph* mg = new TMultiGraph("mgStabNIF", name);
+        TGraphErrors* ge = new TGraphErrors(n, X, ratio, Xerr, Dratio);
+        sprintf(name, "rNIF_%i", i+1);
+        ge->SetName(name);
+        mg->Add(ge);
+        sprintf(name, "cNIFoverMon_%i", i+1);
+        TCanvas* c0 = new TCanvas(name, "(n,f) over n-Monitor", 200, 10, 700, 500);
+        mg->Draw("AP");
+        mg->GetXaxis()->SetTimeDisplay(kTRUE);
+        mg->GetXaxis()->SetTimeFormat("%d.%m.%Y/%H:%M%F1970-01-01s0");
+        c0->Modified();
+        c0->Update();
+    }
+    TMultiGraph *mg = new TMultiGraph("mgAvNIF", "Durchschn. (n,f)-Rate je Deposit; #font[12]{t}; Rate [1/s]");
+    TGraphErrors *gav = new TGraphErrors(n, X, rNIF, Xerr, DrNIF);
+    gav->SetName("gAvNIF");
+    mg->Add(gav);
 
-//    Int_t i = 0;
-//    for (Int_t t = 0; t < tbins; t++)
-//    {
-//        start = t * tstep + 1;
-//        stop = start + tstep;
-//        cout << "t " << t << " " << start << "-" << stop << endl;
-//        X[t] = 0.5 * (start + stop);
-//        Xerr[t] = 0;
-//        rSF[t] = 0;
-//        DrSF[t] = 0;
-//        rNIF[t] = 0;
-//        DrNIF[t] = 0;
-//        for (Int_t j = 0; j < /*nHist*/1; j++)
-//        {
-//            rNIF[t] += pH[j]->NIFvsTime(i, start, stop);
-//            DrNIF[t] += pH[j]->DNIFvsTime(i, start, stop);
-//            rSF[t] += pH[j]->SFvsTime(i, start, stop);
-//            cout << " j " << j << " " << rNIF[t] << "+-" << DrNIF[t] << endl;
-//        }
-//        DrSF[t] = sqrt(rSF[t]);
-//    }
-//    g1[i] = new TGraphErrors(nHist, X, rNIF, Xerr, DrNIF);
-//    g1[i]->SetName(name);
-//    g1[i]->SetLineColor(i);
-//    g1[i]->SetLineWidth(2);
-//    mg1->Add(g1[i]);
-//    sprintf(name, "%i", i+1);
-//    l1->AddEntry(g1[i], name);
-//    //}
-//    TCanvas *c1 = new TCanvas("cStabNIF", "Stability", 200, 10, 700, 500);
-//    gPad->SetTicks(1, 1);
-//    mg1->Draw("AP");
-//    mg1->GetXaxis()->SetTimeDisplay(1);
-//    mg1->GetXaxis()->SetTimeFormat("%d.%m. %H:%M%F1970-01-01 00:00:00s0");
-//    l1->Draw();
+    TCanvas* c1 = new TCanvas("cStab", "(n,f) stability", 200, 10, 700, 500);
+    c1->Divide(1, 2);
+    c1->cd(1);
+    gPad->SetTicks(1, 1);
+    gm->Draw("AP");
+//    gm->SetTimeDisplay(kTRUE);
+//    gm->SetTimeFormat("%d./%H:%M%F1970-01-01");
+
+    c1->cd(2);
+    gPad->SetTicks(1, 1);
+    mg->Draw("AP");
+
 //    c1->Modified();
 //    c1->Update();
 }
-
+//*/
 
 //void FC::GetHistPointers()
 //{
@@ -343,42 +400,41 @@ void FC::CrossSection()
         cout << " Chanel " << i+1 << endl;
         if (CommentFlag)
             cout << "  " << nAtoms[i] << "+-" << DnAtoms[i] << " atoms" << endl
-                 << "  Run   t_live[s]   (n,f)-events   n-Flux[mm^-2 s^-1]   sigma[b]" << endl;
+                 << "  Run   t_live[s]   (n,f)-rate[s^-1]   n-Flux[mm^-2 s^-1]   N*sigma[mm^2]" << endl;
         avFG = 0;
         D2avFG = 0;
         avBG = 0;
         D2avBG = 0;
 
         // Cross section ////////////////////////////////////////////////////////////
-        //  weighting with live times. Exact would be weighting with monitor counts
+        //  weighting with monitor counts
         for (Int_t k = 0; k < FgRuns + BgRuns; k++)
         {
-            pR[k]->CrossSection(i);
-            if (CommentFlag)
-                cout << "  " << pR[k]->Name << "   " << pR[k]->t_live << "   " << pR[k]->nNIF[i] << "+-" << pR[k]->DnNIF[i] << "   " << pR[k]->NeutronFlux[i] << "+-" << pR[k]->DstatNeutronFlux[i] << "   " << pR[k]->uncCS[i] << "+-" << pR[k]->DuncCS[i] << endl;
+//            if (CommentFlag)
+                cout << "  " << pR[k]->Name << "   " << pR[k]->t_live << "   " << pR[k]->pToF->GetnfRate(i) << "+-" << pR[k]->pToF->GetDnfRate(i) << "   " << pR[k]->NeutronFlux[i] << "+-" << pR[k]->DstatNeutronFlux[i] << "   " << pR[k]->GetnfoverPhi(i) << "+-" << pR[k]->GetDnfoverPhi(i) << endl;
             if (pR[k]->IsForeground())
             {
-                avFG += pR[k]->t_live / tFG * pR[k]->uncCS[i];
-                D2avFG += pow(pR[k]->t_live / tFG * pR[k]->DuncCS[i], 2);
+                avFG += pR[k]->Monitor / FgMon * pR[k]->GetnfoverPhi(i);
+                D2avFG += pow(pR[k]->Monitor / FgMon * pR[k]->GetDnfoverPhi(i), 2);
 //                cout << "   " << pR[k]->DuncCS[i] << "  " << pR[k]->t_live / tFG * pR[k]->DuncCS[i] << "  " << D2avFG << endl;
             }
             else
             {
-                avBG += pR[k]->t_live / tBG * pR[k]->uncCS[i];
-                D2avBG += pow(pR[k]->t_live / tBG * pR[k]->DuncCS[i], 2);
+                avBG += pR[k]->Monitor / BgMon * pR[k]->GetnfoverPhi(i);
+                D2avBG += pow(pR[k]->Monitor / BgMon * pR[k]->GetDnfoverPhi(i), 2);
             }
         }
-        avCS += avFG / NumCh;
-        D2avCS += D2avFG / NumCh / NumCh;
         pDirect[i][0] = 1.0 - avBG / avFG;
-        DpDirect[i][0] = sqrt(D2avBG) / avFG;
+        DpDirect[i][0] = sqrt( D2avBG / pow(avFG, 2) + D2avFG * pow(avBG / avFG / avFG, 2) );
 //        if (CommentFlag)
 //            cout << "   nFlux " << pHFG->NeutronFlux[i] << "+-" << pHFG->DNeutronFlux[i] << "mm^-2 s^-1" << endl <<
 //                    "   nAtoms " << nAtoms[i] << "+-" << DnAtoms[i] << endl <<
 //                    "   Foreground " << nFg1[i] << "+-" << DnFg1[i]  << " s^-1" << endl;
-        uCS[i] = avFG;
-        DuCS[i] = sqrt(D2avFG);
-        cout << "  raw CS = " << uCS[i] << "+-" << DuCS[i] << " barn" << endl;
+        uCS[i] = avFG / nAtoms[i] * 1.E22;
+        D2uCS[i] = D2avFG / pow(nAtoms[i] / 1.E22, 2) + pow(avFG * DnAtoms[i] / 1.E22, 2) / pow(nAtoms[i] / 1.E22, 4);
+        avCS += uCS[i] / NumCh;
+        D2avCS += D2uCS[i] / NumCh / NumCh;
+        cout << "  raw CS = " << uCS[i] << "+-" << sqrt(D2uCS[i]) << " barn" << endl;
     }
     cout << "Average: sigma = " << avCS << "+-" << sqrt(D2avCS) << endl;
     DoneRawCS = kTRUE;
@@ -448,17 +504,17 @@ void FC::Corrections()
         CS[i] = fTS[i] * uCS[i] * fIsoVec - sIsoVec;
         Double_t uncert[] = {DfIsoVec * fTS[i] * uCS[i],
                              fIsoVec * DfTS[i] * uCS[i],
-                             fIsoVec * fTS[i] * DuCS[i],
+                             fIsoVec * fTS[i] * sqrt(D2uCS[i]),
                              DsIsoVec
                             };
         DCS[i] = sqrt( pow(uncert[0], 2) +
                        pow(uncert[1], 2) +
                        pow(uncert[2], 2) +
                        pow(uncert[3], 2) );
-        cout << " " << i+1 << ",  " << uCS[i] << "+-" << DuCS[i] << " barn,  " << CS[i] << "+-" << DCS[i] << " barn" << endl;
+        cout << " " << i+1 << ",  " << uCS[i] << "+-" << sqrt(D2uCS[i]) << " barn,  " << CS[i] << "+-" << DCS[i] << " barn" << endl;
 //        cout << "  unc: f " << uncert[0] << ", TS " << uncert[1] << ", u " << uncert[2] << ", s " << uncert[3] << endl;
         sUCS += uCS[i];
-        D2UCS += pow(DuCS[i], 2);
+        D2UCS += D2uCS[i];
         sCS += CS[i];
         D2CS += pow(DCS[i], 2);
     }

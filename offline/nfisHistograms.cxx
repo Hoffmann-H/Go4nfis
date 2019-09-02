@@ -223,8 +223,8 @@ void nfisHistograms::DefineRawQDC(const char* step_name, const char* dir_name,
                 step_name, i_ch+1);
         sprintf(obj_title,"QDCS(low) vs Time channel %i", i_ch+1);
         pH2QDCTime[i_ch]   = (TH2I *) MakeTH2('I',obj_name,obj_title,
-                                            350,0.,350.,
-                                            0.25*tbins,t_start, t_end,
+                                            2000,0.,2000.,
+                                            tbins / 15,t_start, t_end, // 15min time binning
                                            "#font[12]{Q} / ch",
                                            "");
 //*/
@@ -338,9 +338,10 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
 //    UInt_t tbins = tdiff/pParGlobal->ReadoutPeriod;
 
     //define ToF bins
-    Double_t tof_min = 62000;
-    Double_t tof_max = 80000;
-    Int_t tof_bins = 1800;
+    Double_t tof_min = 0;//62000;
+    Double_t tof_max = 440;//80022.4;
+    Double_t ch_ns = 40.96;
+    Int_t tof_bins = 440;//(tof_max - tof_min) / ch_ns;
 
     //define directory structure of histograms
     if (strcmp(dir_name, "")==0)
@@ -364,15 +365,15 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
         sprintf(obj_title,"Time Diff to Acc (coarse bin), channel %i", i_ch+1);
         pH1AnaDtHZDR[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
                                             tof_bins, tof_min, tof_max,
-                                           "#font[12]{t} / ch", "counts");
+                                           "#Delta#font[12]{t} / ns", "counts");
 
         ////TimeDiff to acc (pulse heigt gated)
         sprintf(obj_name,"%s/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", path_name, i_ch+1);
         sprintf(obj_title,"Time Diff to Acc (coarse bin, pulse height gate),"
                           " channel %i", i_ch+1);
         pH1AnaDtHZDR_g[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
-                                            tof_bins, tof_min, tof_max,
-                                           "#font[12]{t} / ch", "counts");
+                                            tof_max - tof_min, tof_min, tof_max,
+                                           "#Delta#font[12]{t} / ns", "counts");
 
 //        ////TimeDiff to acc (pulse heigt refused)
 //        sprintf(obj_name,"%s/TimeDiff/PH-Gated/H1AnaHZDRDtR_%i", path_name, i_ch+1);
@@ -380,7 +381,7 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
 //                          " channel %i", i_ch+1);
 //        pH1AnaDtHZDR_r[i_ch]  = (TH1I *) MakeTH1('I',obj_name, obj_title,
 //                                            18000,62000.,80000.,
-//                                           "#font[12]{t} / ch", "counts");
+//                                           "#Delta#font[12]{t} / ch", "counts");
 
         ///TimeDiff to acc (pulse height gated) vs Time
         sprintf(obj_name, "%s/TimeDiff/PH-Gated/H2DtGvsTime_%i", path_name, i_ch+1);
@@ -389,7 +390,7 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
         pH2DtTime[i_ch] = (TH2I *) MakeTH2('I', obj_name, obj_title,
                                            tof_bins, tof_min, tof_max,
                                            tbins, t_start, t_end,
-                                           "#font[12]{Q} / ch", "#font[12]{t}");
+                                           "#Delta#font[12]{t} / ns", "#font[12]{t}");
 
         ////QDC (low gain)
         sprintf(obj_name,"%s/QDC/low/H1AnaQDCl_%i", path_name, i_ch+1);

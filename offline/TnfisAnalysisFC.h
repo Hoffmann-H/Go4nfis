@@ -51,6 +51,7 @@ class TnfisFCAnalysis : public TGo4EventProcessor {
       TnfisAnaFC        *pHZDRFCOut;
       TnfisAnaPreAmp    *pHZDRPreAmpOut[NumHZDRFC];
 
+      Double_t          ChToNanosec(Double_t channel);
       void              MakeConditions();
       void              MakePictures();
 
