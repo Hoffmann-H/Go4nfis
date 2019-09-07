@@ -24,7 +24,7 @@ Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t 
     // output settings
     CommentFlag = kFALSE; // set manually
     DrawSingle = draw_flag;
-    DrawMulti = kFALSE;
+    DrawMulti = kTRUE;
 
     cout << " Opening " << file_name << endl;
     f = TFile::Open(FileName.c_str(), "UPDATE");
@@ -245,6 +245,9 @@ void Sim::Projections()
             pH1Eeff[i][1] = new TH1F(name, name, NbinsY, ymin, ymax);
             sprintf(name, "%s, %s, Effective scattered neutron spectrum, Ch.%i; #font[12]{t} / ns; Effective neutrons", FC.c_str(), Setup.c_str(), i+1);
             pH1Eeff[i][1]->SetTitle(name);
+
+//            cout << "E   w   Total   Scattered" << endl;
+
             for (Int_t binE = 0; binE <= binEmax; binE++)
             {
                 Double_t E = pH1Eproj[i][0]->GetBinCenter(binE);
@@ -252,15 +255,26 @@ void Sim::Projections()
                 relSigma(E, w, Dw);
                 pH1Eeff[i][0]->AddBinContent(binE, w * pH1Eproj[i][0]->GetBinContent(binE));
                 pH1Eeff[i][1]->AddBinContent(binE, w * pH1Eproj[i][1]->GetBinContent(binE));
+
+//                Double_t Total = 0, Scattered = 0;
+
                 for (Int_t binT = 0; binT <= NbinsY + 1; binT ++)
                 {
+//                    Total     += pH2TvsE[i][0]->GetBinContent(binT, binE);
+//                    Scattered += pH2TvsE[i][1]->GetBinContent(binT, binE);
                     pH1Tproj[i][0]->AddBinContent(binT, w * pH2TvsE[i][0]->GetBinContent(binT, binE));
                     if (tID)
                         pH1Tproj[i][1]->AddBinContent(binT, w * pH2TvsE[i][1]->GetBinContent(binT, binE));
                     else if (binE < binEmin)
                         pH1Tproj[i][1]->AddBinContent(binT, w * pH2TvsE[i][0]->GetBinContent(binT, binE));
                 }
+
+//                cout << E << "  " << w << "  " << Total << "  " << Scattered << endl;
+
             } // for(binE)
+//            cout << endl << "=== Total:     " << pH1Tproj[i][0]->Integral() << "\t===" << endl << endl;
+//            cout << endl << "=== Scattered: " << pH1Tproj[i][1]->Integral() << "\t===" << endl << endl;
+
             SaveToFile("Analysis/EffEnergy", pH1Eeff[i][0]);
             SaveToFile("Analysis/EffEnergy/Scattered", pH1Eeff[i][1]);
             SaveToFile("Analysis/EffToF", pH1Tproj[i][0]);

@@ -48,7 +48,7 @@ public:
     virtual void IsoVec() = 0;
     void InitVar(Bool_t draw);
     void Run(string setup, string tof_file, Double_t monitor, Double_t Dmonitor, Double_t tmonitor);
-    void SetLimits(Int_t left = 12, Int_t right = 37);
+    void SetLimits(Int_t left = 15, Int_t right = 40);
     void NeutronField();
 //    void UseHists(Int_t start, Int_t stop, string setup, Int_t run);
 //    void UseHist(string file_name, string setup, Int_t run);

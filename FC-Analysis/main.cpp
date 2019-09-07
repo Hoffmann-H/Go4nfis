@@ -14,6 +14,9 @@
 #include "Run.h"
 #include "Plot.h"
 #include "ToF.h"
+#include "root/QDCmin.C"
+#include "root/PeakWidth.C"
+#include "root/NumberOfAtoms.C"
 
 using namespace std;
 
@@ -24,36 +27,36 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
-//    string file_name = "/home/hoffma93/Programme/Go4nfis/offline/results/SF.root";
-//    string fc = "PuFC";
-//    string setup = "SF";
-//    ToF *tof = new ToF(file_name, fc, setup, "");
-//    tof->DrawPeakLim(12, 0, 50, 2);
-//    file_name = "/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root";
-//    fc = "UFC";
-//    ToF *tof = new ToF(file_name, fc, setup, "");
-//    tof->DrawPeakLim(12, 0, 50, 2);
+    // Fit QDC minima
+    FindPuMinima();
+    FindUMinima();
 
-//    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "NIF", "PuFC", "FG", 0);
-//    Hist *h = new Hist("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "NIF", "UFC", "FG", 0);
-//    h->Stability(0, 0, 0);
-//    h->SetDraw(p);
-//    h->DoAnalyzeQDC();
+    // Create graphs: Peak content vs Peak width, right background vs Peak width.
+    PeakWidth();
+
+    // Calculate eff. number of Pu atoms from spontaneous fission
+    NumberOfPuAtoms();
+    // Calculate eff. number of U atoms from H19 calibration and Carlson
+    NumberOfUAtoms();
+
+    // Create an instance of ToF and calculate background
+    PuFC *fc = new PuFC(1, 0);
+    UFC *ufc = new UFC(1, 0);
+
 
 //    Plot *p = new Plot("UFC", "Open", 0);
 //    p->Source_E();
 
-//    PuFC *fc = new PuFC(1, 0);
+//    PuFC *fc = new PuFC(0, 0);
 //    fc->GetNatoms();
 //    fc->DrawStability();
 //    fc->CrossSection();
 //    fc->Corrections();
 
-    UFC *ufc = new UFC(0, 0);
-    cout << ufc->FgRuns << " + " << ufc->BgRuns << endl;
+//    UFC *ufc = new UFC(0, 0);
 //    ufc->IsoVec();
 //    ufc->CrossSection();
-    ufc->Corrections();
+//    ufc->Corrections();
 
 //    Xsection *xs = new Xsection();
 //    xs->RelativeCS();

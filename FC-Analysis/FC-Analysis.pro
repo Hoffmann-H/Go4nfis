@@ -31,29 +31,30 @@ unix {
 }
 
 # Input
-HEADERS += include/Hist.h \
-           include/Xsection.h \
-           include/FC.h \
+HEADERS += include/FC.h \
            include/PuFC.h \
            include/UFC.h \
+           include/Sim.h \
            include/AnaSim.h \
            include/Plot.h \
-           include/Sim.h \
-    include/Run.h \
-    include/ToF.h
+           include/ToF.h
 
 SOURCES += \
     main.cpp \
-    src/Xsection.cpp \
-    src/Hist.cpp \
     src/FC.cpp \
     src/PuFC.cpp \
     src/UFC.cpp \
+    src/Sim.cpp \
     src/AnaSim.cpp \
     src/Plot.cpp \
-    src/Sim.cpp \
-    src/Run.cpp \
     src/ToF.cpp
+#    root/SaveToFile.C \
+#    root/QDCmin.C \
+#    root/PeakWidth.C \
+#    root/NumberOfAtoms.C \
+#    root/Carlson.C \
+#    root/MCNPtoROOT.C \
+#    root/AnaMCNP.C
 
 !exists ($(ROOTSYS)/include/rootcintrule.pri):message ("The rootcintrules.pri was not found")
 exists ($(ROOTSYS)/include/rootcintrule.pri) {

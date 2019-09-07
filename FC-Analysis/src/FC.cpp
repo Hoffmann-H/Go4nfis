@@ -44,7 +44,7 @@ void FC::InitVar(Bool_t draw)
 
     u = 1.660539E-24; // [g]
     Area = 4300; // in mm^2
-    DArea = 120;
+    DArea = 0;//120;
 
     cout << "Done: common variables" << endl;
 }
@@ -158,7 +158,7 @@ void FC::CrossSection()
         cout << " Channel " << i+1 << endl;
         if (CommentFlag)
             cout << "  " << nAtoms[i] << "+-" << DnAtoms[i] << " atoms" << endl
-                 << "  Run \t\t (n,f)-counts \t n-Fluence[mm^-2] \t t_live[s]  t_mon[s] \t sigma[b]" << endl;
+                 << "  Run \t\t (n,f)-rate \t n-Fluence[mm^-2] \t t_live[s]  t_mon[s] \t sigma[b]" << endl;
         avFG = 0;
         D2avFG = 0;
         avBG = 0;
@@ -169,13 +169,13 @@ void FC::CrossSection()
         for (Int_t k = 0; k < nRuns; k++)
         {
 //            cout << nFluence[i][k] << "\t" << nAtoms[i] << endl;
-            Double_t sigma = pToF[k]->nf[i] / nFluence[i][k] / nAtoms[i] * 1.E22;// * MonitorTime[k] / pToF[k]->t_live;
+            Double_t sigma = pToF[k]->nf[i] / nFluence[i][k] / nAtoms[i] * 1.E22 * MonitorTime[k] / pToF[k]->t_live;
 //            cout << sigma << endl;
             Double_t Dsigma = sqrt( pow(pToF[k]->Dnf[i] / pToF[k]->nf[i], 2) +
                                     pow(DnFluence[i][k] / nFluence[i][k], 2) +
                                     pow(DnAtoms[i] / nAtoms[i], 2) ) * sigma;
             if (CommentFlag)
-                cout << "  " << pToF[k]->GetName() << "\t " << pToF[k]->nf[i] << "+-" << pToF[k]->Dnf[i] << "\t " << nFluence[i][k] << "+-" << DnFluence[i][k] << "\t " << pToF[k]->t_live << "\t " << MonitorTime[k] << "\t " << sigma << "+-" << Dsigma << endl;
+                cout << "  " << pToF[k]->GetName() << "\t " << pToF[k]->nf[i] / pToF[k]->t_live << " $\\pm$ " << pToF[k]->Dnf[i] / pToF[k]->t_live << "\t " << nFluence[i][k] / MonitorTime[k] << "+-" << DnFluence[i][k] / MonitorTime[k] << "\t " << pToF[k]->t_live << "\t " << MonitorTime[k] << "\t " << sigma << " $\\pm$ " << Dsigma << endl;
 
             if (k < FgRuns)
             {
@@ -193,7 +193,8 @@ void FC::CrossSection()
         D2uCS[i] = D2avFG; //D2avFG / pow(nAtoms[i] / 1.E22, 2) + pow(avFG * DnAtoms[i] / 1.E22, 2) / pow(nAtoms[i] / 1.E22, 4);
         avCS += uCS[i] / NumCh;
         D2avCS += D2uCS[i] / NumCh / NumCh;
-        cout << "  raw CS = " << uCS[i] << "+-" << sqrt(D2uCS[i]) << " barn" << endl;
+        cout << "  raw FG = " << uCS[i] << " $\\pm$ " << sqrt(D2uCS[i]) << " barn" << endl;
+        cout << "  raw BG = " << avBG << " $\\pm$ " << sqrt(D2avBG) << " barn" << endl;
     }
     cout << "Average: sigma = " << avCS << "+-" << sqrt(D2avCS) << endl;
     DoneRawCS = kTRUE;

@@ -33,6 +33,7 @@ private:
     void SpontaneousFission();
     void OpenToF(string file_name);
     void MakeLimits(Double_t left, Double_t right);
+    void FitCommonBackground();
     void FitBackground();
     void FitBackground(Int_t  i);
     void SaveToFile(string path, TObject *pObj);

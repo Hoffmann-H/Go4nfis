@@ -259,6 +259,24 @@ void ToF::DrawDt()
 }
 
 
+void ToF::FitCommonBackground()
+{
+    TFile *fFG;
+    TFile *fBG;
+    string file1, file2;
+    if (this->IsPuFC()) {
+        file1 = "/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root";
+        file2 = "/home/hoffma93/Programme/Go4nfis/offline/results/SB.root";
+    } else {
+        file1 = "/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root";
+        file2 = "/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root";
+    }
+    fFG = TFile::Open(file1.c_str());
+    fBG = TFile::Open(file2.c_str());
+
+}
+
+
 void ToF::FitBackground()
 {
     cout << endl << "Fit constant ToF background..." << endl;

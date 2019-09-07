@@ -45,9 +45,14 @@ void AnaSim::Corrections()
     // S := fissions induced by direct / induced fissions (both in time gate)
     //    = direct fissions / ( direct fissions + scattered fissions )
 
+    // Define number of simulated neutrons
+    Double_t N = 50000000;
+    cout << N << " neutrons simulated" << endl;
+
     Fg = new Sim(FgPath, FC, "Open", tID, DrawSingle);
     Fg->Calculate();
-    cout << endl << "Correction factors..." << endl;
+    cout << endl << "Correction factors..." << endl
+         << " Ch      Emit      Direct      Total      S      T      F" << endl;
 //    char name[64] = "";
 
 //    cout << "Input for correction factors" << endl;
@@ -57,19 +62,25 @@ void AnaSim::Corrections()
         //// Calculate Transmission and Scattering correction factor
         T[i] = Fg->nDirect[i] / Fg->nProj[i];
         DT[i] = Fg->DnDirect[i] / Fg->nProj[i];
-        S[i] = Fg->effDirect[i] / (Fg->effScat[i] + Fg->effDirect[i]);
+        S[i] = Fg->nDirect[i] / (Fg->effScat[i] + Fg->effDirect[i]);
 
         //// Calculate T&S's correction factor
-        F[i] = Fg->nProj[i] / (Fg->effScat[i] + Fg->effDirect[i]) * Fg->effDirect[i] / Fg->nDirect[i];   // == S[i] / T[i]
+        F[i] = Fg->nProj[i] / (Fg->effScat[i] + Fg->effDirect[i])/* * Fg->effDirect[i] / Fg->nDirect[i]*/;   // == S[i] / T[i]
     }
-        //// Calculate correlated uncertainties
-        Uncertainties();
+    //// Calculate correlated uncertainties
+    Uncertainties();
 
     for (int i = 0; i < NumCh; i++)
     {
+        Double_t Emit = Fg->nProj[i] / N;
+        Double_t Direct = Fg->effDirect[i] / N;
+        Double_t Total = (Fg->effDirect[i] + Fg->effScat[i]) / N;
 
-        cout << " " << i+1 << "  " << T[i] << "+-" << DT[i] << //endl;
-                              "  " << S[i] << "+-" << DS[i] << //"+-" << sqrt(D2S_sys) <<
+        cout << " " << i+1 << "  " << Emit <<
+                              "  " << Direct <<
+                              "  " << Total <<
+                              "  " << S[i] << "+-" << DS[i] <<
+                              "  " << T[i] << "+-" << DT[i] << //"+-" << sqrt(D2S_sys) <<
                               "  " << F[i] << "+-" << DF[i] << endl;//"+-" << sqrt(D2S_sys) / T[i] << endl;
     }
 
