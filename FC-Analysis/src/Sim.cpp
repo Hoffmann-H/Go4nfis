@@ -24,7 +24,7 @@ Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t 
     // output settings
     CommentFlag = kFALSE; // set manually
     DrawSingle = draw_flag;
-    DrawMulti = kTRUE;
+    DrawMulti = kFALSE;
 
     cout << " Opening " << file_name << endl;
     f = TFile::Open(FileName.c_str(), "UPDATE");

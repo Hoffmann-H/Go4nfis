@@ -48,13 +48,6 @@ SOURCES += \
     src/AnaSim.cpp \
     src/Plot.cpp \
     src/ToF.cpp
-#    root/SaveToFile.C \
-#    root/QDCmin.C \
-#    root/PeakWidth.C \
-#    root/NumberOfAtoms.C \
-#    root/Carlson.C \
-#    root/MCNPtoROOT.C \
-#    root/AnaMCNP.C
 
 !exists ($(ROOTSYS)/include/rootcintrule.pri):message ("The rootcintrules.pri was not found")
 exists ($(ROOTSYS)/include/rootcintrule.pri) {
@@ -64,5 +57,13 @@ exists ($(ROOTSYS)/include/rootcintrule.pri) {
     CREATE_ROOT_DICT_FOR_CLASSES -= ui_mainwindow
 
 OTHER_FILES += \
-    DrawPics.C
+    DrawPics.C \
+    root/SaveToFile.C \
+    root/QDCmin.C \
+    root/PeakWidth.C \
+    root/NumberOfAtoms.C \
+    root/Carlson.C \
+    root/MCNPtoROOT.C \
+    root/AnaSim.C \
+    root/FC.C
 }

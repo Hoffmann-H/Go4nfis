@@ -1,4 +1,5 @@
 #include "SaveToFile.C"
+#include "FC.C"
 #include <fstream>
 
 void GetBinning(string file_to_read)
@@ -83,7 +84,6 @@ TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", Int_t ch = 
         pHist->SetBinContent(binT, binE, C);
         pHist->SetBinError(binT, binE, DC * C);
     }
-
     if (draw)
     {
         sprintf(name, "%s_EvsT_%i", FC.c_str(), ch + 1);
@@ -119,8 +119,8 @@ string PathTag(string result_key = "2")
     return 0;
 }
 
-void MCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, string FC = "PuFC")
-{
+void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, string FC = "PuFC")
+{ // Convert Track Length MCNP results to root
     char name[128] = "";
     string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_PTB/tally";
     TH2D *h[8];
@@ -130,13 +130,6 @@ void MCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, strin
     if (save)
     {
         f = TFile::Open("/home/hoffma93/Programme/MCNP/results/MCNP.root", "UPDATE");
-//        string path;
-//        if (result_key == "2")
-//            path = "PuFC/ToFvsEkin/";
-//        if (result_key == "1")
-//            path = "PuFC/ToFvsEkin/Scattered/";
-//        if (result_key == "0")
-//            path = "PuFC/ToFvsEkin/Direct/";
         pDir = Prepare(f, FC + "/ToFvsEkin/" + PathTag(result_key));
     }
     TCanvas *c1;
@@ -153,6 +146,9 @@ void MCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, strin
 
         // Create 2D histogram
         h[i] = MakeEvsT(name, 0, FC, i);
+        // Track length estimator gives neutrons per started neutron and cm^2
+        Double_t DepositArea = TMath::Pi() * pow(3.7, 2);
+        h[i]->Scale(DepositArea);
 
         if (save)
         {
@@ -187,7 +183,7 @@ void MCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, strin
 }
 
 void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, string FC = "PuFC")
-{
+{ // Convert simple MCNP results to root
     char name[128] = "";
     string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_PTB/tally";
     TH2D *h[8];
@@ -270,4 +266,15 @@ void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
         f->Save();
         f->Close();
     }
+}
+
+
+void MCNPtoROOT()
+{
+    TraLenMCNPtoROOT("0", 1, 0);
+    TraLenMCNPtoROOT("1", 1, 0);
+    TraLenMCNPtoROOT("2", 1, 0);
+    SimpleMCNPtoROOT("0", 1, 0);
+    SimpleMCNPtoROOT("1", 1, 0);
+    SimpleMCNPtoROOT("2", 1, 0);
 }

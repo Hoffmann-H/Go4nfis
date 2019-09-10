@@ -195,6 +195,8 @@ void FC::CrossSection()
         D2avCS += D2uCS[i] / NumCh / NumCh;
         cout << "  raw FG = " << uCS[i] << " $\\pm$ " << sqrt(D2uCS[i]) << " barn" << endl;
         cout << "  raw BG = " << avBG << " $\\pm$ " << sqrt(D2avBG) << " barn" << endl;
+        cout << "  S_exp = " << pDirect[i][0] << " $\\pm$ " << DpDirect[i][0] << endl;
+        cout << "  FG-BG = " << avFG-avBG << " $\\pm$ " << sqrt(D2avFG + D2avBG) << endl;
     }
     cout << "Average: sigma = " << avCS << "+-" << sqrt(D2avCS) << endl;
     DoneRawCS = kTRUE;

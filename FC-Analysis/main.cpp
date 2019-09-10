@@ -20,6 +20,25 @@
 
 using namespace std;
 
+//void ProvideNotebookData()
+//{
+//    // Fit QDC minima
+//    FindPuMinima();
+//    FindUMinima();
+
+//    // Create graphs: Peak content vs Peak width, right background vs Peak width.
+//    PeakWidth();
+
+//    // Calculate eff. number of Pu atoms from spontaneous fission
+//    NumberOfPuAtoms();
+//    // Calculate eff. number of U atoms from H19 calibration and Carlson
+//    NumberOfUAtoms();
+
+//    // Create an instance of ToF and calculate background
+//    PuFC *fc = new PuFC(1, 0);
+//    UFC *ufc = new UFC(1, 0);
+//}
+
 int main(int argc, char **argv)
 {
 
@@ -27,22 +46,7 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
-    // Fit QDC minima
-    FindPuMinima();
-    FindUMinima();
-
-    // Create graphs: Peak content vs Peak width, right background vs Peak width.
-    PeakWidth();
-
-    // Calculate eff. number of Pu atoms from spontaneous fission
-    NumberOfPuAtoms();
-    // Calculate eff. number of U atoms from H19 calibration and Carlson
-    NumberOfUAtoms();
-
-    // Create an instance of ToF and calculate background
-    PuFC *fc = new PuFC(1, 0);
-    UFC *ufc = new UFC(1, 0);
-
+//    ProvideNotebookData();
 
 //    Plot *p = new Plot("UFC", "Open", 0);
 //    p->Source_E();
@@ -53,10 +57,10 @@ int main(int argc, char **argv)
 //    fc->CrossSection();
 //    fc->Corrections();
 
-//    UFC *ufc = new UFC(0, 0);
+    UFC *ufc = new UFC(0, 0);
 //    ufc->IsoVec();
-//    ufc->CrossSection();
-//    ufc->Corrections();
+    ufc->CrossSection();
+    ufc->Corrections();
 
 //    Xsection *xs = new Xsection();
 //    xs->RelativeCS();
