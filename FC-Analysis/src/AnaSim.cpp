@@ -44,15 +44,40 @@ void AnaSim::Corrections()
     // T := Direct incident n / emitted neutrons towards deposit
     // S := fissions induced by direct / induced fissions (both in time gate)
     //    = direct fissions / ( direct fissions + scattered fissions )
+    cout << endl << "Correction factors..." << endl
+         << " Ch      Emit      Direct      Total      S      T      F" << endl;
 
+    if (PuFC)
+    {
+        TFile *f = TFile::Open("/home/hoffma93/Programme/MCNP/results/MCNP.root");
+        if (f == 0)
+            cout << "Error loading " << "MCNP results" << endl;
+        TGraphErrors *gT = (TGraphErrors*) f->Get("Analysis/Correction/T");
+        if (gT == 0)
+            cout << "Error loading " << "Analysis/Correction/T" << endl;
+
+        for (int i = 0; i < NumCh; i++)
+        {
+            Double_t x, y;
+            gT->GetPoint(i, x, y);
+            T[i] = y;
+            DT[i] = gT->GetErrorY(i);
+            S[i] = 1;
+            DS[i] = 0;
+            F[i] = 1;
+            DF[i] = 0;
+            cout << " " << i+1 << "  " << S[i] << "+-" << DS[i] <<
+                                  "  " << T[i] << "+-" << DT[i] << //"+-" << sqrt(D2S_sys) <<
+                                  "  " << F[i] << "+-" << DF[i] << endl;
+        }
+        return;
+    }
     // Define number of simulated neutrons
     Double_t N = 50000000;
     cout << N << " neutrons simulated" << endl;
 
     Fg = new Sim(FgPath, FC, "Open", tID, DrawSingle);
     Fg->Calculate();
-    cout << endl << "Correction factors..." << endl
-         << " Ch      Emit      Direct      Total      S      T      F" << endl;
 //    char name[64] = "";
 
 //    cout << "Input for correction factors" << endl;
@@ -65,7 +90,7 @@ void AnaSim::Corrections()
         S[i] = Fg->nDirect[i] / (Fg->effScat[i] + Fg->effDirect[i]);
 
         //// Calculate T&S's correction factor
-        F[i] = Fg->nProj[i] / (Fg->effScat[i] + Fg->effDirect[i])/* * Fg->effDirect[i] / Fg->nDirect[i]*/;   // == S[i] / T[i]
+        F[i] = Fg->nProj[i] / (Fg->effScat[i] + Fg->effDirect[i]) * Fg->effDirect[i] / Fg->nDirect[i];   // == S[i] / T[i]
     }
     //// Calculate correlated uncertainties
     Uncertainties();
@@ -89,7 +114,7 @@ void AnaSim::Corrections()
     if (!DrawSingle)
         return;
     plot->SimF(T, DT, S, DS, F, DF);
-}
+}//*/
 
 
 void AnaSim::Uncertainties()

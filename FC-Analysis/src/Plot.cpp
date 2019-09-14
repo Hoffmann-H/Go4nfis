@@ -1,5 +1,6 @@
 #include "Plot.h"
 #include "TGaxis.h"
+#include "TMultiGraph.h"
 #define NumCh 8
 #define lw 2
 

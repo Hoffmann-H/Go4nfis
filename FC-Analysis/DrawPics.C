@@ -2,6 +2,28 @@
 #define lw 2
 //#define a 0.25 // alpha
 using namespace std;
+
+void DrawSigma()
+{
+    TGraphErrors *pSigma = new TGraphErrors("/home/hoffma93/Programme/ROOT/Data/Pu242.dat", "%lg %lg %lg");
+
+    TMultiGraph *mg = new TMultiGraph();
+    mg->SetTitle("^{242}Pu(n,f) Wirkungsquerschnitt; E_{n}; #sigma [b]");
+    pSigma->SetFillColorAlpha(1, 0.5);
+    mg->Add(pSigma);
+    TCanvas *cS = new TCanvas("cS", "Evaluated Cross section");
+    gPad->SetTicks(1, 1);
+    mg->GetXaxis()->SetRangeUser(0, 20);
+    mg->GetXaxis()->SetLabelSize(0.06);
+    mg->GetXaxis()->SetTitleSize(0.07);
+    mg->GetXaxis()->SetTitleOffset(-0.0);
+    mg->GetYaxis()->SetLabelSize(0.06);
+    mg->GetYaxis()->SetTitleSize(0.07);
+    mg->GetYaxis()->SetTitleOffset(-0.0);
+    mg->Draw("a3");
+    cS->Update();
+}
+
 TGraph* HistToGraph(TH1I* pH)
 {
     int n = pH->GetNbinsX();
@@ -1727,14 +1749,14 @@ void DrawPeak(TFile* f, string FC)
         ge[i]->SetMarkerStyle(20);
         ge[i]->SetMarkerSize(2);
         sprintf(name, "%i", i+1);
-        l->AddEntry(ge[i], name, "lm");
+        l->AddEntry(ge[i], name);
         mg->Add(ge[i]);
     }
     TGraphErrors* av = new TGraphErrors(n, X, avNIF, Xerr, DavNIF);
     av->SetName("gPeak_av");
     av->SetLineWidth(2);
     av->SetLineColor(1);
-    l->AddEntry(av, "av", "lm");
+    l->AddEntry(av, "av");
     mg->Add(av);
 
     TCanvas* c = new TCanvas("cPeak", "Test Integration Limits", 200, 10, 700, 500);
@@ -1970,14 +1992,15 @@ int DrawPics()
 {
 //    gStyle->SetCanvasPreferGL();
 
-    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
-    TFile* fSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root");
-//    TFile* fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root");
-    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
-    TFile* fUSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root");
-    TFile* fCom = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/Evaluation.root");
+    DrawSigma();
+//    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+//    TFile* fSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root");
+////    TFile* fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root");
+//    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
+//    TFile* fUSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root");
+//    TFile* fCom = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/Evaluation.root");
     /// single pics
-    DrawSingle(fNIF, fCom, "PuFC", "NIF");
+//    DrawSingle(fNIF, fCom, "PuFC", "NIF");
 //    DrawSingle(fSB, fCom, "PuFC", "SB");
 //    DrawSingle(fSF, fCom, "PuFC", "SF");
 //    DrawSingle(fUNIF, fCom, "UFC", "NIF");

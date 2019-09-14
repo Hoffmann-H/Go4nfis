@@ -1,6 +1,28 @@
 #ifndef SAVE_TO_FILE
 #define SAVE_TO_FILE
 
+#include "TF1.h"
+
+void Save(TFile *f, string path, TH1 *pObj)
+{
+//    if (f->GetDirectory(path.c_str()) == 0)
+//    {
+//        cout << "Creating " << path << endl;
+//        f->mkdir(path.c_str(), "Folder");
+//    }
+//    f->cd(path.c_str());
+    TDirectory *pDir = f->GetDirectory(path.c_str());
+    if (pDir == 0)
+    {
+        cout << " Creating root directory " << path << endl;
+        f->mkdir(path.c_str(), "Folder");
+        pDir = f->GetDirectory(path.c_str());
+    }
+    pDir->cd();
+    pObj->Write("", TObject::kOverwrite);
+    return;
+}
+
 TDirectory* Prepare(TFile *f, string path)
 {
     TDirectory *pDir = f->GetDirectory(path.c_str());
@@ -38,6 +60,8 @@ void Save(TDirectory *pDir, TH1 *pObj, string name)
     pDir->cd();//evtl
     pObj->Write();
 }
+
+
 void Save(TDirectory *pDir, TGraph *pObj, string name)
 {
     if (pDir->Get(name.c_str()) != 0)
@@ -90,25 +114,25 @@ void Clear(TDirectory *pDir, string name)
     }
 }
 
-void TestStF()
-{
-    TFile *f = TFile::Open("~/Programme/ROOT/TestStF.root", "UPDATE");
-    string path = "Folder1/SubFolder1";
-    TDirectory *pDir = Prepare(f, path);
+//void TestStF()
+//{
+//    TFile *f = TFile::Open("~/Programme/ROOT/TestStF.root", "UPDATE");
+//    string path = "Folder1/SubFolder1";
+//    TDirectory *pDir = Prepare(f, path);
 
-    string name = "h1";
-    TH1F *h1 = new TH1F(name.c_str(), name.c_str(), 100, -5, 5);
-    h1->FillRandom("gaus", 500);
-    Save(pDir, h1, "H1");
+//    string name = "h1";
+//    TH1F *h1 = new TH1F(name.c_str(), name.c_str(), 100, -5, 5);
+//    h1->FillRandom("gaus", 500);
+//    Save(pDir, h1, "H1");
 
-    name = "h2";
-    TH1F *h2 = new TH1F(name.c_str(), name.c_str(), 100, -5, 5);
-    h2->FillRandom("gaus", 500);
-    Save(pDir, h2, "H2");
+//    name = "h2";
+//    TH1F *h2 = new TH1F(name.c_str(), name.c_str(), 100, -5, 5);
+//    h2->FillRandom("gaus", 500);
+//    Save(pDir, h2, "H2");
 
-    f->Save();
-    f->Close();
-}
+//    f->Save();
+//    f->Close();
+//}
 
 void SaveToFile(TFile *f, string path, TObject *pObj)
 {

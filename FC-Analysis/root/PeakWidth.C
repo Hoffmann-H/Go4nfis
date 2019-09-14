@@ -162,4 +162,6 @@ void PeakWidth()
     Background("NIF.root", "PuFC", 15, 0, 50, 2);
     PeakWidth("UFC_NIF.root", "UFC", 15, 0, 100, 5);
     Background("UFC_NIF.root", "UFC", 15, 0, 100, 5);
+//    Background("NIF.root", "PuFC", 40, 0, 30, 1);
+//    PeakWidth("UFC_NIF.root", "UFC", 40, 0, 30, 1);
 }

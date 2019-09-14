@@ -1,4 +1,4 @@
-//#include "SaveToFile.C"
+#include "SaveToFile.C"
 #include "MCNPtoROOT.C"
 #include "FC.C"
 
@@ -209,7 +209,9 @@ void AnaGeant4(string FC = "PuFC", Bool_t save = 1, string FileName = "4_ene/PuF
     Long_t SimulatedN = pH1theta->Integral(); // get simulation population
 
     // scale old results
-    SimulatedN *= (1-cos(0.08446522295019329)) / (1-cos(0.0746987));
+//    SimulatedN *= (1-cos(0.08446522295019329)) / (1-cos(0.0746987));
+    // Set N for an invalid file
+    SimulatedN = 5.E6;
 
     Double_t S[8], DS[8], T[8], DT[8], F[8], DF[8]; // prepare analysis
 
@@ -299,6 +301,12 @@ void AnaGeant4(string FC = "PuFC", Bool_t save = 1, string FileName = "4_ene/PuF
             sprintf(name, "%s_ToFvsEkin_Ch.%i", FC.c_str(), i+1);
             Save(pDir, pH2Tot[i], name);
         }
+        pDir = Prepare(f, FC + "/ToFvsEkin/Scattered");
+        for (Int_t i = 0; i < 8; i++)
+        {
+            sprintf(name, "%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), i+1);
+            Save(pDir, pH2Sc[i], name);
+        }
         pDir = Prepare(f, "Analysis/EffToF");
         for (Int_t i = 0; i < 8; i++)
         {
@@ -322,10 +330,86 @@ void AnaGeant4(string FC = "PuFC", Bool_t save = 1, string FileName = "4_ene/PuF
     }
 }
 
+TH1D* GetPeakForm(TH1D *pH1ToF, Int_t ch = 0, string FC = "PuFC", Double_t IntExp = 1)
+{
+    char name[64] = "";
+    char title[128] = "";
+
+    /// simulation properties
+    Double_t AccPulseLength = 7.0; // ns
+    Double_t TimeResolution = 2.5; // ns
+    Int_t NbinsProj = pH1ToF->GetNbinsX();
+    Double_t ProjBinWidth = pH1ToF->GetXaxis()->GetBinWidth(1);
+    Int_t AccPulseBins = AccPulseLength / ProjBinWidth;
+    cout << endl << "Simulating ToF spectra..." << endl
+         << " Acc. pulse length: " << AccPulseLength << " ns" << endl
+         << " Time resolution: " << TimeResolution << " ns" << endl
+         << " Original bins: " << NbinsProj << endl
+         << " Original bin width: " << ProjBinWidth << endl
+         << " Acc. pulse bins: " << AccPulseBins << endl;
+
+    /// experimental properties - depending on FC
+    Double_t tMaximum = PeakCenter(ch, FC);
+    Double_t minToF = 0;
+    Double_t maxToF = 440;
+    Int_t NbinsToF = (maxToF - minToF) / ProjBinWidth; // use Tproj's bin width
+
+    /// Prepare simulated ToF histogram
+    sprintf(name, "%s_Dt_Ch.%i", FC.c_str(), ch+1);
+    sprintf(title, "%s, Ch. %i, simulated ToF spectrum; #font[12]{t} [ns]; Counts", FC.c_str(), ch+1);
+    TH1D *pH1Peak = new TH1D(name, title,  NbinsToF, minToF, maxToF);
+    cout << " Sim. bins: " << pH1Peak->GetNbinsX() << endl
+         << " Sim. ToF range: " << pH1Peak->GetBinLowEdge(1) << "-" << pH1Peak->GetBinLowEdge(pH1Peak->GetNbinsX()+1) << " ns" << endl;
+
+    /// create folding function
+    Double_t ampl = 1.0 / (Double_t)AccPulseBins / sqrt(2 * TMath::Pi()) * pH1Peak->GetBinWidth(1) / TimeResolution;
+    cout << " Ampl: " << ampl << endl;
+    TF1* g = new TF1("fG", "gaus", -440, 440);
+    g->SetParameters(1, 0, TimeResolution);
+
+    /// fold
+    Int_t ProjMaxBin = pH1ToF->GetMaximumBin();
+    Double_t ProjMax = pH1ToF->GetBinCenter(ProjMaxBin);
+    //        cout << ProjMax << " -> " << tm[i] << endl;
+    for (Int_t j = 1; j <= NbinsToF; j++)
+    {
+        Double_t t0 = pH1Peak->GetBinCenter(j); // ToF sampling point
+        //            cout << t0 << endl;
+        Double_t sum = 0;
+        for (Int_t k = 1; k < NbinsProj - AccPulseBins; k++)
+        {
+            Double_t t1 = 0.5 * (pH1ToF->GetBinCenter(k) + pH1ToF->GetBinCenter(k + AccPulseBins));
+            //                cout << " " << t1;
+            sum += g->Eval(t1 - t0 + tMaximum - ProjMax) * pH1ToF->Integral(k, k + AccPulseBins - 1);
+        }
+        //            cout << j << "  " << t0 << "  " << sum << endl;
+        pH1Peak->SetBinContent(j, sum);
+    }
+    Double_t IntSim = pH1Peak->Integral();
+    pH1Peak->Scale(IntExp / IntSim);
+    return pH1Peak;
+}
+
+void PeakForm(string key = "2", string FC = "PuFC", string File = "/home/hoffma93/Programme/MCNP/results/MCNP.root")
+{
+    char name[64] = "";
+    TFile *f = TFile::Open(File.c_str(), "UPDATE");
+    TDirectory *pDir = Prepare(f, "Analysis/SimToF/" + PathTag(key));
+    for (Int_t i = 0; i < 8; i++)
+    {
+        TH1D *pH1ToF = GetProjection(f, i, key, FC);
+        TH1D *pH1Peak = GetPeakForm(pH1ToF, i, FC, 1.0);
+        sprintf(name, "%s_FoldT_%i", FC.c_str(), i+1);
+        Save(pDir, pH1Peak, name);
+    }
+    f->Save();
+    f->Close();
+}
+
 void AnaSim()
 {
 //    MCNPtoROOT();
-    AnaMCNP("PuFC", 1, "/home/hoffma93/Programme/MCNP/results/MCNP_simple.root", 6000000000);
+//    AnaMCNP("PuFC", 1, "/home/hoffma93/Programme/MCNP/results/MCNP_simple.root", 6000000000);
     AnaMCNP("PuFC", 1, "/home/hoffma93/Programme/MCNP/results/MCNP.root", 60000000000);
-    AnaGeant4("PuFC", 1, "5_ENDFVII.1/PuFC_Open_15E5.root");
+//    AnaGeant4("PuFC", 1, "5_ENDFVII.1/PuFC_Open_5E7.root");
 }

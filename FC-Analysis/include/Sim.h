@@ -1,3 +1,6 @@
+#ifndef SIM_H
+#define SIM_H
+
 #include <string>
 #include "Plot.h"
 #include "TGraph.h"
@@ -89,3 +92,4 @@ private:
             DoneDirect,
             DoneCalc;
 };
+#endif

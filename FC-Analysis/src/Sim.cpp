@@ -1,4 +1,5 @@
 #include "Sim.h"
+#include "TF1.h"
 using namespace std;
 
 Sim::Sim(string file_name, string fc, string setup, Bool_t use_track_id, Bool_t draw_flag)

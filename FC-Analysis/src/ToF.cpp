@@ -1,6 +1,5 @@
 // Analysen der ToF-Spektren
 #include "ToF.h"
-#include "TFile.h"
 
 using namespace std;
 
@@ -261,6 +260,7 @@ void ToF::DrawDt()
 
 void ToF::FitCommonBackground()
 {
+    // Open files
     TFile *fFG;
     TFile *fBG;
     string file1, file2;
@@ -274,6 +274,43 @@ void ToF::FitCommonBackground()
     fFG = TFile::Open(file1.c_str());
     fBG = TFile::Open(file2.c_str());
 
+    // Get live times
+    TH1D *pH1tFG = (TH1D*)fFG->Get("Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    Double_t tFG = pH1tFG->Integral();
+    TH1D *pH1tBG = (TH1D*)fBG->Get("Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    Double_t tBG = pH1tBG->Integral();
+
+    for (Int_t i = 0; i < 8; i++)
+        FitCommonBackground(i, fFG, fBG, t_live / (tFG + tBG));
+}
+
+
+void ToF::FitCommonBackground(Int_t i, TFile *fFG, TFile *fBG, Double_t t_ratio)
+{
+    char name[64] = "";
+
+    // Open Dt histograms
+    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+    TH1I *pH1DtSum = (TH1I*)fFG->Get(name);
+    TH1I *pH1DtBG = (TH1I*)fBG->Get(name);
+    pH1DtSum->Add(pH1DtBG, 1);
+    pH1DtSum->Sumw2();
+    pH1DtSum->Scale(t_ratio);
+
+    // Prepare fit
+    Double_t xmin = pH1Dt[i]->GetBinLowEdge(1);
+    Double_t xmax = pH1Dt[i]->GetBinLowEdge(pH1Dt[i]->GetNbinsX() + 2);
+    ToF_BG_max[0] = pH1Dt[i]->GetXaxis()->GetBinLowEdge(l1[i]);
+    ToF_BG_min[1] = pH1Dt[i]->GetXaxis()->GetBinLowEdge(l2[i]);
+    Int_t npar = 1;
+
+    // Fit function
+    sprintf(name, "%s_fC_%i", Name.c_str(), i+1);
+    fCommon[i] = new TF1(name, fline, xmin, xmax, npar);
+    reject = kTRUE;
+    pH1DtSum->Fit(name, "LR0Q");
+    reject = kFALSE;
+    SaveToFile("Analysis/ToF/BG/Common", fCommon[i]);
 }
 
 
@@ -287,7 +324,7 @@ void ToF::FitBackground()
 }
 
 
-void ToF::FitBackground(Int_t  i)
+void ToF::FitBackground(Int_t i)
 {
     char name[64] = "";
     Double_t xmin = pH1Dt[i]->GetBinLowEdge(1);

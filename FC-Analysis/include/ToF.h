@@ -3,6 +3,9 @@
 
 #include <string>
 #include "Hist.h"
+#include "TFile.h"
+#include "TFitter.h"
+#include "TFitResult.h"
 #define NumCh 8
 
 using namespace std;
@@ -34,6 +37,7 @@ private:
     void OpenToF(string file_name);
     void MakeLimits(Double_t left, Double_t right);
     void FitCommonBackground();
+    void FitCommonBackground(Int_t i, TFile *fFG, TFile *fBG, Double_t t_ratio);
     void FitBackground();
     void FitBackground(Int_t  i);
     void SaveToFile(string path, TObject *pObj);
@@ -56,6 +60,7 @@ private:
     TFile* f;
     TH1F* pH1Dt[NumCh];
     TH1F* pH1DtSub[NumCh];
+    TF1* fCommon[NumCh];
     TF1* fTotal[NumCh];
     TF1* fLeft[NumCh];
     TF1* fRight[NumCh];

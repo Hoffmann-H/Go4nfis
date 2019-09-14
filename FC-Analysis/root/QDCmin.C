@@ -3,6 +3,8 @@
 ////                 PuFC::HardCodedThresholds(), UFC::HardCodedThresholds()
 
 #include "SaveToFile.C"
+#include "TDirectory.h"
+#include "TFile.h"
 
 void FitLimits(Int_t i, Bool_t PuFC = 1)
 {

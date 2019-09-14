@@ -1,3 +1,6 @@
+#ifndef ANASIM_H
+#define ANASIM_H
+
 #include <string>
 #include "Hist.h"
 #include "Sim.h"
@@ -48,3 +51,5 @@ private:
            DoneCorrections;
 
 };
+
+#endif

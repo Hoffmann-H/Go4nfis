@@ -2,10 +2,11 @@
 #define FC_H
 
 #include <string>
-#include "Run.h"
+#include "ToF.h"
 #include "Hist.h"
 #include "AnaSim.h"
-#include "Plot.h"
+
+//#include "Plot.h"
 
 #define NumCh 8
 #define MaxRuns 10
@@ -18,7 +19,7 @@ public:
     string Name;
     Bool_t CommentFlag;
     Bool_t DrawSingle, DrawMulti;
-    Plot *plot;
+//    Plot *plot;
     Int_t FgRuns;
     Int_t BgRuns;
     Int_t nRuns;

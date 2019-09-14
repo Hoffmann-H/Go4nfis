@@ -1,4 +1,3 @@
-//
 #include "FC.h"
 
 using namespace std;
@@ -20,8 +19,8 @@ void FC::InitVar(Bool_t draw)
     cout << endl << "Initializing common variables..." << endl;
     DrawSingle = draw;
     DrawMulti = kFALSE;
-    if (DrawSingle || DrawMulti)
-        plot = new Plot(Name, "Open");
+//    if (DrawSingle || DrawMulti)
+//        plot = new Plot(Name, "Open");
     FgRuns = 0;
     BgRuns = 0;
     nRuns = 0;
@@ -207,7 +206,7 @@ void FC::CrossSection()
 void FC::GetSimFg()
 {
     cout << endl << "Simulation results requested. Starting " << Name << " foreground simulation analysis..." << endl;
-    sim = new AnaSim(Name, 1, plot);
+    sim = new AnaSim(Name, 1, 0);
     sim->Corrections();
     for (Int_t i = 0; i < NumCh; i++)
     {
@@ -244,6 +243,7 @@ void FC::Corrections()
         cout << "eval CS(14.97 MeV) = " << sim->Fg->gPu242->Eval(14.97) << "+-" << sim->Fg->DgPu242->Eval(14.97) << endl;
     else
         cout << "eval CS(14.97 MeV) = " << sim->Fg->gU235->Eval(14.97) << "+-" << sim->Fg->DgU235->Eval(14.97) << endl;
+    cout << endl << "check" << endl;
     cout << "Ch   uncorrected CS   corrected CS" << endl;
     Double_t sUCS = 0, sCS = 0, D2UCS = 0, D2CS = 0;
     for (int i = 0; i < NumCh; i++)

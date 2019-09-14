@@ -1,6 +1,20 @@
 #ifndef FC_H
 #define FC_H
 
+Double_t PeakCenter(Int_t ch, string FC = "PuFC")
+{
+    if (!strcmp(FC.c_str(), "PuFC"))
+    { // PuFC
+        Double_t m[] = {139.7705, 128.2225, 125.879, 129.663, 129.5655, 128.589, 127.466, 127.49};
+        return m[ch];
+    }
+    else
+    {
+        Double_t m[] = {273.4865, 268.945, 260.5955, 265.2345, 265.21, 264.3555, 263.501, 263.086};
+        return m[ch];
+    }
+}
+
 Double_t Distance(Int_t ch, string FC = "PuFC")
 {
     if (!strcmp(FC.c_str(), "PuFC"))

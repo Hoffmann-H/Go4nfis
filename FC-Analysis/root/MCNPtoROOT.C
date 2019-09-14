@@ -23,7 +23,31 @@ void GetBinning(string file_to_read)
     cout << "E: " << Ebins << " steps from " << Emin << " to " << Emax << endl;
 }
 
-TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", Int_t ch = 0, Bool_t track_length = 1)
+string NameTag(string result_key = "2")
+{
+    if (result_key == "2")
+        return "";
+    if (result_key == "1")
+        return "Sc_";
+    if (result_key == "0")
+        return "Dir_";
+    cout << "Unknown result key " << result_key << endl;
+    return 0;
+}
+
+string PathTag(string result_key = "2")
+{
+    if (result_key == "2")
+        return "";
+    if (result_key == "1")
+        return "Scattered/";
+    if (result_key == "0")
+        return "Direct/";
+    cout << "Unknown result key " << result_key << endl;
+    return 0;
+}
+
+TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", string key = "2", Int_t ch = 0, Bool_t track_length = 1)
 {
     char name[64] = "";
     Int_t N;
@@ -50,7 +74,7 @@ TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", Int_t ch = 
         Tmin = 0.0, Tmax = 500.0, Emin = 0.0, Emax = 20.0;
         Tbins = 500, Ebins = 200;
     }
-    sprintf(name, "EvsT%i", ch + 1);
+    sprintf(name, "%s_ToFvsEkin_%sCh.%i", FC.c_str(), NameTag(key).c_str(), ch + 1);
     TH2D *pHist = new TH2D(name, name,
                            Tbins, Tmin, Tmax, Ebins, Emin, Emax);
     sprintf(name, "%s, ToF vs Ekin, ch.%i", FC.c_str(), ch + 1);
@@ -95,30 +119,6 @@ TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", Int_t ch = 
     return pHist;
 }
 
-string NameTag(string result_key = "2")
-{
-    if (result_key == "2")
-        return "";
-    if (result_key == "1")
-        return "Sc_";
-    if (result_key == "0")
-        return "Dir_";
-    cout << "Unknown result key " << result_key << endl;
-    return 0;
-}
-
-string PathTag(string result_key = "2")
-{
-    if (result_key == "2")
-        return "";
-    if (result_key == "1")
-        return "Scattered/";
-    if (result_key == "0")
-        return "Direct/";
-    cout << "Unknown result key " << result_key << endl;
-    return 0;
-}
-
 void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, string FC = "PuFC")
 { // Convert Track Length MCNP results to root
     char name[128] = "";
@@ -126,11 +126,9 @@ void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
     TH2D *h[8];
 
     TFile *f;
-    TDirectory *pDir;
     if (save)
     {
         f = TFile::Open("/home/hoffma93/Programme/MCNP/results/MCNP.root", "UPDATE");
-        pDir = Prepare(f, FC + "/ToFvsEkin/" + PathTag(result_key));
     }
     TCanvas *c1;
     if (draw)
@@ -145,21 +143,15 @@ void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
         sprintf(name, "%s/FCscat_g_tally-2%i4_xyz_0_%s.dmp", DirName.c_str(), 8 - i, result_key.c_str());
 
         // Create 2D histogram
-        h[i] = MakeEvsT(name, 0, FC, i);
+        h[i] = MakeEvsT(name, 0, FC, result_key, i);
         // Track length estimator gives neutrons per started neutron and cm^2
         Double_t DepositArea = TMath::Pi() * pow(3.7, 2);
         h[i]->Scale(DepositArea);
 
         if (save)
         {
-            std::stringstream s;
-            if (result_key == "2")
-                s << FC << "_ToFvsEkin_Ch." << i+1;
-            if (result_key == "1")
-                s << FC << "_ToFvsEkin_Sc_Ch." << i+1;
-            if (result_key == "0")
-                s << FC << "_ToFvsEkin_Dir_Ch." << i+1;
-            Save(pDir, h[i], s.str());
+            cout << "Saving " << FC<<"/ToFvsEkin/"<<PathTag(result_key) << endl;
+            Save(f, FC+"/ToFvsEkin/"+PathTag(result_key), h[i]);
         }
         if (draw)
         {
@@ -188,18 +180,9 @@ void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
     string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_PTB/tally";
     TH2D *h[8];
     TFile *f;
-    TDirectory *pDir;
     if (save)
     {
         f = TFile::Open("/home/hoffma93/Programme/MCNP/results/MCNP_simple.root", "UPDATE");
-        string path;
-        if (result_key == "2")
-            path = "PuFC/ToFvsEkin/";
-        if (result_key == "1")
-            path = "PuFC/ToFvsEkin/Scattered/";
-        if (result_key == "0")
-            path = "PuFC/ToFvsEkin/Direct/";
-        pDir = Prepare(f, path);
     }
     TCanvas *c1;
     if (draw)
@@ -212,40 +195,40 @@ void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
     for (Int_t i = 0; i < 8; i++)
     {
         sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_%s.dmp", DirName.c_str(), 8 - i, result_key.c_str());
+        string front_key, back_key;
 
         // Create 2D histogram
         if (result_key == "2")
         { // total
-            sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_8.dmp", DirName.c_str(), 8 - i);
-            h[i] = MakeEvsT(name, 0, FC, i, 0);
-            sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_9.dmp", DirName.c_str(), 8 - i);
-            TH2D *pH2front = MakeEvsT(name, 0, FC, i, 0);
-            h[i]->Add(pH2front);
+            front_key = "9";
+            back_key = "8";
         }
         if (result_key == "1")
         { // scattered
-            sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_4.dmp", DirName.c_str(), 8 - i);
-            h[i] = MakeEvsT(name, 0, FC, i, 0);
-            sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_5.dmp", DirName.c_str(), 8 - i);
-            TH2D *pH2front = MakeEvsT(name, 0, FC, i, 0);
-            h[i]->Add(pH2front);
+            front_key = "5";
+            back_key = "4";
         }
         if (result_key == "0")
         { // direct
-            sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_1.dmp", DirName.c_str(), 8 - i);
-            h[i] = MakeEvsT(name, 0, FC, i, 0);
+            front_key = "1";
+            back_key = "0";
         }
+        // Open 2D front
+        sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_%s.dmp", DirName.c_str(), 8-i, front_key.c_str());
+        TH2D *pH2front = MakeEvsT(name, 0, FC, result_key, i, 0);
+        // Change name to prevent overwriting
+        sprintf(name, "%s_EvsT_front_%i", FC.c_str(), i+1);
+        pH2front->SetName(name);
+        // Open 2D back
+        sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_%s.dmp", DirName.c_str(), 8-i, back_key.c_str());
+        h[i] = MakeEvsT(name, 0, FC, result_key, i, 0);
+        // Add front and back
+        h[i]->Add(pH2front);
 
         if (save)
         {
-            std::stringstream s;
-            if (result_key == "2")
-                s << FC << "_ToFvsEkin_Ch." << i+1;
-            if (result_key == "1")
-                s << FC << "_ToFvsEkin_Sc_Ch." << i+1;
-            if (result_key == "0")
-                s << FC << "_ToFvsEkin_Dir_Ch." << i+1;
-            Save(pDir, h[i], s.str());
+            cout << "Saving " << FC<<"/ToFvsEkin/"<<PathTag(result_key) << endl;
+            Save(f, FC+"/ToFvsEkin/"+PathTag(result_key), h[i]);
         }
         if (draw)
         {
@@ -266,7 +249,7 @@ void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
         f->Save();
         f->Close();
     }
-}
+}//*/
 
 
 void MCNPtoROOT()
