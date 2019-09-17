@@ -33,8 +33,8 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
     Double_t D2avNIF[n];
 
     sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s", file_name.c_str());
-    TFile *f = TFile::Open(name, "UPDATE");
-    TDirectory *pDir = Prepare(f, "Analysis/ToF/Gate");
+    TFile *f = TFile::Open(name, "READ");
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     TGraphErrors *ge[8];
     TGraphErrors *geAv = new TGraphErrors(n);
     TMultiGraph *mg = new TMultiGraph("mgPeak", "ToF Peak; Gate[ns]; Peak");
@@ -66,8 +66,7 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
                 geAv->SetPointError(j, 0, sqrt(D2avNIF[j]));
             }
         }
-        sprintf(name, "gPeak_%i", i+1);
-        Save(pDir, ge[i], name);
+        Save(fAna, FC+"/ToF/Gate/Peak", ge[i], "gPeak_"+to_string(i+1));
         ge[i]->SetLineColorAlpha(i+2, 0.5);
         ge[i]->SetLineWidth(1);
         ge[i]->SetMarkerColorAlpha(i+2, 0.5);
@@ -77,8 +76,7 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
         l->AddEntry(ge[i], name, "ep");
         mg->Add(ge[i]);
     }
-    pDir = Prepare(f, "Analysis/ToF/Gate");
-    Save(pDir, geAv, "gPeak_av");
+    Save(fAna, FC+"/ToF/Gate/Peak", geAv, "gPeak_av");
     geAv->SetLineColorAlpha(1, 0.5);
     geAv->SetLineWidth(2);
     geAv->SetMarkerColorAlpha(1, 0.5);
@@ -89,7 +87,8 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
     new TCanvas();
     mg->Draw("AP");
     l->Draw();
-    f->Save();
+    fAna->Save();
+    fAna->Close();
     f->Close();
 }
 
@@ -111,8 +110,8 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
     Double_t D2avNIF[n];
 
     sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s", file_name.c_str());
-    TFile *f = TFile::Open(name, "UPDATE");
-    TDirectory *pDir = Prepare(f, "Analysis/ToF/BG");
+    TFile *f = TFile::Open(name, "READ");
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     TGraphErrors *gL[8];
     TGraphErrors *gR[8];
     TMultiGraph *mg = new TMultiGraph("mgBg", "ToF Background; Gate[ns]; Background/ns[1/s]");
@@ -136,10 +135,8 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
             gR[i]->SetPointError(j, 0, DR);
 //            cout << r << "  " << L << "+-" << DL << " " << R << "+-" << DR << endl;
         }
-        sprintf(name, "gBgL_%i", i+1);
-        Save(pDir, gL[i], name);
-        sprintf(name, "gBgR_%i", i+1);
-        Save(pDir, gR[i], name);
+        Save(fAna, FC+"/ToF/Gate/Background/Left", gL[i], "gBgL_"+to_string(i+1));
+        Save(fAna, FC+"/ToF/Gate/Background/Right", gR[i], "gBgR_"+to_string(i+1));
         gR[i]->SetLineColorAlpha(i+2, 0.5);
         gR[i]->SetLineWidth(1);
         gR[i]->SetMarkerColorAlpha(i+2, 0.5);
@@ -152,7 +149,8 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
     new TCanvas();
     mg->Draw("AP");
     l->Draw();
-    f->Save();
+    fAna->Save();
+    fAna->Close();
     f->Close();
 }
 

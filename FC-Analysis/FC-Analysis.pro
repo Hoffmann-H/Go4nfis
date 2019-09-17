@@ -65,5 +65,9 @@ OTHER_FILES += \
     root/Carlson.C \
     root/MCNPtoROOT.C \
     root/AnaSim.C \
-    root/FC.C
+    root/FC.C \
+    root/ToF.C \
+    root/NeutronField.C \
+    root/CrossSection.C \
+    root/Runs.C
 }

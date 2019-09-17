@@ -3,26 +3,6 @@
 
 #include "TF1.h"
 
-void Save(TFile *f, string path, TH1 *pObj)
-{
-//    if (f->GetDirectory(path.c_str()) == 0)
-//    {
-//        cout << "Creating " << path << endl;
-//        f->mkdir(path.c_str(), "Folder");
-//    }
-//    f->cd(path.c_str());
-    TDirectory *pDir = f->GetDirectory(path.c_str());
-    if (pDir == 0)
-    {
-        cout << " Creating root directory " << path << endl;
-        f->mkdir(path.c_str(), "Folder");
-        pDir = f->GetDirectory(path.c_str());
-    }
-    pDir->cd();
-    pObj->Write("", TObject::kOverwrite);
-    return;
-}
-
 TDirectory* Prepare(TFile *f, string path)
 {
     TDirectory *pDir = f->GetDirectory(path.c_str());
@@ -34,6 +14,27 @@ TDirectory* Prepare(TFile *f, string path)
     }
     pDir->cd();
     return pDir;
+}
+
+void Save(TFile *f, string path, TH1 *pObj, string setName = "")
+{
+    TDirectory *pDir = Prepare(f, path);
+    pObj->Write(setName.c_str(), TObject::kOverwrite);
+    return;
+}
+
+void Save(TFile *f, string path, TGraph *pObj, string setName = "")
+{
+    TDirectory *pDir = Prepare(f, path);
+    pObj->Write(setName.c_str(), TObject::kOverwrite);
+    return;
+}
+
+void Save(TFile *f, string path, TF1 *pObj, string setName = "")
+{
+    TDirectory *pDir = Prepare(f, path);
+    pObj->Write(setName.c_str(), TObject::kOverwrite);
+    return;
 }
 
 //// Usage:

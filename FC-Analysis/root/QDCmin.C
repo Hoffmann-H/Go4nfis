@@ -50,10 +50,10 @@ TF1* FindMin(TH1I *pH, Int_t xmin, Int_t xmax)
 
 void FindPuMinima()
 {
-    TFile *fPuNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "UPDATE");
-    TFile *fPuSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root", "UPDATE");
-    TFile *fPuSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "UPDATE");
-    TDirectory *pDir;
+    TFile *fPuNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "READ");
+    TFile *fPuSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root", "READ");
+    TFile *fPuSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "READ");
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     Int_t x[] = {950, 900, 950, 900, 1050, 950, 950, 900}; // rough minimum positions
     Int_t xmin, xmax;
     Double_t mFG, mBG, mSF, mAv, mSum;
@@ -87,12 +87,9 @@ void FindPuMinima()
         mSF = fSF->GetMinimumX(xmin, xmax);
 
         // Save fit functions
-        pDir = Prepare(fPuNIF, "Analysis/QDC/Fit");
-        Save(pDir, fFG, "pol4_FG_" + to_string(i+1));
-        pDir = Prepare(fPuSB, "Analysis/QDC/Fit");
-        Save(pDir, fBG, "pol4_BG_" + to_string(i+1));
-        pDir = Prepare(fPuSF, "Analysis/QDC/Fit");
-        Save(pDir, fSF, "pol4_SF_" + to_string(i+1));
+        Save(fAna, "PuFC/QDC/Fit/FG", fFG, "pol4_FG_"+to_string(i+1));
+        Save(fAna, "PuFC/QDC/Fit/BG", fBG, "pol4_BG_"+to_string(i+1));
+        Save(fAna, "PuFC/QDC/Fit/SF", fSF, "pol4_SF_"+to_string(i+1));
 
         // Calculate average
         Int_t intFG = hFG->Integral(hFG->FindBin(mFG), 4096);
@@ -122,22 +119,14 @@ void FindPuMinima()
 //    gSF->SetTitle("QDC pol4 fit minima");
 //    gAv->SetTitle("QDC average fit minima");
 //    gSum->SetTitle("QDC sum fit minima");
-    pDir = Prepare(fPuNIF, "Analysis/QDC");
-    Save(pDir, gFG, "Minima_FG");
-    Save(pDir, gAv, "Average");
-    Save(pDir, gSum, "Sum");
-    pDir = Prepare(fPuSB, "Analysis/QDC");
-    Save(pDir, gBG, "Minima_BG");
-//    Save(pDir, gAv, "Average");
-//    Save(pDir, gSum, "Sum");
-    pDir = Prepare(fPuSF, "Analysis/QDC");
-    Save(pDir, gSF, "Minima_SF");
-//    Save(pDir, gAv, "Average");
-//    Save(pDir, gSum, "Sum");
+    Save(fAna, "PuFC/QDC", gFG, "Minima_FG");
+    Save(fAna, "PuFC/QDC", gBG, "Minima_BG");
+    Save(fAna, "PuFC/QDC", gSF, "Minima_SF");
+    Save(fAna, "PuFC/QDC", gAv, "Average");
+    Save(fAna, "PuFC/QDC", gSum, "Sum");
 
-    fPuNIF->Save();
-    fPuSB->Save();
-    fPuSF->Save();
+    fAna->Save();
+    fAna->Close();
     fPuNIF->Close();
     fPuSB->Close();
     fPuSF->Close();
@@ -145,9 +134,9 @@ void FindPuMinima()
 
 void FindUMinima()
 {
-    TFile *fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "UPDATE");
-    TFile *fUSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root", "UPDATE");
-    TDirectory *pDir;
+    TFile *fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "READ");
+    TFile *fUSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root", "READ");
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     Int_t xmin[] = {150, 350, 150, 150, 100, 100, 100, 50}; // rough minimum ranges
     Int_t xmax[] = {400, 900, 400, 400, 400, 350, 350, 300};
     Double_t mFG, mBG, mAv, mSum;
@@ -174,10 +163,8 @@ void FindUMinima()
         mBG = fBG->GetMinimumX(xmin[i], xmax[i]);
 
         // Save fit functions
-        pDir = Prepare(fUNIF, "Analysis/QDC/Fit");
-        Save(pDir, fFG, "pol4_FG_" + to_string(i+1));
-        pDir = Prepare(fUSB, "Analysis/QDC/Fit");
-        Save(pDir, fBG, "pol4_BG_" + to_string(i+1));
+        Save(fAna, "UFC/QDC/Fit/FG", fFG, "pol4_FG_"+to_string(i+1));
+        Save(fAna, "UFC/QDC/Fit/BG", fBG, "pol4_BG_"+to_string(i+1));
 
         // Calculate average
         Int_t intFG = hFG->Integral(hFG->FindBin(mFG), 4096);
@@ -198,23 +185,19 @@ void FindUMinima()
         cout << " " << i+1 << "   " << mFG << "   " << mBG << "   "
              << mAv << "   " << mSum << endl;
     }
-    pDir = Prepare(fUNIF, "Analysis/QDC");
-    Save(pDir, gFG, "Minima_FG");
-    Save(pDir, gAv, "Average");
-    Save(pDir, gSum, "Sum");
-    pDir = Prepare(fUSB, "Analysis/QDC");
-    Save(pDir, gBG, "Minima_BG");
-//    Save(pDir, gAv, "Average");
-//    Save(pDir, gSum, "Sum");
+    Save(fAna, "UFC/QDC", gFG, "Minima_FG");
+    Save(fAna, "UFC/QDC", gBG, "Minima_BG");
+    Save(fAna, "UFC/QDC", gAv, "Average");
+    Save(fAna, "UFC/QDC", gSum, "Sum");
 
-    fUNIF->Save();
-    fUSB->Save();
+    fAna->Save();
+    fAna->Close();
     fUNIF->Close();
     fUSB->Close();
 }
 
 void QDCmin()
 {
-//    FindPuMinima();
+    FindPuMinima();
     FindUMinima();
 }

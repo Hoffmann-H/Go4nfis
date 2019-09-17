@@ -1,17 +1,14 @@
+/// file effUmA.dat is used
 #include "SaveToFile.C"
 
 void NumberOfPuAtoms()
 {
-    TFile* fPuNIF = TFile::Open("~/Programme/Go4nfis/offline/results/NIF.root", "UPDATE");
-    TFile* fPuSB = TFile::Open("~/Programme/Go4nfis/offline/results/SB.root", "UPDATE");
-    TFile* fPuSF = TFile::Open("~/Programme/Go4nfis/offline/results/SF.root", "UPDATE");
-    TDirectory *pDir;
+    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     Double_t PuSFT2 = 6.76E10 * 365.24*24*60*60;
     Double_t DPuSFT2 = 7E8 * 365.24*24*60*60;
     Double_t rSF_Toni[] = {4.3234, 3.8945, 3.4859, 3.3611, 3.5388, 3.5293, 3.2948, 4.2508};
     Double_t DrSF_Toni[] = {0.0013, 0.0012, 0.0011, 0.0011, 0.0011, 0.0011, 0.0011, 0.0013};
     TGraphErrors *ge = new TGraphErrors(8);
-    ge->SetName("nAtoms");
     for (Int_t i = 0; i < 8; i++)
     {
         Double_t nAtoms = rSF_Toni[i] * PuSFT2 / log(2.0);
@@ -20,18 +17,9 @@ void NumberOfPuAtoms()
         ge->SetPoint(i, i+1, nAtoms);
         ge->SetPointError(i, 0, DnAtoms);
     }
-    pDir = Prepare(fPuNIF, "Analysis/nAtoms");
-    Save(pDir, ge, "effNPu");
-//    pDir = Prepare(fPuSB, "Analysis/nAtoms");
-//    Save(pDir, ge, "effNPu");
-//    pDir = Prepare(fPuSF, "Analysis/nAtoms");
-//    Save(pDir, ge, "effNPu");
-    fPuNIF->Save();
-    fPuSB->Save();
-    fPuSF->Save();
-    fPuNIF->Close();
-    fPuSB->Close();
-    fPuSF->Close();
+    Save(fAna, "PuFC/nAtoms", ge, "PuFC_effN");
+    fAna->Save();
+    fAna->Close();
 }
 
 TGraphErrors* EffUmA()
@@ -50,8 +38,7 @@ void NumberOfUAtoms()
     Double_t Deposit_area = TMath::Pi() * pow(Deposit_radius, 2); // cm^2
     Double_t MolarMass = 235.3175644086;
     Double_t u = 1.660539E-24; // [g]
-    TFile* fUNIF = TFile::Open("~/Programme/Go4nfis/offline/results/UFC_NIF.root", "UPDATE");
-    TDirectory *pDir;
+    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     TGraphErrors *gEffUmA = EffUmA();
     TGraphErrors *gEffNU = new TGraphErrors(8);
     for (Int_t i = 0; i < 8; i++)
@@ -65,16 +52,14 @@ void NumberOfUAtoms()
         gEffNU->SetPoint(i, i+1, effNU);
         gEffNU->SetPointError(i, 0, DeffNU);
     }
-
-    pDir = Prepare(fUNIF, "Analysis/nAtoms");
-    Save(pDir, gEffUmA, "effUmA");
-    Save(pDir, gEffNU, "effNU");
-    fUNIF->Save();
-    fUNIF->Close();
+    Save(fAna, "UFC/nAtoms", gEffUmA, "effUmA");
+    Save(fAna, "UFC/nAtoms", gEffNU, "UFC_effN");
+    fAna->Save();
+    fAna->Close();
 }
 
 void NumberOfAtoms()
 {
-//    NumberOfPuAtoms();
+    NumberOfPuAtoms();
     NumberOfUAtoms();
 }

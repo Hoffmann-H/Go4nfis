@@ -1,3 +1,9 @@
+#ifndef TOF_H
+#define TOF_H
+#include "FC.C"
+#include "Runs.C"
+#include "SaveToFile.C"
+
 TH1F* GetToF(TFile *f, Int_t ch, string FC = "PuFC")
 {
     char name[64] = "";
@@ -12,12 +18,171 @@ TH1F* GetToF(TFile *f, Int_t ch, string FC = "PuFC")
     return pH1F;
 }
 
+Double_t ToF_BG_min[]   = {25., 850.};               //ns
+Double_t ToF_BG_max[]   = {95.,2450.};               //ns
+Bool_t reject;
+Double_t fline(Double_t *x, Double_t *par)
+{   //compute the function only in selected sub-ranges
+    if (reject)
+    {   //only include points in sub-range into the fit
+        if ((x[0] >= ToF_BG_min[0] && x[0] <= ToF_BG_max[0]) ||
+            (x[0] >= ToF_BG_min[1] && x[0] <= ToF_BG_max[1]))
+            return par[0];
+        else
+        {   TF1::RejectPoint();
+            return 0;
+        }
+    }
+    //compute the function values over the whole range
+    else
+        return par[0];
+}
+
+TF1* FitLeft(TH1F *pH, Int_t i, string FC, string Run)
+{
+    char name[64] = "";
+    ToF_BG_min[0] = pH->GetBinLowEdge(Gate_0(i, FC));
+    ToF_BG_max[0] = pH->GetBinLowEdge(Gate_1(i, FC));
+    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_2(i, FC) + 1);
+    ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC) + 1);
+    Double_t xmin = ToF_BG_min[0];
+    Double_t xmax = ToF_BG_max[0];
+//    cout << ToF_BG_min[0] << " " << ToF_BG_max[0] << " " << ToF_BG_min[1] << " " << ToF_BG_max[1] << " " << xmin << " " << xmax << endl;
+
+    sprintf(name, "%s_fL_%i", Run.c_str(), i+1);
+    TF1 *fLeft = new TF1(name, fline, xmin, xmax, 1);
+    reject = kTRUE;
+    pH->Fit(name, "LR0Q");
+    return fLeft;
+}
+
+TF1* FitRight(TH1F *pH, Int_t i, string FC, string Run)
+{
+    char name[64] = "";
+    ToF_BG_min[0] = pH->GetBinLowEdge(Gate_0(i, FC));
+    ToF_BG_max[0] = pH->GetBinLowEdge(Gate_1(i, FC));
+    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_2(i, FC) + 1);
+    ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC) + 1);
+    Double_t xmin = ToF_BG_min[1];
+    Double_t xmax = ToF_BG_max[1];
+//    cout << ToF_BG_min[0] << " " << ToF_BG_max[0] << " " << ToF_BG_min[1] << " " << ToF_BG_max[1] << " " << xmin << " " << xmax << endl;
+
+    sprintf(name, "%s_fR_%i", Run.c_str(), i+1);
+    TF1 *fRight = new TF1(name, fline, xmin, xmax, 1);
+    reject = kTRUE;
+    pH->Fit(name, "LR0Q");
+    return fRight;
+}
+
+TF1* FitTotal(TH1F *pH, Int_t i, string FC, string Run)
+{
+    char name[64] = "";
+    ToF_BG_min[0] = Gate_0(i, FC);
+    ToF_BG_max[0] = Gate_1(i, FC);
+    ToF_BG_min[1] = Gate_2(i, FC);
+    ToF_BG_max[1] = Gate_3(i, FC);
+    Double_t xmin = pH->GetBinLowEdge(1);
+    Double_t xmax = pH->GetBinLowEdge(pH->GetNbinsX() + 1);
+
+    sprintf(name, "%s_fT_%i", Run.c_str(), i+1);
+    TF1 *fTotal = new TF1(name, fline, xmin, xmax, 1);
+    reject = kTRUE;
+    pH->Fit(name, "LR0Q");
+    reject = kFALSE;
+    return fTotal;
+}
+
+void SubtractBackground(string Run, string FC)
+{
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    char name[128] = "";
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    TFile *f = TFile::Open(name, "READ");
+    if (f == 0)
+        cout << "Error opening " << name << endl;
+    TH1D *pHt = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    Double_t t_live = pHt->Integral();
+    TGraphErrors *geNIF = new TGraphErrors(8);
+    TGraphErrors *geBG = new TGraphErrors(8);
+    TGraphErrors *geNIFrate = new TGraphErrors(8);
+    TGraphErrors *geBGrate = new TGraphErrors(8);
+
+    for (Int_t i = 0; i < 8; i++)
+    {
+        // Open ToF spectrum
+        TH1F *pH = GetToF(f, i, FC);
+        Double_t C_total, DC_total;
+        C_total = pH->IntegralAndError(0, -1, DC_total);
+        // Fit
+        TF1 *fLeft = FitLeft(pH, i, FC, Run);
+        Save(fAna, FC+"/ToF/Background/"+Run+"/Left", fLeft);
+        TF1 *fRight = FitRight(pH, i, FC, Run);
+        Save(fAna, FC+"/ToF/Background/"+Run+"/Right", fRight);
+        TF1 *fTotal = FitTotal(pH, i, FC, Run);
+        Save(fAna, FC+"/ToF/Background/"+Run+"/Total", fTotal);
+        // Subtract
+        pH->Add(fTotal, -1);
+        Save(fAna, FC+"/ToF/Signal/"+Run, pH);
+        // Integrate
+        Double_t C_nif, DC_nif;
+        C_nif = pH->IntegralAndError(Gate_1(i, FC), Gate_2(i, FC), DC_nif);
+        Double_t C_bg, DC_bg;
+        C_bg = C_total - C_nif;
+        DC_bg = sqrt(pow(DC_total , 2) + pow(DC_nif, 2));
+
+//        cout << DC_nif << "  " << sqrt(C_total + C_sf) << endl;
+        geBG->SetPoint(i, i+1, C_bg);
+        geBG->SetPointError(i, 0, DC_bg);
+        geNIF->SetPoint(i, i+1, C_nif);
+        geNIF->SetPointError(i, 0, DC_nif);
+        geBGrate->SetPoint(i, i+1, C_bg / t_live);
+        geBGrate->SetPointError(i, 0, DC_bg / t_live);
+        geNIFrate->SetPoint(i, i+1, C_nif / t_live);
+        geNIFrate->SetPointError(i, 0, DC_nif / t_live);
+    }
+    Save(fAna, FC+"/ToF/Signal/"+Run, geNIF, "InducedFission");
+    Save(fAna, FC+"/ToF/Background/"+Run, geBG, "FissionBackground");
+    Save(fAna, FC+"/ToF/Signal/"+Run, geNIFrate, "FissionRate");
+    Save(fAna, FC+"/ToF/Background/"+Run, geBGrate, "BackgroundRate");
+
+//    TCanvas *c1 = new TCanvas();
+//    pH->Draw("hist");
+//    fTotal->Draw("same");
+//    fLeft->Draw("same");
+//    fRight->Draw("same");
+//    c1->Draw();
+
+    fAna->Save();
+    fAna->Close();
+}
 
 void ToF()
 {
-    TFile *f = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
-    TH1F *pH = GetToF(f, 0);
-    TCanvas *c1 = new TCanvas();
-    pH->Draw("hist");
-    c1->Draw();
+    Int_t nRuns = GetnRuns();
+    for (Int_t j = 0; j < 10; j++)
+    {
+        string Run = GetRunName(j);
+        string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
+        SubtractBackground(Run, FC);
+    }//*/
+    /*SubtractBackground("PuFC_FG_MS4", "PuFC");
+    SubtractBackground("PuFC_FG_MS5", "PuFC");
+    SubtractBackground("PuFC_FG_MS6", "PuFC");
+    SubtractBackground("PuFC_FG_MS7", "PuFC");
+    SubtractBackground("PuFC_BG_MS9", "PuFC");
+    SubtractBackground("PuFC_BG_MS10", "PuFC");
+    SubtractBackground("PuFC_BG_MS11", "PuFC");
+    SubtractBackground("NIF", "PuFC");
+    SubtractBackground("SB", "PuFC");
+    SubtractBackground("UFC_FG_MS20_2", "UFC");
+    SubtractBackground("UFC_FG_MS20_3", "UFC");
+    SubtractBackground("UFC_FG_MS20_4", "UFC");
+    SubtractBackground("UFC_FG_MS21_2", "UFC");
+    SubtractBackground("UFC_FG_MS21_3", "UFC");
+    SubtractBackground("UFC_BG_MS20_5", "UFC");
+    SubtractBackground("UFC_BG_MS21_4", "UFC");
+    SubtractBackground("UFC_NIF", "UFC");
+    SubtractBackground("UFC_SB", "UFC");//*/
+
 }
+#endif
