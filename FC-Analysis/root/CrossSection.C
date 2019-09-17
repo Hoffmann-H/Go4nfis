@@ -2,13 +2,14 @@
 #define CROSS_SECTION_H
 #include "Runs.C"
 
-void CrossSection(string Run)
+string CrossSectionRun(string Run)
 {
+    TFile *fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     char name[64] = "";
+
     // choose fission chamber
     string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
-    cout << "Cross section for run " << Run << ", auto-assigned to " << FC << endl;
-    TFile *fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+//    cout << "Cross section for run " << Run << ", auto-assigned to " << FC << endl;
 
     // Get fission signal rate
     sprintf(name, "%s/ToF/Signal/%s/FissionRate", FC.c_str(), Run.c_str());
@@ -30,9 +31,16 @@ void CrossSection(string Run)
 
     // Create cross section graph
     TGraphErrors *geCrossSection = new TGraphErrors(8);
+
+    // Initialize returned string
+    std::stringstream line;
+    line << Run;
+
+    // loop over deposits
     for (Int_t i = 0; i < 8; i++)
     {
-        Double_t x, FissionRate, Atoms, Flux, DFissionRate, DAtoms, DFlux, CrossSection, DCrossSection;
+        Double_t x, FissionRate, Atoms, Flux, CrossSection;
+        Double_t DFissionRate, DAtoms, DFlux, DCrossSection;
         // Extract values from graphs
         geFissionRate->GetPoint(i, x, FissionRate);
         DFissionRate = geFissionRate->GetErrorY(i);
@@ -49,18 +57,47 @@ void CrossSection(string Run)
         // Write cross section to graph
         geCrossSection->SetPoint(i, i+1, CrossSection);
         geCrossSection->SetPointError(i, 0, DCrossSection);
+
+        line << " " << CrossSection << " " << DCrossSection;
     }
     Save(fAna, FC+"/CrossSection", geCrossSection, Run+"_CS_raw");
+    return line.str();
 }
 
-void CrossSection()
+void DoCrossSection(string FC)
 {
+    string FileName = "CrossSection_"+FC+".txt";
+    ofstream output("../results/"+FileName);
+    output << "# nr run {cs[b] unc[b]}" << endl;
+    Int_t nRuns = GetnRuns(FC);
+    for (Int_t j = 0; j < nRuns; j++)
+    {
+        string Run = GetRunName(FC, j);
+        output << j+1 << CrossSectionRun(Run) << endl;
+    }
+}
+
+void DoCrossSection()
+{
+    string FileName = "CrossSection.txt";
+    ofstream output("../results/"+FileName);
+    output << "# nr run {cs[b] unc[b]}" << endl;
     Int_t nRuns = GetnRuns();
     for (Int_t j = 0; j < nRuns; j++)
     {
         string Run = GetRunName(j);
-        CrossSection(Run);
+        output << j+1 << CrossSectionRun(Run) << endl;
     }
+}
+
+void CrossSection()
+{
+    DoCrossSection("UFC");
+    CrossSectionRun("UFC_NIF");
+    CrossSectionRun("UFC_SB");
+    DoCrossSection("PuFC");
+    CrossSectionRun("NIF");
+    CrossSectionRun("SB");
 }
 
 #endif

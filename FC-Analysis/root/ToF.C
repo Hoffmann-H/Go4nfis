@@ -159,10 +159,12 @@ void SubtractBackground(string Run, string FC)
 void ToF()
 {
     Int_t nRuns = GetnRuns();
-    for (Int_t j = 0; j < 10; j++)
+//    cout << nRuns << endl;
+    for (Int_t j = 0; j < nRuns; j++)
     {
         string Run = GetRunName(j);
         string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
+//        cout << Run << " " << FC << endl;
         SubtractBackground(Run, FC);
     }//*/
     /*SubtractBackground("PuFC_FG_MS4", "PuFC");

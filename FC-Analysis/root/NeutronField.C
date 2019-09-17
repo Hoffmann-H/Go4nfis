@@ -3,6 +3,33 @@
 #include "Runs.C"
 #include <fstream>
 
+Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &t_real)
+{
+    // Open txt tabular, break if not successful
+    std::ifstream input("/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/runs.txt");
+    if (!input.is_open())
+    {
+        cout << "Could not open " << "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/runs.txt" << endl;
+        return 0;
+    }
+    string Run = "", lastRun;
+    Double_t Monitor, DeltaRel, tReal;
+    do {
+        lastRun = Run; // keep last run name
+        // Read line
+        input >> Run >> Monitor >> DeltaRel >> tReal;
+        // Break if last line was reached
+        if (!strcmp(Run.c_str(), lastRun.c_str()))
+            return 0;
+        // repeat until names match
+    } while (strcmp(Run.c_str(), RunName.c_str()));
+    // Save numbers to reference
+    monitor = Monitor;
+    delta_rel = DeltaRel;
+    t_real = tReal;
+    return 1;
+}
+
 string NeutronFieldRun(string Run)
 { // Find 1 run's neutron flux. Return output string
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
@@ -59,7 +86,7 @@ string NeutronFieldRun(string Run)
     return line.str();
 }
 
-void NeutronField(string FC)
+void DoNeutronField(string FC)
 {
     string FileName = "NeutronField_"+FC+".txt";
     ofstream output("../results/"+FileName);
@@ -69,12 +96,11 @@ void NeutronField(string FC)
     {
         string Run = GetRunName(FC, j);
         // Analyze monitor data
-        cout << Run << endl;
         output << j+1 << " " << NeutronFieldRun(Run) << endl;
     }
 }
 
-void NeutronField()
+void DoNeutronField()
 {
     string FileName = "NeutronField.txt";
     ofstream output("../results/"+FileName);
@@ -87,4 +113,15 @@ void NeutronField()
         output << j+1 << " " << NeutronFieldRun(Run) << endl;
     }
 }
+
+void NeutronField()
+{
+    DoNeutronField("UFC");
+    NeutronFieldRun("UFC_NIF");
+    NeutronFieldRun("UFC_SB");
+    DoNeutronField("PuFC");
+    NeutronFieldRun("NIF");
+    NeutronFieldRun("SB");
+}
+
 #endif

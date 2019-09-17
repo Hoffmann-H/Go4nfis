@@ -84,9 +84,9 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
     geAv->SetMarkerSize(2);
     l->AddEntry(geAv, "av", "ep");
     mg->Add(geAv);
-    new TCanvas();
-    mg->Draw("AP");
-    l->Draw();
+//    new TCanvas();
+//    mg->Draw("AP");
+//    l->Draw();
     fAna->Save();
     fAna->Close();
     f->Close();
@@ -146,9 +146,9 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
         l->AddEntry(gR[i], name, "ep");
         mg->Add(gR[i]);
     }
-    new TCanvas();
-    mg->Draw("AP");
-    l->Draw();
+//    new TCanvas();
+//    mg->Draw("AP");
+//    l->Draw();
     fAna->Save();
     fAna->Close();
     f->Close();
