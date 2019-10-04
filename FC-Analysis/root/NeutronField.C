@@ -1,7 +1,54 @@
 #ifndef NEUTRON_FIELD_H
 #define NEUTRON_FIELD_H
+#include "SaveToFile.C"
 #include "Runs.C"
+#include "FC.C"
 #include <fstream>
+
+void Freifeld()
+{
+    Int_t nFreifeld = 11;
+    Double_t Q[] = {9.502182, 5.283354, 1.756110, 1.747356, 46.947156, 57.481554, 53.542836, 96.288870, 6.377172, 50.632404, 8.310576};
+    Double_t PLC[] = {1205191, 670297, 222819, 221708, 5837042, 7104705, 6559310, 11616244, 767556, 6071205, 1008025};
+    Double_t He3[] = {1661687, 924619, 307917, 306382, 8109248, 9959170, 9238458, 16413936, 1089187, 8592403, 1427724};
+    Double_t GM[] = {57278, 31877, 10750, 10697, 283758, 349482, 324393, 575540, 37931, 301346, 49700};
+    Double_t NM[] = {5671053, 3154900, 1051251, 1046011, 27492079, 33478370, 30916955, 54792679, 3623069, 28646614, 4757385};
+    Double_t sQ = 0, sHe3 = 0, sGM = 0, sNM = 0;
+    for (Int_t j = 0; j < nFreifeld; j++)
+    {
+        sQ += Q[j] / PLC[j];
+        sHe3 += He3[j] / PLC[j];
+        sGM += GM[j] / PLC[j];
+        sNM += NM[j] / PLC[j];
+    }
+    TGraphErrors* gQ = new TGraphErrors(nFreifeld);
+    TGraphErrors* gHe3 = new TGraphErrors(nFreifeld);
+    TGraphErrors* gGM = new TGraphErrors(nFreifeld);
+    TGraphErrors* gNM = new TGraphErrors(nFreifeld);
+    for (Int_t j = 0; j < nFreifeld; j++)
+    {
+        gQ->SetPoint(j, j + 1, Q[j] / PLC[j] * nFreifeld / sQ);
+        gHe3->SetPoint(j, j + 1, He3[j] / PLC[j] * nFreifeld / sHe3);
+        gHe3->SetPointError(j, 0, sqrt(He3[j]) / PLC[j] * nFreifeld / sHe3);
+        gGM->SetPoint(j, j + 1, GM[j] / PLC[j] * nFreifeld / sGM);
+        gGM->SetPointError(j, 0, sqrt(GM[j]) / PLC[j] * nFreifeld / sGM);
+        gNM->SetPoint(j, j + 1, NM[j] / PLC[j] * nFreifeld / sNM);
+        gNM->SetPointError(j, 0, sqrt(NM[j]) / PLC[j] * nFreifeld / sNM);
+        cout << j << " " << Q[j] / PLC[j] * nFreifeld / sQ << " " << He3[j] / PLC[j] * nFreifeld / sHe3 << endl;
+    }
+//    TCanvas *c = new TCanvas();
+//    gQ->Draw();
+//    gHe3->Draw("same");
+//    gNM->Draw("same");
+//    c->Update();
+    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    Save(fAna, "Freifeld", gQ, "Q");
+    Save(fAna, "Freifeld", gHe3, "He3");
+    Save(fAna, "Freifeld", gGM, "GM");
+    Save(fAna, "Freifeld", gNM, "NM");
+    fAna->Save();
+    fAna->Close();
+}
 
 Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &t_real)
 {
@@ -51,9 +98,9 @@ string NeutronFieldRun(string Run)
 
     // Initialize returned string
     std::stringstream line;
-    line << Run << " " << Monitor / tReal << " " << DeltaRel * Monitor / tReal;
+    line << Run << " " << Monitor << " " << DeltaRel * Monitor << " " << Monitor / tReal << " " << DeltaRel * Monitor / tReal;
 
-    // lop over deposits
+    // loop over deposits
     for (Int_t i = 0; i < 8; i++)
     {
         Double_t w = SolidAngle(i, FC);
@@ -90,7 +137,7 @@ void DoNeutronField(string FC)
 {
     string FileName = "NeutronField_"+FC+".txt";
     ofstream output("../results/"+FileName);
-    output << "# nr run monitor[1/s] unc[1/s] {flux[1/(s*mm^2)] unc[1/(s*mm^2)]}" << endl;
+    output << "# nr run monitor unc monitor[1/s] unc[1/s] {flux[1/(s*mm^2)] unc[1/(s*mm^2)]}" << endl;
     Int_t nRuns = GetnRuns(FC);
     for (Int_t j = 0; j < nRuns; j++)
     {
@@ -98,13 +145,14 @@ void DoNeutronField(string FC)
         // Analyze monitor data
         output << j+1 << " " << NeutronFieldRun(Run) << endl;
     }
+    output.close();
 }
 
 void DoNeutronField()
 {
     string FileName = "NeutronField.txt";
     ofstream output("../results/"+FileName);
-    output << "# nr run monitor[1/s] unc[1/s] {flux[1/(s*mm^2)] unc[1/(s*mm^2)]}" << endl;
+    output << "# nr run monitor unc monitor[1/s] unc[1/s] {flux[1/(s*mm^2)] unc[1/(s*mm^2)]}" << endl;
     Int_t nRuns = GetnRuns();
     for (Int_t j = 0; j < nRuns; j++)
     {
@@ -112,14 +160,22 @@ void DoNeutronField()
         // Analyze monitor data
         output << j+1 << " " << NeutronFieldRun(Run) << endl;
     }
+    output.close();
 }
 
 void NeutronField()
 {
+    Freifeld();
+
     DoNeutronField("UFC");
+    DoNeutronField("UFC_FG");
+    DoNeutronField("UFC_BG");
     NeutronFieldRun("UFC_NIF");
     NeutronFieldRun("UFC_SB");
+
     DoNeutronField("PuFC");
+    DoNeutronField("PuFC_FG");
+    DoNeutronField("PuFC_BG");
     NeutronFieldRun("NIF");
     NeutronFieldRun("SB");
 }

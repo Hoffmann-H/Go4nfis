@@ -1,6 +1,7 @@
 #ifndef CROSS_SECTION_H
 #define CROSS_SECTION_H
 #include "Runs.C"
+using namespace std;
 
 string CrossSectionRun(string Run)
 {
@@ -49,7 +50,7 @@ string CrossSectionRun(string Run)
         geFlux->GetPoint(i, x, Flux);
         DFlux = geFlux->GetErrorY(i);
         // Calculate cross section
-        CrossSection = FissionRate / (Atoms * Flux);
+        CrossSection = FissionRate / (Atoms * Flux) * 1.E22; // mm^2 -> barn
         DCrossSection = CrossSection * sqrt(
                     pow(DFissionRate / FissionRate, 2) +
                     pow(DAtoms / Atoms, 2) +
@@ -60,7 +61,12 @@ string CrossSectionRun(string Run)
 
         line << " " << CrossSection << " " << DCrossSection;
     }
-    Save(fAna, FC+"/CrossSection", geCrossSection, Run+"_CS_raw");
+    sprintf(name, "%s_CS_raw", Run.c_str());
+    geCrossSection->SetName(name);
+    Save(fAna, FC+"/CrossSection", geCrossSection);
+//    cout << line.str() << endl;
+    fAna->Save();
+    fAna->Close();
     return line.str();
 }
 
@@ -73,8 +79,9 @@ void DoCrossSection(string FC)
     for (Int_t j = 0; j < nRuns; j++)
     {
         string Run = GetRunName(FC, j);
-        output << j+1 << CrossSectionRun(Run) << endl;
+        output << j+1 << " " << CrossSectionRun(Run) << endl;
     }
+    output.close();
 }
 
 void DoCrossSection()
@@ -86,16 +93,22 @@ void DoCrossSection()
     for (Int_t j = 0; j < nRuns; j++)
     {
         string Run = GetRunName(j);
-        output << j+1 << CrossSectionRun(Run) << endl;
+        output << j+1 << " " << CrossSectionRun(Run) << endl;
     }
+    output.close();
 }
 
 void CrossSection()
 {
     DoCrossSection("UFC");
+    DoCrossSection("UFC_FG");
+    DoCrossSection("UFC_BG");
     CrossSectionRun("UFC_NIF");
     CrossSectionRun("UFC_SB");
+
     DoCrossSection("PuFC");
+    DoCrossSection("PuFC_FG");
+    DoCrossSection("PuFC_BG");
     CrossSectionRun("NIF");
     CrossSectionRun("SB");
 }

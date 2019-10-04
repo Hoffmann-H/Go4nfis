@@ -3,7 +3,8 @@
 #include <fstream>
 /// hard coded ToF gates
 #define LEFT 15
-#define RIGHT 40
+#define RIGHT 15
+#define TAIL 15
 
 Double_t PeakCenter(Int_t ch, string FC = "PuFC")
 {
@@ -34,6 +35,11 @@ Int_t Gate_2(Int_t ch, string FC = "PuFC")
     return 1 + (Int_t)PeakCenter(ch, FC) + RIGHT;
 }
 
+Int_t Gate_b(Int_t ch, string FC = "PuFC")
+{
+    return 1 + (Int_t)PeakCenter(ch, FC) + RIGHT + TAIL;
+}
+
 Int_t Gate_3(Int_t ch, string FC = "PuFC")
 {
     return 402;
@@ -50,7 +56,7 @@ Double_t DepositArea(Int_t ch = 0, string FC = "PuFC")
 }
 
 Double_t Distance(Int_t ch, string FC = "PuFC")
-{
+{ // in mm
     if (!strcmp(FC.c_str(), "PuFC"))
     { // PuFC
         return 1709.2 - ch * 20.5;
@@ -69,7 +75,7 @@ Double_t SolidAngle(Double_t D, Double_t R)
     return 2*TMath::Pi() * (1.0 - cos(atan(R / D)));
 }
 
-Double_t SolidAngle(Int_t ch, string FC = "PuFC")
+Double_t SolidAngle(Int_t ch, string FC)
 {
     return SolidAngle(Distance(ch, FC), DepositRadius(ch, FC));
 }

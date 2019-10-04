@@ -1,6 +1,9 @@
 #include "SaveToFile.C"
 #include "FC.C"
 #include <fstream>
+#include "TH2D.h"
+#include "TGraphErrors.h"
+#include "TCanvas.h"
 
 void GetBinning(string file_to_read)
 {
@@ -119,17 +122,34 @@ TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", string key 
     return pHist;
 }
 
-void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, string FC = "PuFC")
+TGraphErrors* GetEmitMCNP(Double_t SimulatedN, string FC = "PuFC")
+{
+    Double_t SourceMaxAngle = atan(12.7/150);
+    TGraphErrors *ge = new TGraphErrors(8);
+    ge->SetTitle("Projectiles; Deposit; Neutrons");
+    for (Int_t i = 0; i < 8; i++)
+    {
+        Double_t SimulatedDistance = Distance(i, FC) - 2.0; //
+        Double_t DepositAngle = atan(DepositRadius(i, FC) / SimulatedDistance);
+        Double_t Emit = SolidAngle(DepositAngle) / SolidAngle(SourceMaxAngle);
+        Double_t DEmit = sqrt(Emit / SimulatedN);
+        ge->SetPoint(i, i+1, Emit);
+        ge->SetPointError(i, 0, DEmit);
+//        cout << Emit << "+-" << DEmit << endl;
+    }
+    return ge;
+}
+
+void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 1, Bool_t draw = 0, string FC = "PuFC", Long_t SimulatedN = 60000000000)
 { // Convert Track Length MCNP results to root
     char name[128] = "";
     string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_PTB/tally";
     TH2D *h[8];
 
-    TFile *f;
+    TFile *fAna;
     if (save)
-    {
-        f = TFile::Open("/home/hoffma93/Programme/MCNP/results/MCNP.root", "UPDATE");
-    }
+        fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+
     TCanvas *c1;
     if (draw)
     {
@@ -150,8 +170,8 @@ void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
 
         if (save)
         {
-            cout << "Saving " << FC<<"/ToFvsEkin/"<<PathTag(result_key) << endl;
-            Save(f, FC+"/ToFvsEkin/"+PathTag(result_key), h[i]);
+//            cout << "Saving " << "Simulation/MCNP/ToFvsEkin/"<<PathTag(result_key) << endl;
+            Save(fAna, "Simulation/MCNP/ToFvsEkin/"+PathTag(result_key), h[i]);
         }
         if (draw)
         {
@@ -169,21 +189,24 @@ void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
     }
     if (save)
     {
-        f->Save();
-        f->Close();
+        TGraphErrors *geEmit = GetEmitMCNP(SimulatedN, FC);
+        Save(fAna, "Simulation/MCNP/Correction", geEmit, "Emit");
+        fAna->Save();
+        fAna->Close();
     }
 }
 
-void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1, string FC = "PuFC")
+void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 1, Bool_t draw = 0, string FC = "PuFC", Long_t SimulatedN = 6000000000)
 { // Convert simple MCNP results to root
     char name[128] = "";
     string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_PTB/tally";
     TH2D *h[8];
-    TFile *f;
+
+    TFile *fAna;
     if (save)
-    {
-        f = TFile::Open("/home/hoffma93/Programme/MCNP/results/MCNP_simple.root", "UPDATE");
-    }
+        fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+
+
     TCanvas *c1;
     if (draw)
     {
@@ -227,8 +250,8 @@ void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
 
         if (save)
         {
-            cout << "Saving " << FC<<"/ToFvsEkin/"<<PathTag(result_key) << endl;
-            Save(f, FC+"/ToFvsEkin/"+PathTag(result_key), h[i]);
+//            cout << "Saving " << "Simulation/MCNP_simple/ToFvsEkin/"<<PathTag(result_key) << endl;
+            Save(fAna, "Simulation/MCNP_simple/ToFvsEkin/"+PathTag(result_key), h[i]);
         }
         if (draw)
         {
@@ -246,18 +269,93 @@ void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 0, Bool_t draw = 1,
     }
     if (save)
     {
-        f->Save();
-        f->Close();
+        TGraphErrors *geEmit = GetEmitMCNP(SimulatedN, FC);
+        Save(fAna, "Simulation/MCNP_simple/Correction", geEmit, "Emit");
+        fAna->Save();
+        fAna->Close();
     }
 }//*/
+
+TH2D* TH2FtoTH2D(TH2F *h1, string FC, string key, Int_t ch)
+{
+    const char *name = h1->GetName();
+    const char *title = h1->GetTitle();
+    string replace_name = FC+"_"+key+"_"+to_string(ch+1);
+    h1->SetName(replace_name.c_str());
+    if (h1->GetNbinsX() != 2000)
+        cout << replace_name << " bad binning " << h1->GetNbinsX() << endl;
+    if (h1->GetNbinsY() != 1600)
+        cout << replace_name << " bad binning " << h1->GetNbinsY() << endl;
+    TH2D *h2 = new TH2D(name, title, 2000, 0, 200, 1600, 0, 16);
+    h2->GetXaxis()->SetTitle(h1->GetXaxis()->GetTitle());
+    h2->GetYaxis()->SetTitle(h1->GetYaxis()->GetTitle());
+    h2->Add(h1);
+    return h2;
+}
+
+void Geant4toROOT(string FileName, string FC = "PuFC", string Setup = "Open")
+{
+    string FilePath = "/home/hoffma93/Programme/Geant4-Work/builds/G4PuFCvsH19/results";
+//    string FileName = "5_ENDFVII.1/PuFC_Open_15E5.root";
+    char name[128] = "";
+    sprintf(name, "%s/%s", FilePath.c_str(), FileName.c_str());
+    TFile *fG4 = TFile::Open(name, "READ");
+    if (fG4 == 0)
+        cout << "Could not open " << name << endl;
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+
+    // Emitted neutrons
+    TH1F *pHemit = (TH1F*)fG4->Get("Source/Source_Theta");
+    Double_t maxTheta = 0.08446522295019329 * 180 / TMath::Pi();
+    Int_t lastBin = pHemit->FindBin(maxTheta);
+    Double_t WeightLastBin = (maxTheta - pHemit->GetBinLowEdge(lastBin)) / pHemit->GetBinWidth(lastBin);
+    Double_t nEmit = pHemit->Integral(0, lastBin - 1) + WeightLastBin * pHemit->GetBinContent(lastBin);
+    TGraphErrors *geEmit = new TGraphErrors(8);
+    for (Int_t i = 0; i < 8; i++)
+    {
+        sprintf(name, "Source/Source_Theta_Ch.%i", i+1);
+        pHemit = (TH1F*)fG4->Get(name);
+        geEmit->SetPoint(i, i+1, pHemit->Integral() / nEmit);
+        geEmit->SetPointError(i, 0, 0);
+    }
+    Save(fAna, "Simulation/Geant4/"+FC+"_"+Setup+"/Correction", geEmit, "Emit");
+
+    for (Int_t i = 0; i < 8; i++)
+    {
+        sprintf(name, "%s/ToFvsEkin/%s_ToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+        TH2F *pH2tot = (TH2F*)fG4->Get(name);
+        TH2D *pH2Tot = TH2FtoTH2D(pH2tot, FC, "2", i);
+
+        if (pH2Tot->Integral() > 1)
+            pH2Tot->Scale(1.0 / nEmit);
+
+        sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+        TH2F *pH2sc = (TH2F*)fG4->Get(name);
+        TH2D *pH2Sc = TH2FtoTH2D(pH2sc, FC, "1", i);
+        if (pH2Sc->Integral() > 1)
+            pH2Sc->Scale(1.0 / nEmit);
+
+        TH2D *pH2Dir = (TH2D*)pH2Tot->Clone();
+        pH2Dir->Add(pH2Sc, -1);
+
+        Save(fAna, "Simulation/Geant4/"+FC+"_"+Setup+"/ToFvsEkin/Direct", pH2Dir, FC+"_ToFvsEkin_Dir_Ch."+to_string(i+1));
+        Save(fAna, "Simulation/Geant4/"+FC+"_"+Setup+"/ToFvsEkin/Scattered", pH2Sc, FC+"_ToFvsEkin_Sc_Ch."+to_string(i+1));
+        Save(fAna, "Simulation/Geant4/"+FC+"_"+Setup+"/ToFvsEkin", pH2Tot, FC+"_ToFvsEkin_Ch."+to_string(i+1));
+    }
+    fAna->Save();
+    fAna->Close();
+}
 
 
 void MCNPtoROOT()
 {
-    TraLenMCNPtoROOT("0", 1, 0);
-    TraLenMCNPtoROOT("1", 1, 0);
-    TraLenMCNPtoROOT("2", 1, 0);
+    Geant4toROOT("5_ENDFVII.1/PuFC_Open_5E7_v2.root", "PuFC", "Open");
+    Geant4toROOT("4_ene/UFC_Open_5E7.root", "UFC", "Open");
+    Geant4toROOT("4_ene/UFC_SB_5E7.root", "UFC", "SB");
     SimpleMCNPtoROOT("0", 1, 0);
     SimpleMCNPtoROOT("1", 1, 0);
     SimpleMCNPtoROOT("2", 1, 0);
+    TraLenMCNPtoROOT("0", 1, 0);
+    TraLenMCNPtoROOT("1", 1, 0);
+    TraLenMCNPtoROOT("2", 1, 0);
 }

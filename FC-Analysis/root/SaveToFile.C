@@ -1,7 +1,12 @@
 #ifndef SAVE_TO_FILE
 #define SAVE_TO_FILE
 
+#include "TFile.h"
+#include "TGraph.h"
+#include "TH1.h"
 #include "TF1.h"
+#include <string>
+using namespace std;
 
 TDirectory* Prepare(TFile *f, string path)
 {

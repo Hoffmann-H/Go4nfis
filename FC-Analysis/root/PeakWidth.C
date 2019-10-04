@@ -1,4 +1,7 @@
 #include "SaveToFile.C"
+#include "TMultiGraph.h"
+#include "TLegend.h"
+
 void GetLimits(Int_t i, string FC, Int_t left, Int_t right, Int_t* l0, Int_t* l1, Int_t* l2, Int_t* l3)
 {
     *l0 = 42;

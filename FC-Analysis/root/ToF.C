@@ -43,7 +43,7 @@ TF1* FitLeft(TH1F *pH, Int_t i, string FC, string Run)
     char name[64] = "";
     ToF_BG_min[0] = pH->GetBinLowEdge(Gate_0(i, FC));
     ToF_BG_max[0] = pH->GetBinLowEdge(Gate_1(i, FC));
-    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_2(i, FC) + 1);
+    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_b(i, FC) + 1);
     ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC) + 1);
     Double_t xmin = ToF_BG_min[0];
     Double_t xmax = ToF_BG_max[0];
@@ -61,7 +61,7 @@ TF1* FitRight(TH1F *pH, Int_t i, string FC, string Run)
     char name[64] = "";
     ToF_BG_min[0] = pH->GetBinLowEdge(Gate_0(i, FC));
     ToF_BG_max[0] = pH->GetBinLowEdge(Gate_1(i, FC));
-    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_2(i, FC) + 1);
+    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_b(i, FC) + 1);
     ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC) + 1);
     Double_t xmin = ToF_BG_min[1];
     Double_t xmax = ToF_BG_max[1];
@@ -79,7 +79,7 @@ TF1* FitTotal(TH1F *pH, Int_t i, string FC, string Run)
     char name[64] = "";
     ToF_BG_min[0] = Gate_0(i, FC);
     ToF_BG_max[0] = Gate_1(i, FC);
-    ToF_BG_min[1] = Gate_2(i, FC);
+    ToF_BG_min[1] = Gate_b(i, FC);
     ToF_BG_max[1] = Gate_3(i, FC);
     Double_t xmin = pH->GetBinLowEdge(1);
     Double_t xmax = pH->GetBinLowEdge(pH->GetNbinsX() + 1);
@@ -92,20 +92,29 @@ TF1* FitTotal(TH1F *pH, Int_t i, string FC, string Run)
     return fTotal;
 }
 
-void SubtractBackground(string Run, string FC)
+string SubtractBackground(string Run)
 {
+    string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     char name[128] = "";
     sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
     TFile *f = TFile::Open(name, "READ");
     if (f == 0)
         cout << "Error opening " << name << endl;
+
+    // live time
     TH1D *pHt = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_47");
     Double_t t_live = pHt->Integral();
+
+    // Create graphs
     TGraphErrors *geNIF = new TGraphErrors(8);
     TGraphErrors *geBG = new TGraphErrors(8);
     TGraphErrors *geNIFrate = new TGraphErrors(8);
     TGraphErrors *geBGrate = new TGraphErrors(8);
+
+    // Initialize returned string
+    std::stringstream line;
+    line << Run;
 
     for (Int_t i = 0; i < 8; i++)
     {
@@ -123,6 +132,7 @@ void SubtractBackground(string Run, string FC)
         // Subtract
         pH->Add(fTotal, -1);
         Save(fAna, FC+"/ToF/Signal/"+Run, pH);
+
         // Integrate
         Double_t C_nif, DC_nif;
         C_nif = pH->IntegralAndError(Gate_1(i, FC), Gate_2(i, FC), DC_nif);
@@ -139,6 +149,8 @@ void SubtractBackground(string Run, string FC)
         geBGrate->SetPointError(i, 0, DC_bg / t_live);
         geNIFrate->SetPoint(i, i+1, C_nif / t_live);
         geNIFrate->SetPointError(i, 0, DC_nif / t_live);
+
+        line << " " << C_nif << " " << DC_nif << " " << C_nif / t_live << " " << DC_nif / t_live;
     }
     Save(fAna, FC+"/ToF/Signal/"+Run, geNIF, "InducedFission");
     Save(fAna, FC+"/ToF/Background/"+Run, geBG, "FissionBackground");
@@ -154,19 +166,51 @@ void SubtractBackground(string Run, string FC)
 
     fAna->Save();
     fAna->Close();
+    return line.str();
+}
+
+void DoToF(string FC)
+{
+    string FileName = "InducedFission_"+FC+".txt";
+    ofstream output("../results/"+FileName);
+    output << "# nr run {indfis unc indfis[1/s] unc[1/s]}" << endl;
+    Int_t nRuns = GetnRuns(FC);
+    for (Int_t j = 0; j < nRuns; j++)
+    {
+        string Run = GetRunName(FC, j);
+        output << j+1 << " " << SubtractBackground(Run) << endl;
+    }
+    output.close();
+}
+
+void DoToF()
+{
+    string FileName = "InducedFission.txt";
+    ofstream output("../results/"+FileName);
+    output << "# nr run {indfis unc indfis[1/s] unc[1/s]}" << endl;
+    Int_t nRuns = GetnRuns();
+    for (Int_t j = 0; j < nRuns; j++)
+    {
+        string Run = GetRunName(j);
+        output << j+1 << " " << SubtractBackground(Run) << endl;
+    }
+    output.close();
 }
 
 void ToF()
 {
-    Int_t nRuns = GetnRuns();
-//    cout << nRuns << endl;
-    for (Int_t j = 0; j < nRuns; j++)
-    {
-        string Run = GetRunName(j);
-        string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
-//        cout << Run << " " << FC << endl;
-        SubtractBackground(Run, FC);
-    }//*/
+    DoToF("UFC");
+    DoToF("UFC_FG");
+    DoToF("UFC_BG");
+    SubtractBackground("UFC_NIF");
+    SubtractBackground("UFC_SB");
+
+    DoToF("PuFC");
+    DoToF("PuFC_FG");
+    DoToF("PuFC_BG");
+    SubtractBackground("NIF");
+    SubtractBackground("SB");
+    //*/
     /*SubtractBackground("PuFC_FG_MS4", "PuFC");
     SubtractBackground("PuFC_FG_MS5", "PuFC");
     SubtractBackground("PuFC_FG_MS6", "PuFC");

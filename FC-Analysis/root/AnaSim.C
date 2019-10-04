@@ -2,13 +2,16 @@
 #include "MCNPtoROOT.C"
 #include "FC.C"
 
-TH2D* GetSpectrum(TFile *f, Int_t ch, string key = "2", string FC = "PuFC")
+TH2D* GetSpectrum(TFile *f, string SimulationPath, Int_t ch, string key = "2", string FC = "PuFC")
 {
     /// Open a histogram in a file created by MCNPtoROOT.C
     char name[64] = "";
-    sprintf(name, "%s/ToFvsEkin/%s%s_ToFvsEkin_%sCh.%i", FC.c_str(), PathTag(key).c_str(), FC.c_str(), NameTag(key).c_str(), ch + 1);
+    sprintf(name, "%s/ToFvsEkin/%s%s_ToFvsEkin_%sCh.%i", SimulationPath.c_str(), PathTag(key).c_str(), FC.c_str(), NameTag(key).c_str(), ch + 1);
     TH2D *h = (TH2D*)f->Get(name);
-    cout << "Opened " << h->GetName() << endl;
+    if (h == 0)
+        cout << "Could not open " << name << endl;
+    else
+        cout << "Opened " << h->GetName() << endl;
     return h;
 }
 
@@ -24,18 +27,32 @@ TGraphErrors* GetSigma(string FC = "PuFC", string path = "/home/hoffma93/Program
             cout << "Fehler beim Öffnen von " << path << endl;
         return pSigma;
     } else {
-        Double_t UisoVec[] = {0.904, 0.0912}; // U-235, U-238 portion
+        Double_t UisoVec[] = {0.988, 0.0912}; // U-235, U-238 portion
         Double_t DUisoVec[] = {0.005, 0.0006};
-        cout << "Uranium cross section not implemented!" << endl;
-        // implementation needed...
-        return 0;
+        sprintf(name, "%s/U235.dat", path.c_str());
+        TGraphErrors *pU235 = new TGraphErrors(name, "%lg %lg %lg");
+        sprintf(name, "%s/U238.dat", path.c_str());
+        TGraphErrors *pU238 = new TGraphErrors(name, "%lg %lg %lg");
+        Int_t N = pU235->GetN();
+        pSigma = new TGraphErrors(N);
+        for (Int_t j = 0; j < N; j++)
+        {
+            Double_t x, y235, yerr235, y238;
+            pU235->GetPoint(j, x, y235);
+            yerr235 = pU235->GetErrorY(j);
+            y238 = pU238->Eval(x);
+            Double_t y = UisoVec[0] * y235 + UisoVec[1] * y238;
+            pSigma->SetPoint(j, x, y);
+            pSigma->SetPointError(j, 0, yerr235);
+        }
+        return pSigma;
     }
 }
 
-TH1D* GetProjection(TFile *f, Int_t ch, string key = "2", string FC = "PuFC")
+TH1D* GetProjection(TFile *f, Int_t ch, string key = "2", string FC = "PuFC", string SimulationPath = "Simulation/Geant4/PuFC_Open")
 {
     char name[64] = "";
-    sprintf(name, "Analysis/EffToF/%s%s_ProjT_%s%i", PathTag(key).c_str(), FC.c_str(), NameTag(key).c_str(), ch + 1);
+    sprintf(name, "%s/EffToF/%s%s_ProjT_%s%i", SimulationPath.c_str(), PathTag(key).c_str(), FC.c_str(), NameTag(key).c_str(), ch + 1);
     TH1D *h = (TH1D*)f->Get(name);
     cout << "Opened " << h->GetName() << endl;
     return h;
@@ -76,44 +93,40 @@ TH1D* GetProjection(TH2 *pH2, TGraphErrors *pSigma, Int_t ch, string FC = "PuFC"
     return pH1x;
 }
 
-void MCNPprojections(string key = "2", string FC = "PuFC", string File = "/home/hoffma93/Programme/MCNP/results/MCNP.root")
+void Projections(string key = "2", string FC = "PuFC", string SimulationPath = "Simulation/Geant4/PuFC_Open")
 {
     char name[64] = "";
     TGraphErrors *pSigma = GetSigma(FC);
-    TFile *f = TFile::Open(File.c_str(), "UPDATE");
-    TDirectory *pDir = Prepare(f, "Analysis/EffToF/" + PathTag(key));
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+
     for (Int_t i = 0; i < 8; i++)
     {
-        TH2D *pH2 = GetSpectrum(f, i, key, FC);
-        TH1D *pH1 = GetProjection(pH2, pSigma, i);
+        TH2D *pH2 = GetSpectrum(fAna, SimulationPath, i, key, FC);
+        TH1D *pH1 = GetProjection(pH2, pSigma, i, FC);
         sprintf(name, "%s_ProjT_%s%i", FC.c_str(), NameTag(key).c_str(), i+1);
-        Save(pDir, pH1, name);
+        pH1->SetName(name);
+        Save(fAna, SimulationPath+"/EffToF/"+PathTag(key), pH1);
         Double_t Int, Err;
         Int = pH1->IntegralAndError(0, -1, Err);
     }
-    f->Save();
-    f->Close();
+    fAna->Save();
+    fAna->Close();
 }
 
-void AnaMCNP(string FC = "PuFC", Bool_t save = 1, string File = "/home/hoffma93/Programme/MCNP/results/MCNP.root", Long_t SimulatedN = 60000000000)
+void AnaSim(string FC, Bool_t save = 1, string SimulationPath = "Simulation/Geant4/PuFC_Open")
 {
-
     // Create projections.
-    MCNPprojections("0", "PuFC", File);
-    MCNPprojections("1", "PuFC", File);
-    MCNPprojections("2", "PuFC", File);
+    Projections("0", FC, SimulationPath);
+    Projections("1", FC, SimulationPath);
+    Projections("2", FC, SimulationPath);
 
-    Double_t SourceMaxAngle = atan(12.7/150.0);
-    cout << "Maximum simulated source angle: " << SourceMaxAngle / asin(1) * 90.0 << "°" << endl;
-    Double_t DepositRadius = 37.0; // mm
-    Double_t DepositDistance;
     Double_t S[8], DS[8], T[8], DT[8], F[8], DF[8];
 
     char name[64] = "";
-    TFile *f = TFile::Open(File.c_str(), "UPDATE");
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    sprintf(name, "%s/Correction/Emit", SimulationPath.c_str());
+    TGraphErrors *gEmit = (TGraphErrors*)fAna->Get(name);
 
-    TGraphErrors *gEmit = new TGraphErrors(8);
-    gEmit->SetTitle("Projectiles; Deposit; Neutrons");
     TGraphErrors *gDirect = new TGraphErrors(8);
     gDirect->SetTitle("Direct fission; Deposit; Effective Neutrons");
     TGraphErrors *gTotal = new TGraphErrors(8);
@@ -125,21 +138,23 @@ void AnaMCNP(string FC = "PuFC", Bool_t save = 1, string File = "/home/hoffma93/
     TGraphErrors *gF = new TGraphErrors(8);
     gF->SetTitle("Correction factor; Deposit; F");
 
-    cout << endl << File << endl;
     cout << "Ch      Emit      Direct      Total      S      T      F" << endl;
     for (Int_t i = 0; i < 8; i++)
     {
         // projectiles
-        DepositDistance = Distance(i, FC);
-//        Double_t DepositMaxAngle = atan(DepositRadius / DepositDistance);
-        Double_t nEmit = SolidAngle(DepositDistance, DepositRadius) / SolidAngle(150.0, 12.7);
-        Double_t DnEmit = sqrt(nEmit / SimulatedN);
+        Double_t x, nEmit, DnEmit;
+        gEmit->GetPoint(i, x, nEmit);
+        DnEmit = gEmit->GetErrorY(i);
 
         // effective scattered+total neutrons
-        sprintf(name, "Analysis/EffToF/%s_ProjT_%i", FC.c_str(), i+1);
-        TH1D *pTotFis = (TH1D*)f->Get(name); // fissions induced by backward sc neutrons over time
-        sprintf(name, "Analysis/EffToF/Direct/%s_ProjT_Dir_%i", FC.c_str(), i+1);
-        TH1D *pDirFis = (TH1D*)f->Get(name); // fissions induced by direct neutrons over time
+        sprintf(name, "%s/EffToF/%s_ProjT_%i", SimulationPath.c_str(), FC.c_str(), i+1);
+        TH1D *pTotFis = (TH1D*)fAna->Get(name); // fissions induced by backward sc neutrons over time
+        if (pTotFis == 0)
+            cout << "Could not open " << name << endl;
+        sprintf(name, "%s/EffToF/Direct/%s_ProjT_Dir_%i", SimulationPath.c_str(), FC.c_str(), i+1);
+        TH1D *pDirFis = (TH1D*)fAna->Get(name); // fissions induced by direct neutrons over time
+        if (pDirFis == 0)
+            cout << "Could not open " << name << endl;
         Double_t DnTotal, DnDirect;
         Double_t nTotal = pTotFis->IntegralAndError(0, -1, DnTotal);
         Double_t nDirect = pDirFis->IntegralAndError(0, -1, DnDirect);
@@ -159,8 +174,6 @@ void AnaMCNP(string FC = "PuFC", Bool_t save = 1, string File = "/home/hoffma93/
                            << "   " << F[i] << "+-" << DF[i] << endl;
 
         // Write to graphs
-        gEmit->SetPoint(i, i + 1, nEmit);
-        gEmit->SetPointError(i, 0, DnEmit);
         gDirect->SetPoint(i, i + 1, nDirect);
         gDirect->SetPointError(i, 0, DnDirect);
         gTotal->SetPoint(i, i + 1, nTotal);
@@ -175,158 +188,13 @@ void AnaMCNP(string FC = "PuFC", Bool_t save = 1, string File = "/home/hoffma93/
 
     if (save)
     {
-        TDirectory *pDir = Prepare(f, "Analysis/Correction");
-        Save(pDir, gEmit, "Emit");
-        Save(pDir, gDirect, "Direct");
-        Save(pDir, gTotal, "Total");
-        Save(pDir, gS, "S");
-        Save(pDir, gT, "T");
-        Save(pDir, gF, "F");
-        f->Save();
-    }
-}
-
-void AnaGeant4(string FC = "PuFC", Bool_t save = 1, string FileName = "4_ene/PuFC_Open_5E7.root")
-{ //    string FileName = "5_ENDFVII.1/PuFC_Open_15E5.root";
-    /// Open G4 result file
-    /// Scale TvsE hist
-    /// Create time profile
-    /// Calculate correction factors
-    /// Save all
-    char name[128] = "";
-    string FilePath = "/home/hoffma93/Programme/Geant4-Work/builds/G4PuFCvsH19/results";
-
-    // preparation...
-    sprintf(name, "%s/%s", FilePath.c_str(), FileName.c_str());
-    TFile *f = TFile::Open(name, "UPDATE"); // Open file
-
-    TH2F *pH2Tot[8]; // prepare histograms
-    TH2F *pH2Sc[8];
-    TH1D *pH1Tot[8];
-    TH1D *pH1Sc[8];
-    TGraphErrors *pSigma = GetSigma(FC); // get evaluated cross section
-    TH1F *pH1theta = (TH1F*)f->Get("Source/Source_Theta");
-    Long_t SimulatedN = pH1theta->Integral(); // get simulation population
-
-    // scale old results
-//    SimulatedN *= (1-cos(0.08446522295019329)) / (1-cos(0.0746987));
-    // Set N for an invalid file
-    SimulatedN = 5.E6;
-
-    Double_t S[8], DS[8], T[8], DT[8], F[8], DF[8]; // prepare analysis
-
-    // create graphs
-    TGraphErrors *gEmit = new TGraphErrors(8);
-    gEmit->SetTitle("Projectiles");
-    TGraphErrors *gDirect = new TGraphErrors(8);
-    gDirect->SetTitle("Direct fission");
-    TGraphErrors *gTotal = new TGraphErrors(8);
-    gTotal->SetTitle("Total fission");
-    TGraphErrors *gS = new TGraphErrors(8);
-    gS->SetTitle("Scattering correction");
-    TGraphErrors *gT = new TGraphErrors(8);
-    gT->SetTitle("Transmission");
-    TGraphErrors *gF = new TGraphErrors(8);
-    gF->SetTitle("Correction factor");
-
-    cout << endl << FilePath << "/" << FileName << endl;
-    cout << "Ch      Emit      Direct      Total      S      T      F" << endl;
-    for (Int_t i = 0; i < 8; i++)
-    {
-        // Open 2D T vs E histograms, give name dummies
-        sprintf(name, "%s/ToFvsEkin/%s_ToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), i+1);
-        pH2Tot[i] = (TH2F*)f->Get(name);
-        sprintf(name, "TvsE_%i", i+1);
-        pH2Tot[i]->SetName(name);
-        sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
-        pH2Sc[i] = (TH2F*)f->Get(name);
-        sprintf(name, "TvsE_Sc_%i", i+1);
-        pH2Sc[i]->SetName(name);
-        // scale T vs E to one simulated neutron (if not done yet)
-        if (pH2Tot[i]->Integral() > 1)
-            pH2Tot[i]->Scale(1.0/SimulatedN);
-        if (pH2Sc[i]->Integral() > 1)
-            pH2Sc[i]->Scale(1.0/SimulatedN);
-
-        // Create projections
-        pH1Tot[i] = GetProjection(pH2Tot[i], pSigma, i, FC);
-        pH1Sc[i] = GetProjection(pH2Sc[i], pSigma, i, FC + "Sc");
-
-        // projectiles
-        sprintf(name, "Source/Source_Theta_Ch.%i", i+1);
-        pH1theta = (TH1F*)f->Get(name);
-        Double_t nEmit = pH1theta->Integral() / SimulatedN;
-        Double_t DnEmit = 0.0; //sqrt(nEmit / SimulatedN);
-        Double_t nDirect = pH1Tot[i]->Integral() - pH1Sc[i]->Integral();
-        Double_t DnDirect = sqrt(nDirect / SimulatedN);
-        Double_t nTotal = pH1Tot[i]->Integral();
-        Double_t DnTotal = sqrt(nTotal / SimulatedN);
-
-        // Correction factors
-        S[i] = nDirect / nTotal;
-        DS[i] = S[i] * sqrt(pow(DnDirect / nDirect, 2) + pow(DnTotal / nTotal, 2));
-        T[i] = nDirect / nEmit;
-        DT[i] = T[i] * sqrt(pow(DnDirect / nDirect, 2) + pow(DnEmit / nEmit, 2));
-        F[i] = nEmit / nTotal;
-        DF[i] = F[i] * sqrt(pow(DnEmit / nEmit, 2) + pow(DnTotal / nTotal, 2));
-
-        cout << " " << i+1 << "   " << nEmit << "+-" << DnEmit
-                           << "   " << nDirect << "+-" << DnDirect
-                           << "   " << nTotal << "+-" << DnTotal
-                           << "   " << S[i] << "+-" << DS[i]
-                           << "   " << T[i] << "+-" << DT[i]
-                           << "   " << F[i] << "+-" << DF[i] << endl;
-
-        // Write to graphs
-        gEmit->SetPoint(i, i + 1, nEmit);
-        gEmit->SetPointError(i, 0, DnEmit);
-        gDirect->SetPoint(i, i + 1, nDirect);
-        gDirect->SetPointError(i, 0, DnDirect);
-        gTotal->SetPoint(i, i + 1, nTotal);
-        gTotal->SetPointError(i, 0, DnTotal);
-        gS->SetPoint(i, i + 1, S[i]);
-        gS->SetPointError(i, 0, DS[i]);
-        gT->SetPoint(i, i + 1, T[i]);
-        gT->SetPointError(i, 0, DT[i]);
-        gF->SetPoint(i, i + 1, F[i]);
-        gF->SetPointError(i, 0, DF[i]);
-    } // end of for(Deposits)
-
-    if (save)
-    {
-        TDirectory *pDir;
-        pDir = Prepare(f, FC + "/ToFvsEkin");
-        for (Int_t i = 0; i < 8; i++)
-        {
-            sprintf(name, "%s_ToFvsEkin_Ch.%i", FC.c_str(), i+1);
-            Save(pDir, pH2Tot[i], name);
-        }
-        pDir = Prepare(f, FC + "/ToFvsEkin/Scattered");
-        for (Int_t i = 0; i < 8; i++)
-        {
-            sprintf(name, "%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), i+1);
-            Save(pDir, pH2Sc[i], name);
-        }
-        pDir = Prepare(f, "Analysis/EffToF");
-        for (Int_t i = 0; i < 8; i++)
-        {
-            sprintf(name, "%s_ProjT_%i", FC.c_str(), i+1);
-            Save(pDir, pH1Tot[i], name);
-        }
-        pDir = Prepare(f, "Analysis/EffToF/Scattered");
-        for (Int_t i = 0; i < 8; i++)
-        {
-            sprintf(name, "%s_ProjT_Sc_%i", FC.c_str(), i+1);
-            Save(pDir, pH1Sc[i], name);
-        }
-        pDir = Prepare(f, "Analysis/Correction");
-        Save(pDir, gEmit, "Emit");
-        Save(pDir, gDirect, "Direct");
-        Save(pDir, gTotal, "Total");
-        Save(pDir, gS, "S");
-        Save(pDir, gT, "T");
-        Save(pDir, gF, "F");
-        f->Save();
+        Save(fAna, SimulationPath+"/Correction", gDirect, "Direct");
+        Save(fAna, SimulationPath+"/Correction", gTotal, "Total");
+        Save(fAna, SimulationPath+"/Correction", gS, "S");
+        Save(fAna, SimulationPath+"/Correction", gT, "T");
+        Save(fAna, SimulationPath+"/Correction", gF, "F");
+        fAna->Save();
+        fAna->Close();
     }
 }
 
@@ -390,26 +258,33 @@ TH1D* GetPeakForm(TH1D *pH1ToF, Int_t ch = 0, string FC = "PuFC", Double_t IntEx
     return pH1Peak;
 }
 
-void PeakForm(string key = "2", string FC = "PuFC", string File = "/home/hoffma93/Programme/MCNP/results/MCNP.root")
+void PeakForm(string key = "2", string FC = "PuFC", string SimulationPath = "Simulation/Geant4/PuFC_Open")
 {
     char name[64] = "";
-    TFile *f = TFile::Open(File.c_str(), "UPDATE");
-    TDirectory *pDir = Prepare(f, "Analysis/SimToF/" + PathTag(key));
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+
     for (Int_t i = 0; i < 8; i++)
     {
-        TH1D *pH1ToF = GetProjection(f, i, key, FC);
+        TH1D *pH1ToF = GetProjection(fAna, i, key, FC, SimulationPath);
         TH1D *pH1Peak = GetPeakForm(pH1ToF, i, FC, 1.0);
-        sprintf(name, "%s_FoldT_%i", FC.c_str(), i+1);
-        Save(pDir, pH1Peak, name);
+        sprintf(name, "%s_FoldT_%s%i", FC.c_str(), NameTag(key).c_str(), i+1);
+        pH1Peak->SetName(name);
+        Save(fAna, SimulationPath+"/SimToF/"+PathTag(key), pH1Peak);
     }
-    f->Save();
-    f->Close();
+    fAna->Save();
+    fAna->Close();
 }
 
 void AnaSim()
 {
-//    MCNPtoROOT();
-//    AnaMCNP("PuFC", 1, "/home/hoffma93/Programme/MCNP/results/MCNP_simple.root", 6000000000);
-    AnaMCNP("PuFC", 1, "/home/hoffma93/Programme/MCNP/results/MCNP.root", 60000000000);
-//    AnaGeant4("PuFC", 1, "5_ENDFVII.1/PuFC_Open_5E7.root");
+    MCNPtoROOT();
+    AnaSim("PuFC", 1, "Simulation/Geant4/PuFC_Open");
+    AnaSim("UFC", 1, "Simulation/Geant4/UFC_Open");
+    PeakForm("1", "UFC", "Simulation/Geant4/UFC_Open");
+    PeakForm("2", "UFC", "Simulation/Geant4/UFC_Open");
+    AnaSim("UFC", 1, "Simulation/Geant4/UFC_SB");
+    AnaSim("PuFC", 1, "Simulation/MCNP_simple");
+    AnaSim("PuFC", 1, "Simulation/MCNP");
+    PeakForm("1", "PuFC", "Simulation/MCNP");
+    PeakForm("2", "PuFC", "Simulation/MCNP");
 }

@@ -8,15 +8,21 @@
 #include "TApplication.h"
 
 //my includes
-#include "Xsection.h"
-#include "PuFC.h"
-#include "UFC.h"
-#include "Run.h"
-#include "Plot.h"
-#include "ToF.h"
+//#include "Xsection.h"
+//#include "PuFC.h"
+//#include "UFC.h"
+//#include "Run.h"
+//#include "Plot.h"
+#include "root/Target.C"
+#include "root/AnaSim.C"
+#include "root/FC.C"
 #include "root/QDCmin.C"
 #include "root/PeakWidth.C"
+#include "root/NeutronField.C"
+#include "root/ToF.C"
 #include "root/NumberOfAtoms.C"
+#include "root/CrossSection.C"
+#include "root/Runs.C"
 
 using namespace std;
 
@@ -27,17 +33,7 @@ using namespace std;
 //    FindUMinima();
 
 //    // Create graphs: Peak content vs Peak width, right background vs Peak width.
-//    PeakWidth();
 
-//    // Calculate eff. number of Pu atoms from spontaneous fission
-//    NumberOfPuAtoms();
-//    // Calculate eff. number of U atoms from H19 calibration and Carlson
-//    NumberOfUAtoms();
-
-//    // Create an instance of ToF and calculate background
-//    PuFC *fc = new PuFC(1, 0);
-//    UFC *ufc = new UFC(1, 0);
-//}
 
 int main(int argc, char **argv)
 {
@@ -46,16 +42,25 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
-//    ProvideNotebookData();
+    Target();
+    AnaSim();
+    PeakWidth();
+    ToF();
+    NumberOfAtoms();
+    NeutronField();
+    CrossSection();
+    Runs();
+
+
 
 //    Plot *p = new Plot("UFC", "Open", 0);
 //    p->Source_E();
 
-    PuFC *fc = new PuFC(1, 0);
+//    PuFC *fc = new PuFC(1, 0);
 //    fc->GetNatoms();
 //    fc->DrawStability();
 //    fc->CrossSection();
-    fc->Corrections();
+//    fc->Corrections();
 
 //    UFC *ufc = new UFC(0, 0);
 //    ufc->IsoVec();
