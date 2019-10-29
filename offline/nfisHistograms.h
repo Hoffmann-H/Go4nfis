@@ -18,6 +18,9 @@ class nfisHistograms : public TGo4EventProcessor {
 public:
     nfisHistograms();
     virtual ~nfisHistograms();
+//    static Bool_t PuFC() {return 1;} // PuFC
+    static Bool_t PuFC() {return 0;} // UFC
+    static Double_t tof_bias(Int_t ch);
 
 private:
 

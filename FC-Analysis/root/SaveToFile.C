@@ -36,6 +36,14 @@ void Save(TFile *f, string path, TGraph *pObj, string setName = "")
 }
 
 void Save(TFile *f, string path, TF1 *pObj, string setName = "")
+//{
+//    TDirectory *pDir = Prepare(f, path);
+//    if (strcmp(setName.c_str(), ""))
+//        pObj->Write(setName.c_str());
+//    else
+//        pObj->Write("", TObject::kOverwrite);
+//    return;
+//}
 {
     TDirectory *pDir = Prepare(f, path);
     pObj->Write(setName.c_str(), TObject::kOverwrite);

@@ -2,20 +2,21 @@
 #define FC_H
 #include <fstream>
 /// hard coded ToF gates
-#define LEFT 15
-#define RIGHT 15
-#define TAIL 15
+#define GATE 8
+#define TAIL 30
 
 Double_t PeakCenter(Int_t ch, string FC = "PuFC")
 {
     if (!strcmp(FC.c_str(), "PuFC"))
     { // PuFC
         Double_t m[] = {139.7705, 128.2225, 125.879, 129.663, 129.5655, 128.589, 127.466, 127.49};
+//        Double_t m[] = {32.9355, 32.5355, 32.1294, 31.7217, 31.3162, 30.9138, 30.5155, 30.1205};
         return m[ch];
     }
     else
     {
         Double_t m[] = {273.4865, 268.945, 260.5955, 265.2345, 265.21, 264.3555, 263.501, 263.086};
+//        Double_t m[] = {31.7416, 31.5622, 31.286, 31.2567, 30.8611, 30.6516, 30.4355, 30.2321};
         return m[ch];
     }
 }
@@ -25,19 +26,24 @@ Int_t Gate_0(Int_t ch, string FC = "PuFC")
     return 42;
 }
 
+Int_t Gate_a(Int_t ch, string FC = "PuFC")
+{
+    return (Int_t)(PeakCenter(ch, FC)+0.5) - 15;
+}
+
 Int_t Gate_1(Int_t ch, string FC = "PuFC")
 {
-    return 1 + (Int_t)PeakCenter(ch, FC) - LEFT;
+    return (Int_t)(PeakCenter(ch, FC)+0.5) - GATE;
 }
 
 Int_t Gate_2(Int_t ch, string FC = "PuFC")
 {
-    return 1 + (Int_t)PeakCenter(ch, FC) + RIGHT;
+    return (Int_t)(PeakCenter(ch, FC)+0.5) + GATE;
 }
 
 Int_t Gate_b(Int_t ch, string FC = "PuFC")
 {
-    return 1 + (Int_t)PeakCenter(ch, FC) + RIGHT + TAIL;
+    return (Int_t)(PeakCenter(ch, FC)+0.5) + TAIL;
 }
 
 Int_t Gate_3(Int_t ch, string FC = "PuFC")
@@ -80,11 +86,59 @@ Double_t SolidAngle(Int_t ch, string FC)
     return SolidAngle(Distance(ch, FC), DepositRadius(ch, FC));
 }
 
+Double_t QDCcut(Int_t ch, string FC)
+{
+    if (strcmp(FC.c_str(), "PuFC"))
+    { // UFC
+        Double_t qdc_min[]   = {220.396, 500.964, 219.016, 214.101, 199.19,  171.929, 169.046, 121.56}; // UFC
+        return qdc_min[ch];
+    } else { // PuFC
+        Double_t qdc_min[]   = {899.24,  853.668, 895.652, 849.393, 1046.41, 891.396, 906.123, 837.486}; // PuFC
+        return qdc_min[ch];
+    }
+}
+
+Int_t digit(Double_t err)
+{ // return Nachkommastellen to print uncertainty err
+    Int_t Digit = (Int_t)-TMath::Floor(TMath::Log10(err));
+    if (TMath::Floor(err * pow(10, Digit)) < 3)
+        Digit++;
+    return Digit;
+}
+
+Double_t round(Double_t val, Int_t digit)
+{
+    return  TMath::Floor(val * pow(10, digit) + 0.5) / pow(10, digit);
+}
+
+string pm(Double_t val, Double_t err)
+{
+    Int_t Digit = digit(err);
+    char name[64] = "";
+    char format[64] = "";
+    sprintf(format, "%s%i%s%i%s", "%.", Digit > 0 ? Digit : 0, "f #pm %.", Digit > 0 ? Digit : 0, "f");
+    sprintf(name, format, round(val, Digit), round(err, Digit));
+    string s(name);
+    return s;
+}
+
+string br(Double_t val, Double_t err)
+{ // brackets notation. Does not make sense for large numbers: 11590000(28)
+    Int_t Digit = digit(err);
+    char name[64] = "";
+    char format[64] = "";
+    sprintf(format, "%s%i%s", "%.", Digit > 0 ? Digit : 0, "f(%i)");
+    sprintf(name, format, round(val, Digit), (Int_t)(err * pow(10, Digit) + 0.5));
+    string s(name);
+    return s;
+}
+
 void FC()
 {
 //    string FC = "PuFC";
 //    for (Int_t i = 0; i < 8; i++)
 //        cout << " " << i+1 << "   " << Distance(i, FC) <<  "   " << SolidAngle(i, FC) << endl;
+    cout << br(1.159E+19, 2.7813E+15) << endl;
 }
 
 #endif

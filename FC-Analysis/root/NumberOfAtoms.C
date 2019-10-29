@@ -3,21 +3,78 @@
 
 void NumberOfPuAtoms()
 {
+    char name[128] = "";
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "READ");
+    if (!fSF) cout << "Could not open " << "/home/homma93/Programme/Go4nfis/offline/results/SF.root" << endl;
     Double_t PuSFT2 = 6.76E10 * 365.24*24*60*60;
     Double_t DPuSFT2 = 7E8 * 365.24*24*60*60;
+    Double_t rSF_06[] = {4.3275, 3.8991, 3.4868, 3.3583, 3.5389, 3.5293, 3.2918, 4.2490};
+    Double_t DrSF_06[] = {0.0018, 0.0017, 0.0016, 0.0016, 0.0017, 0.0017, 0.0016, 0.0018};
+    Double_t rSF_11[] = {4.3106, 3.8920, 3.4781, 3.3610, 3.5363, 3.5257, 3.2965, 4.2455};
+    Double_t DrSF_11[] = {0.0025, 0.0024, 0.0022, 0.0022, 0.0023, 0.0023, 0.0022, 0.0025};
     Double_t rSF_Toni[] = {4.3234, 3.8945, 3.4859, 3.3611, 3.5388, 3.5293, 3.2948, 4.2508};
     Double_t DrSF_Toni[] = {0.0013, 0.0012, 0.0011, 0.0011, 0.0011, 0.0011, 0.0011, 0.0013};
-    TGraphErrors *ge = new TGraphErrors(8);
+    Double_t N_Toni[] = {1.35, 1.216, 1.088, 1.049, 1.105, 1.102, 1.029, 1.327};
+    Double_t DN_Toni[] = {0.023, 0.021, 0.018, 0.018, 0.019, 0.019, 0.017, 0.022};
+    TGraphErrors *geFisBg = new TGraphErrors(8);
+    TGraphErrors *geBgRate = new TGraphErrors(8);
+    TGraphErrors *geAtoms = new TGraphErrors(8);
+    sprintf(name, "PuFC/ToF/Background/NIF/BackgroundRate");
+    TGraphErrors *geNIF = (TGraphErrors*)fAna->Get(name);
+    if (!geNIF) cout << "Could not get " << name << endl;
+    sprintf(name, "PuFC/ToF/Background/SB/BackgroundRate");
+    TGraphErrors *geSB = (TGraphErrors*)fAna->Get(name);
+    if (!geSB) cout << "Could not get " << name << endl;
+    sprintf(name, "Histograms/Raw/Scaler/Rates/H1RawRate_47");
+    TH1D *hTlive = (TH1D*)fSF->Get(name);
+    if (!hTlive) cout << "Could not get " << name << endl;
+    Double_t t_live = hTlive->Integral();
+    Double_t x, BgRateNIF, DBgRateNIF, BgRateSB, DBgRateSB, BgRateBeam, DBgRateBeam, BgRateSF, DBgRateSF, BgRate, DBgRate;
     for (Int_t i = 0; i < 8; i++)
     {
-        Double_t nAtoms = rSF_Toni[i] * PuSFT2 / log(2.0);
-        Double_t DnAtoms = DrSF_Toni[i] * PuSFT2 / log(2.0);
-        cout << " " << i+1 << " " << nAtoms << "+-" << DnAtoms << endl;
-        ge->SetPoint(i, i+1, nAtoms);
-        ge->SetPointError(i, 0, DnAtoms);
+        // Get NIF, SB, SF background
+        geNIF->GetPoint(i, x, BgRateNIF);
+        DBgRateNIF = geNIF->GetErrorY(i);
+        geSB->GetPoint(i, x, BgRateSB);
+        DBgRateSB = geSB->GetErrorY(i);
+        sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+        TH1I *hDt = (TH1I*)fSF->Get(name);
+        if (!hDt) cout << "Could not get " << name << endl;
+        Double_t FissionBackground = hDt->Integral();
+        BgRateSF = FissionBackground / t_live;
+        DBgRateSF = sqrt(FissionBackground) / t_live;
+
+        // Save SF
+        geFisBg->SetPoint(i, i+1, FissionBackground);
+        geFisBg->SetPointError(i, 0, sqrt(FissionBackground));
+        geBgRate->SetPoint(i, i+1, BgRateSF);
+        geBgRate->SetPointError(i, 0, DBgRateSF);
+
+        // Print values and average
+        BgRateBeam = (BgRateNIF/DBgRateNIF + BgRateSB/DBgRateSB) / (1/DBgRateNIF + 1/DBgRateSB);
+        DBgRateBeam = sqrt(2) / (1/DBgRateNIF + 1/DBgRateSB);
+        Double_t w = (1/DBgRateNIF + 1/DBgRateSB + 1/DBgRateSF + 1/DrSF_06[i] + 1/DrSF_11[i]);
+        BgRate = (BgRateNIF/DBgRateNIF + BgRateSB/DBgRateSB + BgRateSF/DBgRateSF + rSF_06[i]/DrSF_06[i] + rSF_11[i]/DrSF_11[i]) / w;
+        DBgRate = sqrt(5)/w;
+        sprintf(name, "%.3f(%i) & %.4f(%i) & %.4f(%i) & %.4f(%i) & %.4f(%i)",
+                BgRateBeam, (Int_t)(1000*DBgRateBeam),
+                BgRateSF, (Int_t)(10000*DBgRateSF),
+                rSF_06[i], (Int_t)(10000*DrSF_06[i]),
+                rSF_11[i], (Int_t)(10000*DrSF_11[i]),
+                BgRate, (Int_t)(10000*DBgRate));
+//        cout << i+1 << " & " << name << " \\\\" << endl;
+
+        Double_t nAtoms = BgRate * PuSFT2 / log(2.0);
+        Double_t DnAtoms = DBgRate * PuSFT2 / log(2.0);
+        sprintf(name, "%.3f(%i) & %.3f(%i)", nAtoms*1.E-19, (Int_t)(DnAtoms*1.E-15), N_Toni[i], (Int_t)(1000*DN_Toni[i]));
+        cout << i+1 << " & " << name << " \\\\" << endl;
+        geAtoms->SetPoint(i, i+1, nAtoms);
+        geAtoms->SetPointError(i, 0, DnAtoms);
     }
-    Save(fAna, "PuFC/nAtoms", ge, "PuFC_effN");
+    Save(fAna, "PuFC/nAtoms/SF", geFisBg, "FissionBackground");
+    Save(fAna, "PuFC/nAtoms/SF", geBgRate, "BackgroundRate");
+    Save(fAna, "PuFC/nAtoms", geAtoms, "PuFC_effN");
     fAna->Save();
     fAna->Close();
 }

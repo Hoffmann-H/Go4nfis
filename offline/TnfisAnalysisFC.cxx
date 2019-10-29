@@ -186,9 +186,10 @@ Bool_t TnfisFCAnalysis::BuildEvent(TGo4EventElement * output)
                 {   channel = mult.fchzdr.ch[i_preAmp];
 
                     if (pHZDRPreAmp[channel]->GetFirstHit(event) != 0)
-                    {   Long_t TimeDiff = ( pHZDRPreAmp[channel]->GetFirstHit(event)-
-                                            pAccInput->GetFirstHit(event) - 62000) / 40.96;
-//                        cout << TimeDiff << endl;
+                    {   Double_t TimeDiff = ( pHZDRPreAmp[channel]->GetFirstHit(event)-
+                                            pAccInput->GetFirstHit(event) - 62000) / 40.96
+                                            + nfisHistograms::tof_bias(channel); // bias according to simulation
+
                         Long_t QDCl = pHZDRPreAmp[channel]->GetQDCl(event);
                         Long_t QDCh = pHZDRPreAmp[channel]->GetQDCh(event);
 
@@ -303,14 +304,14 @@ void TnfisFCAnalysis::MakeConditions()
     // unit: QDC channels / TDC channels
 
         // Channel              1        2        3        4        5        6        7        8
-        Double_t qdc_min[]   = {899.24,  853.668, 895.652, 849.393, 1046.41, 891.396, 906.123, 837.486}; // PuFC
-        Double_t tof_mean[]  = {67725,   67252,   67156,   67311,   67307,   67267,   67221,   67222}; // PuFC
-        Double_t tof_width[] = {115,     94,      90,      84,      90,      96,      86,      94}; // PuFC
-
+//        Double_t qdc_min[]   = {899.24,  853.668, 895.652, 849.393, 1046.41, 891.396, 906.123, 837.486}; // PuFC
+//        Double_t tof_mean[]  = {67725,   67252,   67156,   67311,   67307,   67267,   67221,   67222}; // PuFC
+//        Double_t tof_width[] = {115,     94,      90,      84,      90,      96,      86,      94}; // PuFC
+/// Auch in nfisHistograms.cxx, ll 341-344 auswählen!
         // Channel              1        2        3        4        5        6        7        8
-//        Double_t qdc_min[]   = {220.396, 500.964, 219.016, 214.101, 199.19,  171.929, 169.046, 121.56}; // UFC
-//        Double_t tof_mean[]  = {73202,   73016,   72674,   72864,   72863,   72828,   72793,   72776}; // UFC
-//        Double_t tof_width[] = {134,     119,     117,     118,     118,     116,     115,     116}; // UFC
+        Double_t qdc_min[]   = {220.396, 500.964, 219.016, 214.101, 199.19,  171.929, 169.046, 121.56}; // UFC
+        Double_t tof_mean[]  = {73202,   73016,   72674,   72864,   72863,   72828,   72793,   72776}; // UFC
+        Double_t tof_width[] = {134,     119,     117,     118,     118,     116,     115,     116}; // UFC
         
     Double_t qdc_max[]      = {4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096};
 

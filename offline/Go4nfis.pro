@@ -32,8 +32,8 @@ OTHER_FILES += \
                 setup.C  \
                 nfisGlobals.h \
                 nfisLinkDef.h \
-    File-Lists/nfis2014_NIF.lml \
-    File-Lists/nfis2014_SF.lml \
-    File-Lists/nfis2014_SB.lml \
-    File-Lists/nfis2014_UFC_NIF.lml \
-    File-Lists/nfis2014_UFC_SB.lml
+    File-Lists/NIF.lml \
+    File-Lists/UFC_SB.lml \
+    File-Lists/SB.lml \
+    File-Lists/SF.lml \
+    File-Lists/UFC_NIF.lml

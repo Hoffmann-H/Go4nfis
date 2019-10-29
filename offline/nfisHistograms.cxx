@@ -14,6 +14,20 @@ nfisHistograms::~nfisHistograms()
 {
 }
 
+Double_t nfisHistograms::tof_bias(Int_t ch)
+{
+    if (PuFC())
+    {
+        Double_t tof_bias[] = {-107.265, -95.9733, -94.3092, -98.4121, -98.6395, -97.9744, -97.4484, -97.896}; // PuFC
+//        Double_t tof_bias[] = {}; // PuFC
+        return tof_bias[ch];
+    } else {
+        Double_t tof_bias[] = {-241.8574, -237.4807, -230.1365, -235.1872, -235.5673, -234.1214, -233.7746, -233.5808}; // UFC
+//        Double_t tof_bias[] = {-242, -237, -229, -234, -234, -234, -233, -233}; // UFC
+        return tof_bias[ch];
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 //define all nfis histogrmas
@@ -338,9 +352,7 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
 //    UInt_t tbins = tdiff/pParGlobal->ReadoutPeriod;
 
     //define ToF bins
-    Double_t tof_min = 0;//62000;
-    Double_t tof_max = 440;//80022.4;
-    Double_t ch_ns = 40.96;
+//    Double_t ch_ns = 40.96;
     Int_t tof_bins = 440;//(tof_max - tof_min) / ch_ns;
 
     //define directory structure of histograms
@@ -351,6 +363,8 @@ void nfisHistograms::DefineAnaHZDR(const char* step_name, const char* dir_name,
 
     for (int i_ch=0; i_ch<NumHist; i_ch++)
     {
+        Double_t tof_min = 0.0 + (Int_t)tof_bias(i_ch);//
+        Double_t tof_max = 440.0 + (Int_t)tof_bias(i_ch);//
         ////Hits
         sprintf(obj_name,"%s/Hits/H1AnaHZDRHit_%i", path_name, i_ch+1);
         sprintf(obj_title,"Number of hits per event Channel %i", i_ch+1);

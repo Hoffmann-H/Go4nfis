@@ -1,4 +1,5 @@
 #include "TMathBase.h"
+#include "TLine.h"
 #include "FC.C"
 #include "Runs.C"
 #include "MCNPtoROOT.C"
@@ -6,9 +7,17 @@
 //#define a 0.25 // alpha
 using namespace std;
 
-void DrawSigma()
+void DrawSigma(Int_t isotope = 242)
 {
-    TGraphErrors *pSigma = new TGraphErrors("/home/hoffma93/Programme/ROOT/Data/Pu242.dat", "%lg %lg %lg");
+    TGraphErrors *pSigma;
+    if (isotope == 242)
+        pSigma = new TGraphErrors("/home/hoffma93/Programme/ROOT/Data/Pu242.dat", "%lg %lg %lg");
+    if (isotope == 235)
+        pSigma = new TGraphErrors("/home/hoffma93/Programme/ROOT/Data/U235.dat", "%lg %lg %lg");
+    if (isotope == 238)
+        pSigma = new TGraphErrors("/home/hoffma93/Programme/ROOT/Data/U238.dat", "%lg %lg %lg");
+    if (!pSigma)
+        cout << "Isotope " << isotope << " not found." << endl;
 
     TMultiGraph *mg = new TMultiGraph();
     mg->SetTitle("^{242}Pu(n,f) Wirkungsquerschnitt; E_{n}; #sigma [b]");
@@ -121,6 +130,17 @@ TH1F* GetDtRate(TFile* f, string FC, string Setup, Int_t channel)
     pHDtRate->Scale(1.0 / t_live);
     
     return pHDtRate;
+}
+
+void SetSize(TH1 *h)
+{
+    h->SetStats(0);
+    h->GetXaxis()->SetLabelSize(0.06);
+    h->GetXaxis()->SetTitleSize(0.06);
+    h->GetXaxis()->SetTitleOffset(0.9);
+    h->GetYaxis()->SetLabelSize(0.06);
+    h->GetYaxis()->SetTitleSize(0.06);
+    h->GetYaxis()->SetTitleOffset(0.9);
 }
 
 void DrawDtComp4(Int_t RebinFactor)
@@ -433,8 +453,8 @@ void DrawPeakWidth(TFile *f, string FC = "PuFC")
         sprintf(name, "%s/ToF/Gate/Peak/gPeak_%i", FC.c_str(), i+1);
         gePeak[i] = (TGraphErrors*)f->Get(name);
         BiasX(gePeak[i], -0.7 + 0.2*i);
-        gePeak[i]->SetLineColor(i+2);
-        gePeak[i]->SetMarkerColor(i+2);
+        gePeak[i]->SetLineColorAlpha(i+2, 0.5);
+        gePeak[i]->SetMarkerColorAlpha(i+2, 0.5);
         gePeak[i]->SetMarkerStyle(20);
         gePeak[i]->SetMarkerSize(2);
         mg->Add(gePeak[i]);
@@ -464,7 +484,7 @@ void DrawPeakWidth(TFile *f, string FC = "PuFC")
     c->Update();
 }
 
-void DrawSimPeak(TFile *f, string FC, string key, Int_t ch, string SimulationPath)
+void DrawSimPeak(TFile *f, string FC, string key, Int_t ch, string Simulation)
 {
     char name[64] = "";
     if (!strcmp(FC.c_str(), "PuFC")) // if PuFC
@@ -472,44 +492,43 @@ void DrawSimPeak(TFile *f, string FC, string key, Int_t ch, string SimulationPat
     else
         sprintf(name, "UFC/ToF/Signal/UFC_NIF/H1AnaHZDRDtG_%i", ch+1);
     TH1F *pH1Exp = (TH1F*)f->Get(name);
-    if (!pH1Exp)
-        cout << "Could not open " << name << endl;
-    sprintf(name, "%s/SimToF/%s%s_FoldT_%s%i", SimulationPath.c_str(), PathTag(key).c_str(), FC.c_str(), NameTag(key).c_str(), ch+1);
+    if (!pH1Exp) cout << "Could not get " << name << endl;
+
+    sprintf(name, "Simulation/%s/%s_%s/SimToF/%s_FoldT_%s_%i", Simulation.c_str(), FC.c_str(), key.c_str(), FC.c_str(), key.c_str(), ch+1);
     TH1D *pH1Sim = (TH1D*)f->Get(name);
-    if (!pH1Sim)
-        cout << "Could not open " << name << endl;
-    Double_t max_pos = PeakCenter(ch, FC);
-    Double_t Gate[] = {max_pos - 15.0, max_pos + 15.0};
-    Double_t IntExp = pH1Exp->Integral(pH1Exp->GetXaxis()->FindBin(Gate[0]), pH1Exp->GetXaxis()->FindBin(Gate[1]));
-    Double_t IntSim = pH1Sim->Integral(pH1Sim->GetXaxis()->FindBin(Gate[0]), pH1Sim->GetXaxis()->FindBin(Gate[1]));
-    Double_t IntSimTotal = pH1Sim->Integral();
-    cout << Gate[0] << " " << Gate[1] << " " << IntExp << " " << IntSim << " " << IntSimTotal << endl;
+    if (!pH1Sim) cout << "Could not get " << name << endl;
+
     sprintf(name, "%s Deposit %i", FC.c_str(), ch+1);
     TLegend *l = new TLegend(0.5, 0.15, 0.85, 0.4, name);
     pH1Exp->SetLineWidth(2);
-    pH1Exp->SetStats(0);
-    pH1Exp->GetXaxis()->SetLabelSize(0.06);
-    pH1Exp->GetXaxis()->SetTitleSize(0.08);
-    pH1Exp->GetXaxis()->SetTitleOffset(0.8);
-    pH1Exp->GetYaxis()->SetLabelSize(0.06);
-    pH1Exp->GetYaxis()->SetTitleSize(0.08);
-    pH1Exp->GetYaxis()->SetTitleOffset(0.8);
+    SetSize(pH1Exp);
+    pH1Exp->GetXaxis()->SetRangeUser(0, 100);
     l->AddEntry(pH1Exp, "Messung");
 
-    Double_t Scale = IntExp / IntSim * pH1Exp->GetXaxis()->GetBinWidth(1) / pH1Sim->GetXaxis()->GetBinWidth(1);
-    pH1Sim->Scale(Scale);
+//    Int_t Gate[] = {Gate_1(ch, FC), Gate_2(ch, FC)};
+//    Double_t IntExp = pH1Exp->Integral(Gate[0], Gate[1]-1);
+//    Double_t IntSim = pH1Sim->Integral(Gate[0], Gate[1]-1);
+//    Double_t IntSimTotal = pH1Sim->Integral();
+//    cout << Gate[0] << " " << Gate[1] << " " << IntExp << " " << IntSim << " " << IntSimTotal << endl;
+//    Double_t Scale = IntExp / IntSim * pH1Exp->GetXaxis()->GetBinWidth(1) / pH1Sim->GetXaxis()->GetBinWidth(1);
+//    pH1Sim->Scale(Scale);
     pH1Sim->SetLineColor(kRed);
     pH1Sim->SetLineWidth(2);
-    l->AddEntry(pH1Sim, "Simulation");
+    sprintf(name, "%s-Simulation", Simulation.c_str());
+    l->AddEntry(pH1Sim, name);
 
 //    Double_t min = pH1Exp->GetMinimum();
     Double_t max = pH1Exp->GetMaximum();
-    TLine *ll = new TLine(Gate[0], 0, Gate[0], max);
-    TLine *lr = new TLine(Gate[1], 0, Gate[1], max);
-    Double_t Efficiency = IntSim / IntSimTotal;
-    sprintf(name, "%f im Zeitfenster", Efficiency);
-    TLatex *t = new TLatex(max_pos, 0.5*max, name);
-    t->SetTextColor(kRed);
+    Double_t xl = pH1Exp->GetBinLowEdge(Gate_1(ch, FC));
+    Double_t xr = pH1Exp->GetBinLowEdge(Gate_2(ch, FC));
+    TLine *ll = new TLine(xl, 0, xl, max);
+    ll->SetLineStyle(3);
+    TLine *lr = new TLine(xr, 0, xr, max);
+    lr->SetLineStyle(3);
+//    Double_t Efficiency = IntSim / IntSimTotal;
+//    sprintf(name, "%f%% im Zeitfenster", 100*Efficiency);
+//    TLatex *t = new TLatex(30, 0.5*max, name);
+//    t->SetTextColor(kRed);
 
     TCanvas *c = new TCanvas("name", "title", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
@@ -518,8 +537,8 @@ void DrawSimPeak(TFile *f, string FC, string key, Int_t ch, string SimulationPat
     l->Draw();
     ll->Draw();
     lr->Draw();
-    t->Draw();
-    c->Update();
+//    t->Draw();
+    c->Update();//*/
 }
 
 void DrawMonitorRatio(TFile *f, Int_t ch)
@@ -772,6 +791,29 @@ void DrawSourceE(Double_t E = 14.97, Double_t DE = 0.3)
     c->Update();
 }
 
+void DrawEnELBE()
+{
+    TGraph *g = new TGraph("/home/hoffma93/Programme/ROOT/Data/nELBE_E.dat");
+
+    TCanvas *c = new TCanvas("Source_E", "Source_E", 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    gPad->SetLogx(1);
+    g->SetNameTitle("Source_E", "nELBE Neutron Energy Spectrum");
+    g->GetXaxis()->SetTitle("#font[12]{E} / MeV");
+    g->GetXaxis()->SetTitleSize(0.08);
+    g->GetXaxis()->SetLabelSize(0.06);
+    g->GetXaxis()->SetTitleOffset(0.8);
+    g->GetYaxis()->SetTitle("#font[12]{n}(#font[12]{E}) [a.u.]");
+    g->GetYaxis()->SetTitleSize(0.08);
+    g->GetYaxis()->SetLabelSize(0.06);
+    g->GetYaxis()->SetTitleOffset(0.7);
+    g->SetLineWidth(2);
+
+    g->Draw();
+    c->Modified();
+    c->Update();
+}
+
 void DrawTargetE(TFile *f, string Subfolder, Int_t Population)
 {
     char name[64] = "";
@@ -785,26 +827,22 @@ void DrawTargetE(TFile *f, string Subfolder, Int_t Population)
     TH1D *pTot = (TH1D*)f->Get(name);
     pDir->SetLineColor(kRed);
     pSc->SetLineColor(kBlue);
-    pTot->SetLineColor(0);
+//    pTot->SetLineColor(0);
+    pTot->SetLineColor(kBlack);
     sprintf(name, "%i simulierte Ionen", Population);
     TLegend *l = new TLegend(0.4, 0.2, 0.6, 0.3, name);
     sprintf(name, "%.2f%% direkte Neutronen", 100 * pDir->Integral());
     l->AddEntry(pDir, name);
     sprintf(name, "%.2f%% indirekte Neutronen", 100 * pSc->Integral());
     l->AddEntry(pSc, name);
-    pTot->GetXaxis()->SetTitleSize(0.08);
-    pTot->GetXaxis()->SetLabelSize(0.06);
-    pTot->GetXaxis()->SetTitleOffset(0.8);
-    pTot->GetYaxis()->SetTitleSize(0.08);
-    pTot->GetYaxis()->SetLabelSize(0.06);
-    pTot->GetYaxis()->SetTitleOffset(0.7);
+    SetSize(pTot);
     TCanvas *c = new TCanvas("Target_E", "Target_E", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
     gPad->SetLogy(1);
     pTot->Draw("hist");
-    pDir->Draw("same hist");
-    pSc->Draw("same hist");
-    l->Draw();
+//    pDir->Draw("same hist");
+//    pSc->Draw("same hist");
+//    l->Draw();
     c->Update();
 }
 
@@ -840,30 +878,343 @@ void DrawTargetToF(TFile *f, string Subfolder)
     cT->Update();
 }
 
+void DrawGEF(Int_t isotope, string spectrum)
+{
+    char name[128] = "";
+    sprintf(name, "/home/hoffma93/Experiment/Carlson-Korrektur/GEF/GEF_92_%i_nf_%s_1e6/GEF_U%i_nf_%s_1e6.root", isotope, spectrum.c_str(), isotope, spectrum.c_str());
+    TFile *fGEF = TFile::Open(name);
+    if (!fGEF)
+        cout << "Could not open " << name << endl;
+    TH1F *hMass = (TH1F*)fGEF->Get("Mass");
+    sprintf(name, "^{%i}U, %s, Spaltfragmentmasse; A; Spaltfragmente", isotope, spectrum.c_str());
+    hMass->SetTitle(name);
+    SetSize(hMass);
+    hMass->GetYaxis()->SetTitleOffset(1.1);
+    TCanvas *c1 = new TCanvas("Mass", "Mass", 200, 10, 700, 500);
+    hMass->Draw();
+    c1->Update();
+    TH1F *hTKE = (TH1F*)fGEF->Get("TKE");
+    sprintf(name, "^{%i}U, %s, Totale kinetische Energie; #font[12]{TKE} [MeV]; Spaltereignisse", isotope, spectrum.c_str());
+    hTKE->SetTitle(name);
+    SetSize(hTKE);
+    hTKE->GetYaxis()->SetTitleOffset(1.1);
+    TCanvas *c2 = new TCanvas("TKE", "TKE", 200, 10, 700, 500);
+    hTKE->Draw();
+    c2->Update();
+    TH2F *hNvsZ = (TH2F*)fGEF->Get("NvsZ");
+    sprintf(name, "^{%i}U, %s, Tochternuklide; Z; A", isotope, spectrum.c_str());
+    hNvsZ->SetTitle(name);
+    SetSize(hNvsZ);
+    hNvsZ->GetZaxis()->SetLabelSize(0.06);
+    TCanvas *c3 = new TCanvas("NvsZ", "NvsZ", 200, 10, 700, 500);
+    hNvsZ->Draw("colz");
+    c3->Update();
+}
+
+void DrawGEF(string hist_name = "Mass")
+{
+    char name[128] = "";
+    Int_t Isotopes[] = {235, 235, 238, 238};
+    string Spectra[] = {"nELBE", "15MeV", "nELBE", "15MeV"};
+    TH1F *pH[4];
+    TCanvas *c4 = new TCanvas(hist_name.c_str(), hist_name.c_str(), 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    TLegend *l = new TLegend(0.7, 0.8, 1, 1);
+    for (Int_t j = 0; j < 4; j++)
+    {
+        sprintf(name, "/home/hoffma93/Programme/GEF/results/GEF_U%i_nf_%s_1e6.root", Isotopes[j], Spectra[j].c_str());
+        TFile *f = TFile::Open(name);
+        if (!f) cout << "Could not open " << name << endl;
+        pH[j] = (TH1F*)f->Get(hist_name.c_str());
+        if (!pH[j]) cout << "Could not get " << hist_name << endl;
+        pH[j]->SetLineWidth(2);
+        pH[j]->SetLineColorAlpha(Isotopes[j] == 235 ? kBlue : kOrange, 0.8);
+        pH[j]->SetLineStyle(strcmp(Spectra[j].c_str(), "nELBE") ? 2 : 1);
+        sprintf(name, "%s ^{%i}U", Spectra[j].c_str(), Isotopes[j]);
+        l->AddEntry(pH[j], name);
+    }
+    pH[0]->SetTitle(hist_name.c_str());
+    pH[0]->GetXaxis()->SetTitle(hist_name.c_str());
+    pH[0]->GetYaxis()->SetTitle("Spaltfragmente");
+    SetSize(pH[0]);
+    pH[0]->Draw("hist");
+    pH[1]->Draw("same hist"); pH[2]->Draw("same hist"); pH[3]->Draw("same hist");
+    l->Draw("same");
+    c4->Update();
+}
+
+void DrawFFRange(TFile *f)
+{
+    TH1F *pH0 = (TH1F*)f->Get("Carlson/U235/nELBE/U235_nELBE_FF_Range");
+    if (!pH0) cout << "Could not get " << "Carlson/U235/nELBE/U235_nELBE_FF_Range" << endl;
+    TH1F *pH1 = (TH1F*)f->Get("Carlson/U235/15MeV/U235_15MeV_FF_Range");
+    if (!pH1) cout << "Could not get " << "Carlson/U235/15MeV/U235_15MeV_FF_Range" << endl;
+    TH1F *pH2 = (TH1F*)f->Get("Carlson/U238/nELBE/U238_nELBE_FF_Range");
+    if (!pH2) cout << "Could not get " << "Carlson/U238/nELBE/U238_nELBE_FF_Range" << endl;
+    TH1F *pH3 = (TH1F*)f->Get("Carlson/U238/15MeV/U238_15MeV_FF_Range");
+    if (!pH3) cout << "Could not get " << "Carlson/U238/15MeV/U238_15MeV_FF_Range" << endl;
+
+    pH0->SetLineWidth(2);
+    pH0->SetLineColorAlpha(kBlue, 0.8);
+    pH0->SetLineStyle(1);
+    pH1->SetLineWidth(2);
+    pH1->SetLineColorAlpha(kBlue, 0.8);
+    pH1->SetLineStyle(2);
+    pH2->SetLineWidth(2);
+    pH2->SetLineColorAlpha(kOrange, 0.8);
+    pH2->SetLineStyle(1);
+    pH3->SetLineWidth(2);
+    pH3->SetLineColorAlpha(kOrange, 0.8);
+    pH3->SetLineStyle(2);
+    TLegend *l = new TLegend(0.7, 0.8, 1, 1);
+    l->AddEntry(pH0, "#font[12]{n}ELBE ^{235}U");
+    l->AddEntry(pH1, "15MeV ^{235}U");
+    l->AddEntry(pH2, "#font[12]{n}ELBE ^{238}U");
+    l->AddEntry(pH3, "15MeV ^{238}U");
+
+    pH0->SetTitle("FF Range");
+    pH0->GetXaxis()->SetTitle("#font[12]{R'} [mg/cm^{2}]");
+    pH0->GetYaxis()->SetTitle("#font[12]{N}");
+    SetSize(pH0);
+
+    TCanvas *cR = new TCanvas("cR", "FF Range", 200, 10, 700, 500);
+    gPad->SetTicks(1,1);
+    pH0->Draw("hist");
+    pH1->Draw("same hist"); pH2->Draw("same hist"); pH3->Draw("same hist");
+    l->Draw("same");
+    cR->Update();
+}
+
+void DrawQDC(TFile *fAna, string FC, Int_t ch, TFile *f, string Setup = "FG")
+{
+    char name[64] = "";
+
+    sprintf(name, "Histograms/Raw/QDC/low/H1RawQDCl_%i", ch+1);
+    TH1I *pH = (TH1I*)f->Get(name);
+    pH->SetStats(0);
+    SetSize(pH);
+    pH->SetLineColor(kBlack);
+    pH->SetTitle("");
+    pH->GetYaxis()->SetTitle("#font[12]{N}");
+    sprintf(name, "Histograms/Analysis/FC/QDC/low/trig/H1AnaQDCl_trig_%i", ch+1);
+    TH1I *pHt = (TH1I*)f->Get(name);
+    pHt->SetLineColor(kBlue);
+
+    sprintf(name, "%s/QDC/Fit/%s/pol4_%s_%i", FC.c_str(), Setup.c_str(), Setup.c_str(), ch+1);
+    TF1 *pF = (TF1*)fAna->Get(name);
+    pF->SetLineWidth(lw);
+    pF->SetLineColor(kRed);
+
+    sprintf(name, "QDCfit_%i", ch+1);
+    TCanvas *pC = new TCanvas(name, name, 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    gPad->SetLogy(1);
+    pH->Draw("hist");
+    pHt->Draw("same hist");
+    pF->Draw("same");
+    pC->Update();
+
+    Double_t x0 = QDCcut(ch, FC),
+             x1 = x0,
+             y0 = pow(10, pC->GetUymin()),
+             y1 = pow(10, pC->GetUymax());
+    cout << x0 << " " << y0 << " " << x1 << " " << y1 << endl;
+    TLine *lCut = new TLine(x0, y0, x1, y1);
+    lCut->Draw("same");
+    x1 = 4096;
+    pH->GetXaxis()->SetRange(x0, x1);
+    y0 = 2.0 * pH->GetMaximum();
+    pH->GetXaxis()->SetRangeUser(0, 4096);
+    y1 = y0;
+    TArrow *aFF = new TArrow(x0, y0, x1, y1, 0.02, "<|>");
+    aFF->SetAngle(30);
+    aFF->Draw();
+    TLegend *lQDC = new TLegend(0.6, 0.7, 0.85, 0.8);
+    sprintf(name, "%s Kanal %i", FC.c_str(), ch+1);
+    lQDC->AddEntry(pHt, name);
+    lQDC->Draw("same");
+}
+
+void DrawQDCsum(TFile *fAna, string FC, Int_t ch)
+{
+//    char name[64] = "";
+//    sprintf(name, "Histograms/Raw/QDC/low/H1RawQDCl_%i", ch+1);
+//    TH1I *pH;
+//    if (!strcpm(FC.c_str(), "PuFC"))
+//    {
+//        TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+//        pH = (TH1I*)fNIF->Get(name);
+//        TFile* fSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root");
+//        TH1I *pSB = (TH1I*)fSB->Get(name);
+//        TFile* fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root");
+//        TH1I *pSF = (TH1I*)fSF->Get(name);
+//        pH->Add(pSB);
+//        pH->Add(pSF);
+//        fNIF->Close();
+//        fSB->Close();
+//        fSF->Close();
+//    } else {
+//        TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
+//        pH = (TH1I*)fNIF->Get(name);
+//        TFile* fSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root");
+//        TH1I *pSB = (TH1I*)fSB->Get(name);
+//        pH->Add(pSB);
+//        fNIF->Close();
+//        fSB->Close();
+//    }
+
+//    sprintf(name, "%s/QDC/Fit/%s/pol4_%s_%i", FC.c_str(), Setup.c_str(), Setup.c_str(), ch+1);
+//    TF1 *pF = (TF1*)fAna->Get(name);
+//    pH->SetStats(0);
+//    pH->GetXaxis()->SetTitleSize(0.05);
+//    pH->GetYaxis()->SetTitleSize(0.05);
+//    pH->SetLineColor(kBlue);
+//    pH->Draw();
+//    pF->SetLineWidth(lw);
+//    pF->SetLineColor(kRed);
+//    pF->Draw("same");
+}
+
+void DrawDt(TFile *fAna, string FC, Int_t ch, TFile *f)
+{
+    char name[64] = "";
+    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+    TH1I *pH = (TH1I*)f->Get(name);
+    SetSize(pH);
+
+    sprintf(name, "cDt_%s_%i", FC.c_str(), ch+1);
+    TCanvas *cT = new TCanvas(name, name, 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+
+    pH->Draw();
+}
+
+void DrawDtGate(TFile *fAna, string FC, Int_t ch, TFile *f)
+{
+    char name[64] = "";
+    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+    TH1I *pH0 = (TH1I*)f->Get(name);
+    SetSize(pH0);
+    TH1I *pH1 = (TH1I*)pH0->Clone();
+    pH1->GetXaxis()->SetRange(Gate_1(ch, FC), Gate_2(ch, FC)-1);
+    pH1->SetFillColorAlpha(kRed, 0.5);
+    TH1I *pH2 = (TH1I*)pH0->Clone();
+    pH2->GetXaxis()->SetRange(Gate_0(ch, FC), Gate_a(ch, FC)-1);
+    pH2->SetFillColorAlpha(kGray, 0.5);
+    TH1I *pH3 = (TH1I*)pH0->Clone();
+    pH3->GetXaxis()->SetRange(Gate_b(ch, FC), Gate_3(ch, FC)-1);
+    pH3->SetFillColorAlpha(kGray, 0.5);
+
+    sprintf(name, "cDt_%s_%i", FC.c_str(), ch+1);
+    TCanvas *cT = new TCanvas(name, name, 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+
+    pH0->Draw();
+    pH1->Draw("same");
+    pH2->Draw("same");
+    pH3->Draw("same");
+    cT->Update();
+
+    Int_t bin[] = {Gate_0(ch, FC), Gate_a(ch, FC), Gate_1(ch, FC), Gate_2(ch, FC), Gate_b(ch, FC), Gate_3(ch, FC)};
+    Double_t y0 = cT->GetUymin(), y1 = cT->GetUymax();
+    for (Int_t j = 0; j < 6; j++)
+    {
+        Double_t xval = pH0->GetBinLowEdge(bin[j]);
+        TLine *line = new TLine(xval, y0, xval, y1);
+        line->SetLineStyle(3);
+        line->Draw("same");
+    }
+}
+
+void DrawDtBackground(TFile *fAna, string Setup, Int_t ch, TFile *f)
+{
+    char name[64] = "";
+    string FC = (Setup[0] == 'U') ? "UFC" : "PuFC";
+    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+    TH1I *pH = (TH1I*)f->Get(name);
+    SetSize(pH);
+    sprintf(name, "%s/ToF/Background/%s/Left/%s_fL_%i", FC.c_str(), Setup.c_str(), Setup.c_str(), ch+1);
+    TF1 *fL = (TF1*)fAna->Get(name);
+    if (!fL) cout << "Could not get " << name << endl;
+    sprintf(name, "%s/ToF/Background/%s/Right/%s_fR_%i", FC.c_str(), Setup.c_str(), Setup.c_str(), ch+1);
+    TF1 *fR = (TF1*)fAna->Get(name);
+    if (!fR) cout << "Could not get " << name << endl;
+
+    Double_t x1, x2, y, Dy;
+    fL->GetRange(x1, x2);
+    x1 = -80;
+    y = fL->GetParameter(0);
+    Dy = fL->GetParError(0);
+    sprintf(name, "%.1f#pm%.1f", y, Dy);
+    TLatex *t1 = new TLatex(x1, y + pH->GetMaximum()/5, name);
+    sprintf(name, "#chi^{2}/#font[12]{dof} = %.2f", fL->GetChisquare() / fL->GetNDF());
+    TLatex *t2 = new TLatex(x1, y + pH->GetMaximum()/10, name);
+
+    fR->GetRange(x1, x2);
+    x1 = 80;
+    y = fR->GetParameter(0);
+    Dy = fR->GetParError(0);
+    sprintf(name, "%.1f#pm%.1f", y, Dy);
+    TLatex *t3 = new TLatex(x1, y + pH->GetMaximum()/5, name);
+    sprintf(name, "#chi^{2}/#font[12]{dof} = %.2f", fR->GetChisquare() / fR->GetNDF());
+    TLatex *t4 = new TLatex(x1, y + pH->GetMaximum()/10, name);
+
+    fL->SetLineColor(kRed);
+    t1->SetTextColor(kRed);
+    t2->SetTextColor(kRed);
+    fR->SetLineColor(kRed);
+    t3->SetTextColor(kRed);
+    t4->SetTextColor(kRed);
+
+    TLegend *l = new TLegend(0.2, 0.4, 0.5, 0.5);
+    sprintf(name, "%s Kanal %i", FC.c_str(), ch+1);
+    l->AddEntry(pH, name);
+
+    sprintf(name, "cDtBg_%s_%i", FC.c_str(), ch+1);
+    TCanvas *cT = new TCanvas(name, name, 200, 10, 700, 500);
+    gPad->SetTicks(1, 1);
+    pH->Draw("hist");
+    fL->Draw("same");
+    fR->Draw("same");
+    l->Draw();
+    t1->Draw();
+    t2->Draw();
+    t3->Draw();
+    t4->Draw();
+}
+
 int DrawPics()
 {
 //    gStyle->SetCanvasPreferGL();
 
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
-//    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
 
-
-//    DrawSigma();
+//    DrawSigma(235);
 //    DrawCrossSectionRuns(fAna);
 //    DrawUscattering(fAna);
 //    DrawPuCorrection(fAna);
 //    DrawMonitorRate();
 //    DrawPeakWidth(fAna, "UFC");
-//    DrawSimPeak(fAna, "UFC", "2", 0, "Simulation/Geant4/UFC_Open");
-//    DrawSimPeak(fAna, "PuFC", "2", 0, "Simulation/MCNP");
+    DrawSimPeak(fAna, "UFC", "real", 0, "Geant4");
+//    DrawSimPeak(fAna, "PuFC", "real", 1, "MCNP");
 //    DrawMonitorRatio(fAna, 1);
 //    DrawMonitorRatio(fAna, "UFC");
 //    DrawPuSponFis();
 //    DrawTimeDiff(fNIF, 0);
 //    DrawExfor();
 //    DrawSourceE();
+//    DrawEnELBE();
 //    DrawTargetE(fAna, "", 100000000);
-    DrawTargetToF(fAna, "");
+//    DrawTargetToF(fAna, "");
+//    DrawGEF(235, "nELBE");
+//    DrawGEF("Mass");
+//    DrawFFRange(fAna);
+//    DrawQDC(fAna, "PuFC", 0, fNIF);
+//    DrawDt(fAna, "UFC", 0, fUNIF);
+//    DrawDtGate(fAna, "PuFC", 7, fNIF);
+//    DrawDtBackground(fAna, "UFC_NIF", 7, fUNIF);
 
     return 1;
 }

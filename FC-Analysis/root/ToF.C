@@ -42,9 +42,9 @@ TF1* FitLeft(TH1F *pH, Int_t i, string FC, string Run)
 {
     char name[64] = "";
     ToF_BG_min[0] = pH->GetBinLowEdge(Gate_0(i, FC));
-    ToF_BG_max[0] = pH->GetBinLowEdge(Gate_1(i, FC));
-    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_b(i, FC) + 1);
-    ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC) + 1);
+    ToF_BG_max[0] = pH->GetBinLowEdge(Gate_a(i, FC));
+    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_b(i, FC));
+    ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC));
     Double_t xmin = ToF_BG_min[0];
     Double_t xmax = ToF_BG_max[0];
 //    cout << ToF_BG_min[0] << " " << ToF_BG_max[0] << " " << ToF_BG_min[1] << " " << ToF_BG_max[1] << " " << xmin << " " << xmax << endl;
@@ -60,9 +60,9 @@ TF1* FitRight(TH1F *pH, Int_t i, string FC, string Run)
 {
     char name[64] = "";
     ToF_BG_min[0] = pH->GetBinLowEdge(Gate_0(i, FC));
-    ToF_BG_max[0] = pH->GetBinLowEdge(Gate_1(i, FC));
-    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_b(i, FC) + 1);
-    ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC) + 1);
+    ToF_BG_max[0] = pH->GetBinLowEdge(Gate_a(i, FC));
+    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_b(i, FC));
+    ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC));
     Double_t xmin = ToF_BG_min[1];
     Double_t xmax = ToF_BG_max[1];
 //    cout << ToF_BG_min[0] << " " << ToF_BG_max[0] << " " << ToF_BG_min[1] << " " << ToF_BG_max[1] << " " << xmin << " " << xmax << endl;
@@ -77,10 +77,10 @@ TF1* FitRight(TH1F *pH, Int_t i, string FC, string Run)
 TF1* FitTotal(TH1F *pH, Int_t i, string FC, string Run)
 {
     char name[64] = "";
-    ToF_BG_min[0] = Gate_0(i, FC);
-    ToF_BG_max[0] = Gate_1(i, FC);
-    ToF_BG_min[1] = Gate_b(i, FC);
-    ToF_BG_max[1] = Gate_3(i, FC);
+    ToF_BG_min[0] = pH->GetBinLowEdge(Gate_0(i, FC));
+    ToF_BG_max[0] = pH->GetBinLowEdge(Gate_a(i, FC));
+    ToF_BG_min[1] = pH->GetBinLowEdge(Gate_b(i, FC));
+    ToF_BG_max[1] = pH->GetBinLowEdge(Gate_3(i, FC));
     Double_t xmin = pH->GetBinLowEdge(1);
     Double_t xmax = pH->GetBinLowEdge(pH->GetNbinsX() + 1);
 
@@ -92,15 +92,14 @@ TF1* FitTotal(TH1F *pH, Int_t i, string FC, string Run)
     return fTotal;
 }
 
-string SubtractBackground(string Run)
+string SubtractBackground(string Run, Bool_t print = 0)
 {
     string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     char name[128] = "";
     sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
     TFile *f = TFile::Open(name, "READ");
-    if (f == 0)
-        cout << "Error opening " << name << endl;
+    if (!f) cout << "Error opening " << name << endl;
 
     // live time
     TH1D *pHt = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_47");
@@ -111,6 +110,12 @@ string SubtractBackground(string Run)
     TGraphErrors *geBG = new TGraphErrors(8);
     TGraphErrors *geNIFrate = new TGraphErrors(8);
     TGraphErrors *geBGrate = new TGraphErrors(8);
+    TGraph *geChi2dofLeft = new TGraphErrors(8);
+    geChi2dofLeft->SetNameTitle("chi2dofLeft", "Reduced #chi^{2}; Deposit; #chi^{2}/#font[12]{dof}");
+    TGraph *geChi2dofRight = new TGraphErrors(8);
+    geChi2dofRight->SetNameTitle("chi2dofRight", "Reduced #chi^{2}; Deposit; #chi^{2}/#font[12]{dof}");
+    TGraph *geChi2dofTotal = new TGraphErrors(8);
+    geChi2dofTotal->SetNameTitle("chi2dofTotal", "Reduced #chi^{2}; Deposit; #chi^{2}/#font[12]{dof}");
 
     // Initialize returned string
     std::stringstream line;
@@ -130,8 +135,34 @@ string SubtractBackground(string Run)
         TF1 *fTotal = FitTotal(pH, i, FC, Run);
         Save(fAna, FC+"/ToF/Background/"+Run+"/Total", fTotal);
         // Subtract
+        Double_t x1, x2;
+        fTotal->GetRange(x1, x2);
+//        cout << x1 << " " << x2 << " " << pH->FindBin(x1) << " " << pH->FindBin(x2) << endl;
         pH->Add(fTotal, -1);
         Save(fAna, FC+"/ToF/Signal/"+Run, pH);
+
+        // chi2 / dof
+        geChi2dofLeft->SetPoint(i, i+1, fLeft->GetChisquare() / fLeft->GetNDF());
+        geChi2dofRight->SetPoint(i, i+1, fRight->GetChisquare() / fRight->GetNDF());
+        geChi2dofTotal->SetPoint(i, i+1, fTotal->GetChisquare() / fTotal->GetNDF());
+        if (print)
+        {
+            if (Run[0] == 'U') // UFC
+                sprintf(name, "%.2f(%i) & %.2f & %.2f(%i) & %.2f & %.2f(%i)",
+                        fLeft->GetParameter(0), (Int_t)(100*fLeft->GetParError(0)),
+                        fLeft->GetChisquare() / fLeft->GetNDF(),
+                        fRight->GetParameter(0), (Int_t)(100*fRight->GetParError(0)),
+                        fRight->GetChisquare() / fRight->GetNDF(),
+                        fTotal->GetParameter(0), (Int_t)(100*fTotal->GetParError(0)));
+            else
+                sprintf(name, "%.1f(%i) & %.2f & %.1f(%i) & %.2f & %.1f(%i)",
+                        fLeft->GetParameter(0), (Int_t)(10*fLeft->GetParError(0)),
+                        fLeft->GetChisquare() / fLeft->GetNDF(),
+                        fRight->GetParameter(0), (Int_t)(10*fRight->GetParError(0)),
+                        fRight->GetChisquare() / fRight->GetNDF(),
+                        fTotal->GetParameter(0), (Int_t)(10*fTotal->GetParError(0)));
+            cout << FC << " " << i+1 << " & " << name << " \\\\" << endl;
+        }
 
         // Integrate
         Double_t C_nif, DC_nif;
@@ -156,6 +187,9 @@ string SubtractBackground(string Run)
     Save(fAna, FC+"/ToF/Background/"+Run, geBG, "FissionBackground");
     Save(fAna, FC+"/ToF/Signal/"+Run, geNIFrate, "FissionRate");
     Save(fAna, FC+"/ToF/Background/"+Run, geBGrate, "BackgroundRate");
+    Save(fAna, FC+"/ToF/Background/"+Run+"/Left", geChi2dofLeft);
+    Save(fAna, FC+"/ToF/Background/"+Run+"/Right", geChi2dofRight);
+    Save(fAna, FC+"/ToF/Background/"+Run+"/Total", geChi2dofTotal);
 
 //    TCanvas *c1 = new TCanvas();
 //    pH->Draw("hist");

@@ -10,24 +10,24 @@ string CrossSectionRun(string Run)
 
     // choose fission chamber
     string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
-//    cout << "Cross section for run " << Run << ", auto-assigned to " << FC << endl;
+    cout << "Cross section for run " << Run << ", auto-assigned to " << FC << endl;
 
     // Get fission signal rate
     sprintf(name, "%s/ToF/Signal/%s/FissionRate", FC.c_str(), Run.c_str());
     TGraphErrors *geFissionRate = (TGraphErrors*)fAna->Get(name);
-    if (geFissionRate == 0)
+    if (!geFissionRate)
         cout << "Could not open " << name << endl;
 
     // Get number of target atoms
     sprintf(name, "%s/nAtoms/%s_effN", FC.c_str(), FC.c_str());
     TGraphErrors *geAtoms = (TGraphErrors*)fAna->Get(name);
-    if (geAtoms == 0)
+    if (!geAtoms)
         cout << "Could not open " << name << endl;
 
     // Get neutron density rate
     sprintf(name, "%s/NeutronField/%s/%s_Density", FC.c_str(), Run.c_str(), Run.c_str());
     TGraphErrors *geFlux = (TGraphErrors*)fAna->Get(name);
-    if (geFlux == 0)
+    if (!geFlux)
         cout << "Could not open " << name << endl;
 
     // Create cross section graph
