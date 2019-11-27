@@ -101,7 +101,7 @@ void ApplyCorrectionsU(string Simulation = "Geant4", Int_t Gate = 15)
     sprintf(name, "UFC/Correction/UFC_%s_Gate_%ins", Simulation.c_str(), Gate);
     TGraphErrors *gG = (TGraphErrors*)fAna->Get(name);
     if (!gG) cout << "Could not get " << name << endl;
-    sprintf(name, "UFC/Correction/UFC_%s_C", Simulation.c_str());
+    sprintf(name, "UFC/Correction/%s_UFC_real_C", Simulation.c_str());
     TGraphErrors *gC = (TGraphErrors*)fAna->Get(name);
     if (!gC) cout << "Could not get " << name << endl;
     TGraphErrors *gCarlson = (TGraphErrors*)fAna->Get("Carlson/Carlson_Correction");
@@ -174,7 +174,7 @@ void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
     sprintf(name, "PuFC/Correction/PuFC_%s_Gate_%ins", Simulation.c_str(), Gate);
     TGraphErrors *gG = (TGraphErrors*)fAna->Get(name);
     if (!gG) cout << "Could not get " << name << endl;
-    sprintf(name, "PuFC/Correction/PuFC_%s_C", Simulation.c_str());
+    sprintf(name, "PuFC/Correction/%s_PuFC_real_C", Simulation.c_str());
     TGraphErrors *gC = (TGraphErrors*)fAna->Get(name);
     if (!gC) cout << "Could not open " << name << endl;
     TGraphErrors *gAtoms = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_effN");
@@ -217,9 +217,11 @@ void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
         gCorr->SetPointError(i, 0, DSigma[i]);
 
         // Make average
-        sumSigma += Sigma[i] * Atoms[i];
-        D2sumSigma += pow(DSigma[i] * Atoms[i], 2);
-        sumAtoms += Atoms[i];
+        if (i != 4 && i != 7) {
+            sumSigma += Sigma[i] * Atoms[i];
+            D2sumSigma += pow(DSigma[i] * Atoms[i], 2);
+            sumAtoms += Atoms[i];
+        }
     }
     gCorr->SetName("PuFC_CS_corrected");
     Save(fAna, "PuFC/Correction", gCorr);
@@ -233,8 +235,9 @@ void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
 void Correction()
 {
 //    ScatteringUFC();
-    ApplyCorrectionsU("Geant4", GATE);
-    ApplyCorrectionsPu("Geant4", GATE);
+    ApplyCorrectionsU("Geant4", RIGHT);
+    ApplyCorrectionsPu("Geant4", RIGHT);
+//    ApplyCorrectionsPu("MCNP", GATE);
 }
 
 #endif

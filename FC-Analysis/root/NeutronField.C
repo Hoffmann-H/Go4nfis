@@ -80,8 +80,8 @@ Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &
 string NeutronFieldRun(string Run)
 { // Find 1 run's neutron flux. Return output string
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-    Double_t Yield = 2.158821152E4;
-    Double_t DYield = 543.3;
+    Double_t Yield = 2.217E4;
+    Double_t DYield = 0.003 * Yield; //543.3;
     char name[64] = "";
 
     // choose fission chamber
@@ -106,7 +106,7 @@ string NeutronFieldRun(string Run)
         Double_t w = SolidAngle(i, FC);
         Double_t area = DepositArea(i, FC);
         Double_t nFluence = Yield * Monitor * w;
-        Double_t DnFluence = sqrt( pow(DYield * Monitor * w, 2) +
+        Double_t DnFluence = sqrt( /*pow(DYield * Monitor * w, 2) +*/
                                    pow(Yield * DeltaRel * Monitor * w, 2) +
                                    pow(Yield * Monitor * 0, 2) );
         Double_t nFlux = nFluence / area;

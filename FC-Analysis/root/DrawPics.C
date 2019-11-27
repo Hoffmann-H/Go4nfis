@@ -1,5 +1,9 @@
+#ifndef DRAWPICS_H
+#define DRAWPICS_H
+
 #include "TMathBase.h"
 #include "TLine.h"
+#include "TLatex.h"
 #include "FC.C"
 #include "Runs.C"
 #include "MCNPtoROOT.C"
@@ -134,6 +138,7 @@ TH1F* GetDtRate(TFile* f, string FC, string Setup, Int_t channel)
 
 void SetSize(TH1 *h)
 {
+//    gPad->SetTicks(1, 1);
     h->SetStats(0);
     h->GetXaxis()->SetLabelSize(0.06);
     h->GetXaxis()->SetTitleSize(0.06);
@@ -141,6 +146,19 @@ void SetSize(TH1 *h)
     h->GetYaxis()->SetLabelSize(0.06);
     h->GetYaxis()->SetTitleSize(0.06);
     h->GetYaxis()->SetTitleOffset(0.9);
+}
+
+void SetSize(TGraph *g)
+{
+//    gPad->SetTicks(1, 1);
+    g->GetXaxis()->SetLabelSize(0.06);
+    g->GetXaxis()->SetTitleSize(0.06);
+    g->GetXaxis()->SetTitleOffset(0.9);
+    g->GetXaxis()->SetNdivisions(109);
+    g->GetYaxis()->SetLabelSize(0.06);
+    g->GetYaxis()->SetTitleSize(0.06);
+    g->GetYaxis()->SetTitleOffset(0.9);
+    g->GetYaxis()->SetNdivisions(1005);
 }
 
 void DrawDtComp4(Int_t RebinFactor)
@@ -484,32 +502,31 @@ void DrawPeakWidth(TFile *f, string FC = "PuFC")
     c->Update();
 }
 
-void DrawSimPeak(TFile *f, string FC, string key, Int_t ch, string Simulation)
+void DrawSimPeak(TFile *f, string Run, string key, Int_t ch, string Simulation)
 {
     char name[64] = "";
-    if (!strcmp(FC.c_str(), "PuFC")) // if PuFC
-        sprintf(name, "PuFC/ToF/Signal/NIF/H1AnaHZDRDtG_%i", ch+1);
-    else
-        sprintf(name, "UFC/ToF/Signal/UFC_NIF/H1AnaHZDRDtG_%i", ch+1);
-    TH1F *pH1Exp = (TH1F*)f->Get(name);
-    if (!pH1Exp) cout << "Could not get " << name << endl;
+    string FC = Run[0] == 'U' ? "UFC" : "PuFC";
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    TFile *fExp = TFile::Open(name); if (!fExp) cout << "Could not open " << name << endl;
+    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+    TH1F *pH1Exp = (TH1F*)fExp->Get(name); if (!pH1Exp) cout << "Could not get " << name << endl;
 
-    sprintf(name, "Simulation/%s/%s_%s/SimToF/%s_FoldT_%s_%i", Simulation.c_str(), FC.c_str(), key.c_str(), FC.c_str(), key.c_str(), ch+1);
+    sprintf(name, "Simulation/%s/%s_%s/FitToF/%s_FitT_%s_%i", Simulation.c_str(), FC.c_str(), key.c_str(), FC.c_str(), key.c_str(), ch+1);
     TH1D *pH1Sim = (TH1D*)f->Get(name);
     if (!pH1Sim) cout << "Could not get " << name << endl;
 
     sprintf(name, "%s Deposit %i", FC.c_str(), ch+1);
-    TLegend *l = new TLegend(0.5, 0.15, 0.85, 0.4, name);
+    TLegend *l = new TLegend(0.5, 0.6, 0.85, 0.85, name);
     pH1Exp->SetLineWidth(2);
     SetSize(pH1Exp);
     pH1Exp->GetXaxis()->SetRangeUser(0, 100);
     l->AddEntry(pH1Exp, "Messung");
 
-//    Int_t Gate[] = {Gate_1(ch, FC), Gate_2(ch, FC)};
-//    Double_t IntExp = pH1Exp->Integral(Gate[0], Gate[1]-1);
-//    Double_t IntSim = pH1Sim->Integral(Gate[0], Gate[1]-1);
-//    Double_t IntSimTotal = pH1Sim->Integral();
-//    cout << Gate[0] << " " << Gate[1] << " " << IntExp << " " << IntSim << " " << IntSimTotal << endl;
+    Int_t Gate[] = {Gate_1(ch, FC), Gate_2(ch, FC)};
+    Double_t IntExp = pH1Exp->Integral(Gate[0], Gate[1]);
+    Double_t IntSim = pH1Sim->Integral(pH1Sim->FindBin(pH1Exp->GetBinLowEdge(Gate[0])), pH1Sim->FindBin(pH1Exp->GetBinLowEdge(Gate[1]+1)-1));
+    Double_t IntSimTotal = pH1Sim->Integral();
+    cout << Gate[0] << " " << Gate[1] << " " << IntExp << " " << IntSim << " " << IntSimTotal << endl;
 //    Double_t Scale = IntExp / IntSim * pH1Exp->GetXaxis()->GetBinWidth(1) / pH1Sim->GetXaxis()->GetBinWidth(1);
 //    pH1Sim->Scale(Scale);
     pH1Sim->SetLineColor(kRed);
@@ -520,24 +537,28 @@ void DrawSimPeak(TFile *f, string FC, string key, Int_t ch, string Simulation)
 //    Double_t min = pH1Exp->GetMinimum();
     Double_t max = pH1Exp->GetMaximum();
     Double_t xl = pH1Exp->GetBinLowEdge(Gate_1(ch, FC));
-    Double_t xr = pH1Exp->GetBinLowEdge(Gate_2(ch, FC));
+    Double_t xr = pH1Exp->GetBinLowEdge(Gate_2(ch, FC)+1);
     TLine *ll = new TLine(xl, 0, xl, max);
     ll->SetLineStyle(3);
+    ll->SetLineWidth(2);
     TLine *lr = new TLine(xr, 0, xr, max);
     lr->SetLineStyle(3);
-//    Double_t Efficiency = IntSim / IntSimTotal;
-//    sprintf(name, "%f%% im Zeitfenster", 100*Efficiency);
-//    TLatex *t = new TLatex(30, 0.5*max, name);
-//    t->SetTextColor(kRed);
+    lr->SetLineWidth(2);
+    Double_t Efficiency = IntSim / IntSimTotal;
 
-    TCanvas *c = new TCanvas("name", "title", 200, 10, 700, 500);
+    sprintf(name, "c%s_%i", FC.c_str(), ch+1);
+    TCanvas *c = new TCanvas(name, "title", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
-    pH1Exp->Draw("hist");
+    pH1Exp->Sumw2();
+    pH1Exp->Draw("p");
     pH1Sim->Draw("same hist");
     l->Draw();
     ll->Draw();
-    lr->Draw();
-//    t->Draw();
+    lr->Draw();;
+//    TLatex *t = new TLatex();
+//    sprintf(name, "%.1f%% im Zeitfenster", 100*Efficiency);
+//    t->SetTextColor(kRed);
+//    t->DrawLatexNDC(0.5, 0.5, name);
     c->Update();//*/
 }
 
@@ -745,6 +766,7 @@ void DrawTimeDiff(TFile *f, Int_t ch, string FC = "PuFC", string Setup = "")
     TH1I *pHraw = (TH1I*) f->Get(name);
 //    TH1I *pH = BiasX(pHraw, 100);
     TCanvas *c = new TCanvas("name", "title", 200, 10, 700, 500);
+    SetSize(pHraw);
     pHraw->Draw();
     c->Update();
 }
@@ -876,6 +898,22 @@ void DrawTargetToF(TFile *f, string Subfolder)
     pTarget->Draw("same hist");
     l->Draw();
     cT->Update();
+}
+
+void DrawTargetAng(TFile *f, string Subfolder = "")
+{
+    char name[64] = "";
+    sprintf(name, "Simulation/Target/%sAngular", Subfolder.c_str());
+    TGraph *gAng = (TGraph*)f->Get(name); if (!gAng) cout << "Could not get " << name << endl;
+    Double_t Deviation = gAng->Eval(4.84) / gAng->Eval(0);
+    cout << "Max. Abweichung bis 4.84°: " << Deviation << endl;
+    new TCanvas();
+    SetSize(gAng);
+    gAng->GetXaxis()->SetNdivisions();
+    gAng->GetXaxis()->SetRangeUser(0, 180);
+    gAng->GetYaxis()->SetRangeUser(0, 80);
+    gAng->Draw();
+//    TLatex *t = new TLatex();
 }
 
 void DrawGEF(Int_t isotope, string spectrum)
@@ -1075,18 +1113,122 @@ void DrawQDCsum(TFile *fAna, string FC, Int_t ch)
 //    pF->Draw("same");
 }
 
-void DrawDt(TFile *fAna, string FC, Int_t ch, TFile *f)
+void DrawDtInt(TFile *fAna, string FC, Int_t ch, Int_t Left = 7, Int_t Right = 7, Int_t Tail = 30, TGraphErrors *g = 0)
 {
     char name[64] = "";
-    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
-    TH1I *pH = (TH1I*)f->Get(name);
-    SetSize(pH);
+    TFile *f;
+    TH1I *pH;
+    TF1 *fT;
+    Double_t x = 0;
+    if (!strcmp(FC.c_str(), "PuFC"))
+    {
+        sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+        f = TFile::Open(name);
+        sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+        pH = (TH1I*)f->Get(name);
+        sprintf(name, "PuFC/ToF/Background/NIF/Total/NIF_fT_%i", ch+1);
+        fT = (TF1*)fAna->Get(name);
+        x = 0.45;
+    } else {
+        sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
+        f = TFile::Open(name);
+        sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+        pH = (TH1I*)f->Get(name);
+        sprintf(name, "UFC/ToF/Background/UFC_NIF/Total/UFC_NIF_fT_%i", ch+1);
+        fT = (TF1*)fAna->Get(name);
+        x = 0.2;
+    }
+    TH1I *pHfill = (TH1I*)pH->Clone();
+    Double_t Bg = fT->GetParameter(0);
+    Double_t DBg = fT->GetParError(0);
+    Double_t Peak = pH->Integral(Gate_1(ch, FC, Left), Gate_2(ch, FC, Right));
+    Double_t DPeak = sqrt(Peak);
+    Double_t C = Peak - (Left+Right+1) * Bg;
+    Double_t DC = sqrt( pow(DPeak, 2) + pow((Left+Right+1) * DBg, 2) );
+
+    if (g)
+    {
+        g->SetPoint(ch, ch+1, C);
+        g->SetPointError(ch, 0, DC);
+        cout << ch << " " << C << " +- " << DC << endl;
+        return;
+    }
+
+    TGraph *gL = new TGraph(2);
+    gL->SetPoint(0, pH->GetBinLowEdge(Gate_0(ch, FC)), Bg);
+    gL->SetPoint(1, pH->GetBinLowEdge(Gate_a(ch, FC)), Bg);
+    TGraph *gR = new TGraph(2);
+    gR->SetPoint(0, pH->GetBinLowEdge(Gate_b(ch, FC)), Bg);
+    gR->SetPoint(1, pH->GetBinLowEdge(Gate_3(ch, FC)), Bg);
 
     sprintf(name, "cDt_%s_%i", FC.c_str(), ch+1);
     TCanvas *cT = new TCanvas(name, name, 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
+    SetSize(pH);
+    gL->SetLineWidth(2);
+    gR->SetLineWidth(2);
+    gL->SetLineColor(kRed);
+    gR->SetLineColor(kRed);
+    pHfill->SetFillColorAlpha(kBlue, 0.5);
+    pHfill->GetXaxis()->SetRange(Gate_1(ch, FC, Left), Gate_2(ch, FC, Right));
+    pH->Draw("hist");
+    pHfill->Draw("same hist");
+    gL->Draw("same");
+    gR->Draw("same");
+    TLatex *t[4];
+    t[0] = new TLatex();
+    t[0]->SetTextColor(kRed);
+    sprintf(name, "<B> = %.2f #pm %.2f ns^{-1}", Bg, DBg);
+    t[0]->DrawLatexNDC(x, 0.5, name);
+    t[0]->Draw();
+    t[1] = new TLatex();
+    t[1]->SetTextColor(kBlue);
+    sprintf(name, "#Sigma(Peak) = %.0f #pm %.0f", Peak, DPeak);
+    t[1]->DrawLatexNDC(x, 0.4, name);
+    t[1]->Draw();
+    t[2] = new TLatex();
+    t[2]->SetTextColor(kBlack);
+    sprintf(name, "Gate: %i ns", Left+Right+1);
+    t[2]->DrawLatexNDC(x, 0.3, name);
+    t[2]->Draw();
+    t[3] = new TLatex();
+    t[3]->SetTextColor(kBlack);
+    sprintf(name, "C = %.2f #pm %.2f", C, DC);
+    t[3]->DrawLatexNDC(x, 0.2, name);
+    t[3]->Draw();
+}
 
-    pH->Draw();
+void DrawDtChange(TFile *fAna, string FC = "PuFC")
+{
+    char name[32] = "";
+    TGraphErrors *ge40 = new TGraphErrors(8);
+    ge40->SetNameTitle("ge40", "Flugzeitpeak ohne Untergrund; Deposit; #font[12]{C}");
+    TGraphErrors *ge15 = new TGraphErrors(8);
+    ge15->SetNameTitle("ge15", "Flugzeitpeak ohne Untergrund; Deposit; #font[12]{C}");
+    Double_t x, y1, y0, fis0 = 0, fis1 = 0;
+    for (Int_t i = 0; i < 8; i++)
+    {
+        DrawDtInt(fAna, FC, i, 15, 15, 30, ge40);
+        DrawDtInt(fAna, FC, i, 7, 7, 30, ge15);
+        ge40->GetPoint(i, x, y0);
+        fis0 += y0;
+        ge15->GetPoint(i, x, y1);
+        fis1 += y1;
+        cout << i+1 << "   " << y1 / y0 << endl;
+    }
+    new TCanvas("cPG", "Peak-Inhalt");
+    gPad->SetTicks(1, 1);
+    SetSize(ge40);
+    ge15->SetLineColor(kRed);
+    ge40->Draw();
+    ge15->Draw("same");
+    TLegend *l = new TLegend(0.4, 0.65, 0.6, 0.85, "Gate-Breite");
+    l->AddEntry(ge40, "31 ns");
+    l->AddEntry(ge15, "15 ns");
+    l->Draw();
+    TLatex *t = new TLatex();
+    sprintf(name, "Gate: %f", fis1 / fis0);
+    t->DrawLatexNDC(0.4, 0.6, name);
 }
 
 void DrawDtGate(TFile *fAna, string FC, Int_t ch, TFile *f)
@@ -1095,14 +1237,15 @@ void DrawDtGate(TFile *fAna, string FC, Int_t ch, TFile *f)
     sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
     TH1I *pH0 = (TH1I*)f->Get(name);
     SetSize(pH0);
+    pH0->SetTitle("");
     TH1I *pH1 = (TH1I*)pH0->Clone();
-    pH1->GetXaxis()->SetRange(Gate_1(ch, FC), Gate_2(ch, FC)-1);
+    pH1->GetXaxis()->SetRange(Gate_1(ch, FC), Gate_2(ch, FC));
     pH1->SetFillColorAlpha(kRed, 0.5);
     TH1I *pH2 = (TH1I*)pH0->Clone();
     pH2->GetXaxis()->SetRange(Gate_0(ch, FC), Gate_a(ch, FC)-1);
     pH2->SetFillColorAlpha(kGray, 0.5);
     TH1I *pH3 = (TH1I*)pH0->Clone();
-    pH3->GetXaxis()->SetRange(Gate_b(ch, FC), Gate_3(ch, FC)-1);
+    pH3->GetXaxis()->SetRange(Gate_b(ch, FC)+1, Gate_3(ch, FC)-1);
     pH3->SetFillColorAlpha(kGray, 0.5);
 
     sprintf(name, "cDt_%s_%i", FC.c_str(), ch+1);
@@ -1115,7 +1258,14 @@ void DrawDtGate(TFile *fAna, string FC, Int_t ch, TFile *f)
     pH3->Draw("same");
     cT->Update();
 
-    Int_t bin[] = {Gate_0(ch, FC), Gate_a(ch, FC), Gate_1(ch, FC), Gate_2(ch, FC), Gate_b(ch, FC), Gate_3(ch, FC)};
+    TLegend *l;
+    if (!strcmp(FC.c_str(), "PuFC")) l = new TLegend(0.5, 0.4, 0.8, 0.5);
+    else l = new TLegend(0.2, 0.4, 0.5, 0.5);
+    sprintf(name, "%s Kanal %i", FC.c_str(), ch+1);
+    l->AddEntry(pH0, name);
+    l->Draw();
+
+    Int_t bin[] = {Gate_0(ch, FC), Gate_a(ch, FC), Gate_1(ch, FC), Gate_2(ch, FC)+1, Gate_b(ch, FC)+1, Gate_3(ch, FC)};
     Double_t y0 = cT->GetUymin(), y1 = cT->GetUymax();
     for (Int_t j = 0; j < 6; j++)
     {
@@ -1183,22 +1333,206 @@ void DrawDtBackground(TFile *fAna, string Setup, Int_t ch, TFile *f)
     t4->Draw();
 }
 
+void DrawSponFisStability(TFile *fAna, string FC)
+{
+    char name[64] = "";
+    TH1D *hC[8];
+    TF1 *fC[8];
+    Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
+    TLegend *l = new TLegend(0.91, 0.1, 1.0, 0.9, "Ch");
+
+    for (Int_t i = 0; i < 8; i++)
+    {
+        // Get plots Background vs Time
+        sprintf(name, "%s/Stability/SF/%s_%i", FC.c_str(), FC.c_str(), i+1);
+        hC[i] = (TH1D*) fAna->Get(name); if (!hC[i]) cout << "Could not get " << name << endl;
+        sprintf(name, "%s/Stability/SF/%s_%i_fit", FC.c_str(), FC.c_str(), i+1);
+        fC[i] = (TF1*) fAna->Get(name); if (!fC[i]) cout << "Could not get " << name << endl;
+        hC[i]->SetLineColor(color[i]);
+        hC[i]->SetMarkerStyle(20);
+        hC[i]->SetMarkerSize(0.5);
+        hC[i]->SetMarkerColor(color[i]);
+        fC[i]->SetLineColor(color[i]);
+        sprintf(name, "%i", i+1);
+        l->AddEntry(hC[i], name, "PE");
+    }
+
+    // Drawing properties
+    hC[0]->SetStats(0);
+    hC[0]->GetXaxis()->SetNdivisions(604);
+    SetSize(hC[0]);
+    hC[0]->GetXaxis()->SetTimeDisplay(1);
+    hC[0]->GetXaxis()->SetTimeFormat("%d.%m. %H:%M");
+
+    // Draw
+    sprintf(name, "cST_%s", FC.c_str());
+    TCanvas *cST = new TCanvas(name);
+    gPad->SetTicks(1, 1);
+    hC[0]->Draw("P");
+    fC[0]->Draw("same");
+    for (Int_t i = 1; i < 8; i++)
+    {
+        hC[i]->Draw("same P");
+        fC[i]->Draw("same");
+    }
+    l->Draw();
+    cST->Update();
+}
+/*
+void DrawSignalStability(TFile *fAna, string FC)
+{
+    char name[64] = "";
+    TH1D *hFG[8];
+    TF1 *fFG[8];
+    TH1D *hBG[8];
+    TF1 *fBG[8];
+    Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
+    TLegend *l = new TLegend(0.91, 0.1, 1.0, 0.9, "Ch");
+
+    for (Int_t i = 0; i < 8; i++)
+    {
+        // Get plots Background vs Time
+        sprintf(name, "%s/Stability/FG/%s_FG_%i", FC.c_str(), FC.c_str(), i+1);
+        hFG[i] = (TH1D*) fAna->Get(name); if (!hFG[i]) cout << "Could not get " << name << endl;
+        sprintf(name, "%s/Stability/FG/%s_FG_%i_fit", FC.c_str(), FC.c_str(), i+1);
+        fFG[i] = (TF1*) fAna->Get(name); if (!fFG[i]) cout << "Could not get " << name << endl;
+        sprintf(name, "%s/Stability/BG/%s_BG_%i", FC.c_str(), FC.c_str(), i+1);
+        hBG[i] = (TH1D*) fAna->Get(name); if (!hBG[i]) cout << "Could not get " << name << endl;
+        sprintf(name, "%s/Stability/BG/%s_BG_%i_fit", FC.c_str(), FC.c_str(), i+1);
+        fBG[i] = (TF1*) fAna->Get(name); if (!fBG[i]) cout << "Could not get " << name << endl;
+        hFG[i]->SetLineColor(color[i]);
+        hFG[i]->SetMarkerStyle(20);
+        hFG[i]->SetMarkerSize(0.5);
+        hFG[i]->SetMarkerColor(color[i]);
+        fFG[i]->SetLineColor(color[i]);
+        hBG[i]->SetLineColor(color[i]);
+        hBG[i]->SetMarkerStyle(20);
+        hBG[i]->SetMarkerSize(0.5);
+        hBG[i]->SetMarkerColor(color[i]);
+        fBG[i]->SetLineColorAlpha(color[i], 0.5);
+        sprintf(name, "%i", i+1);
+        l->AddEntry(hFG[i], name, "PE");
+    }
+
+    // Drawing properties
+    hFG[0]->SetStats(0);
+    hFG[0]->GetXaxis()->SetNdivisions(604);
+    SetSize(hFG[0]);
+    hFG[0]->GetXaxis()->SetTimeDisplay(1);
+    hFG[0]->GetXaxis()->SetTimeFormat("%d.%m. %H:%M");
+
+    // Draw
+    sprintf(name, "cST_%s", FC.c_str());
+    TCanvas *cST = new TCanvas(name);
+    gPad->SetTicks(1, 1);
+    hFG[0]->Draw("P");
+//    fFG[0]->Draw("same");
+    hBG[0]->Draw("same P");
+//    fBG[0]->Draw("same");
+    for (Int_t i = 1; i < 8; i++)
+    {
+        hFG[i]->Draw("same P");
+//        fFG[i]->Draw("same");
+        hBG[i]->Draw("same P");
+//        fBG[i]->Draw("same");
+    }
+    l->Draw();
+    cST->Update();
+}
+*/
+void DrawSignalStability(TFile *fAna, string FC, Int_t ch)
+{
+    Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
+    char name[64] = "";
+    // Get plots Signal vs Time
+    sprintf(name, "%s/Stability/FG/%s_FG_%i", FC.c_str(), FC.c_str(), ch+1);
+    TH1D *hFG = (TH1D*) fAna->Get(name); if (!hFG) cout << "Could not get " << name << endl;
+    sprintf(name, "%s/Stability/FG/%s_FG_%i_fit", FC.c_str(), FC.c_str(), ch+1);
+    TF1 *fFG = (TF1*) fAna->Get(name); if (!fFG) cout << "Could not get " << name << endl;
+    sprintf(name, "%s/Stability/BG/%s_BG_%i", FC.c_str(), FC.c_str(), ch+1);
+    TH1D *hBG = (TH1D*) fAna->Get(name); if (!hBG) cout << "Could not get " << name << endl;
+    sprintf(name, "%s/Stability/BG/%s_BG_%i_fit", FC.c_str(), FC.c_str(), ch+1);
+    TF1 *fBG = (TF1*) fAna->Get(name); if (!fBG) cout << "Could not get " << name << endl;
+
+    // Drawing properties
+    sprintf(name, "%s Ch. %i", FC.c_str(), ch+1);
+    hFG->SetTitle(name);
+    hFG->SetStats(0);
+    if (!strcmp(FC.c_str(), "PuFC")) {
+        hFG->GetXaxis()->SetRangeUser(1401100000, 1401220000);
+        hFG->GetYaxis()->SetRangeUser(-0.00002, 0.00005);
+    } else {
+        hFG->GetXaxis()->SetRangeUser(1400590000, 1400700000);
+        hFG->GetYaxis()->SetRangeUser(0, 0.00012);
+    }
+    hFG->GetXaxis()->SetNdivisions(604);
+    SetSize(hFG);
+    hFG->SetTitleSize(0.08);
+    hFG->GetXaxis()->SetLabelSize(0.08);
+    hFG->GetYaxis()->SetLabelSize(0.08);
+    hFG->GetYaxis()->SetTitleSize(0.1);
+    hFG->GetYaxis()->SetTitleOffset(0.5);
+    hFG->GetXaxis()->SetTimeDisplay(1);
+    hFG->GetXaxis()->SetTimeFormat("%d.%m. %H:%M");
+    hFG->SetLineColor(color[ch]);
+    hFG->SetMarkerColor(color[ch]);
+    hFG->SetMarkerStyle(20);
+    hFG->SetMarkerSize(0.5);
+    fFG->SetLineColor(color[ch]);
+    hBG->SetLineColor(kBlack);
+    hBG->SetMarkerColor(kBlack);
+    hBG->SetMarkerStyle(21);
+    hBG->SetMarkerSize(0.8);
+    fBG->SetLineColor(kBlack);
+
+    // Draw
+//    sprintf(name, "cST_%s_%i", FC.c_str(), ch+1);
+//    TCanvas *cST = new TCanvas(name);
+    gPad->SetTicks(1, 1);
+    hFG->Draw("P");
+    fFG->Draw("same");
+    hBG->Draw("same P");
+//    fBG->Draw("same");
+    TLatex *t = new TLatex();
+    t->SetNDC();
+    sprintf(name, "#chi^{2} / #font[12]{dof} = %f", fFG->GetChisquare() / fFG->GetNDF());
+    t->SetTextColor(color[ch]);
+    t->SetTextSize(0.1);
+    t->DrawLatex(0.3, strcmp(FC.c_str(), "PuFC") ? 0.5 : 0.3, name);
+//    cST->Update();
+}
+
+void DrawSignalStability(TFile *fAna, string FC)
+{
+    char name[64] = "";
+    sprintf(name, "cST_%s", FC.c_str());
+    TCanvas *cST = new TCanvas(name);
+    cST->Divide(2, 4);
+    for (Int_t i = 0; i < 8; i++)
+    {
+        cST->cd(i+1);
+        DrawSignalStability(fAna, FC, i);
+    }
+    cST->Update();
+}
+
 int DrawPics()
 {
 //    gStyle->SetCanvasPreferGL();
 
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
-    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
-    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
+    TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
+//    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+//    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
 
-//    DrawSigma(235);
+//    DrawSigma(242);
 //    DrawCrossSectionRuns(fAna);
 //    DrawUscattering(fAna);
 //    DrawPuCorrection(fAna);
 //    DrawMonitorRate();
+//    DrawPeakWidth(fAna, "PuFC");
 //    DrawPeakWidth(fAna, "UFC");
-    DrawSimPeak(fAna, "UFC", "real", 0, "Geant4");
-//    DrawSimPeak(fAna, "PuFC", "real", 1, "MCNP");
+//    DrawSimPeak(fAna, "UFC_NIF", "real", 1, "Geant4");
+//        DrawSimPeak(fAna, "NIF", "real", i, "Geant4");
 //    DrawMonitorRatio(fAna, 1);
 //    DrawMonitorRatio(fAna, "UFC");
 //    DrawPuSponFis();
@@ -1208,13 +1542,22 @@ int DrawPics()
 //    DrawEnELBE();
 //    DrawTargetE(fAna, "", 100000000);
 //    DrawTargetToF(fAna, "");
+//    DrawTargetAng(fAna);
 //    DrawGEF(235, "nELBE");
 //    DrawGEF("Mass");
 //    DrawFFRange(fAna);
 //    DrawQDC(fAna, "PuFC", 0, fNIF);
-//    DrawDt(fAna, "UFC", 0, fUNIF);
-//    DrawDtGate(fAna, "PuFC", 7, fNIF);
-//    DrawDtBackground(fAna, "UFC_NIF", 7, fUNIF);
+//    DrawDtInt(fAna, "UFC", 7, 12, 12, 30);
+//    DrawDtChange(fAna, "PuFC");
+//        DrawDtGate(fAna, "UFC", i, fUNIF);
+//    DrawDtBackground(fAna, "NIF", 0, fNIF);
+//    for (Int_t i = 0; i < 8; i++)
+//        DrawSignalStability(fAna, "UFC", i);
+    DrawSignalStability(fAna, "PuFC");
+    DrawSignalStability(fAna, "UFC");
+//    DrawSponFisStability(fAna, "UFC");
+//    DrawSponFisStability(fAna, "PuFC");
 
     return 1;
 }
+#endif

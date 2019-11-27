@@ -92,8 +92,84 @@ TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", string key 
     return pHist;
 }
 
-void MCNPtoROOT(Bool_t save, string FC = "PuFC", string key = "real", string Path = "FCscat_PTB_weight/tally/FCscat_b", Long_t SimulatedN = 60000000000)
+TH1D* TimeProjection(TH2D *pH2, Int_t ch, string FC = "PuFC", string key = "real")
+{
+    char name[64] = "";
+    sprintf(name, "%s_ProjT_%s_%i", FC.c_str(), key.c_str(), ch + 1);
+    TH1D *h = (TH1D*)pH2->ProjectionX(name);
+//    h->SetName(name);
+    sprintf(name, "%s, ToF, %s, ch.%i", FC.c_str(), key.c_str(), ch + 1);
+    h->SetTitle(name);
+    h->GetXaxis()->SetTitle("#font[12]{t} / ns");
+    h->GetYaxis()->SetTitle("#font[12]{C}_{(n,f)}");
+    return h;
+}
+
+TH1D *h = new TH1D();
+Double_t f(Double_t *x, Double_t *par)
+{ // return: histogram h, folded by gaussian (p0 ampl, p1 mean, p2 width), evaluated at x.
+    Double_t s = 0;
+    for (Int_t j = 1; j < h->GetNbinsX()+1; j++)
+    {
+        s += h->GetBinContent(j) * par[0] * exp(-pow((x[0] - h->GetBinCenter(j) - par[1]) / par[2], 2));
+    }
+    return s + par[3];
+}
+
+TH1D* FitPeakForm(TH1D *H, string Run = "NIF", Int_t ch = 0, string Simulation = "Geant4", string key = "real")
+{ // Fit simulated ToF folding to data
+    string FC = Run[0] == 'U' ? "UFC" : "PuFC";
+    char name[128] = "";
+
+    // Experimental spectrum with Background
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    TFile *fExp = TFile::Open(name); if (!fExp) cout << "Could not open " << name << endl;
+    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+    TH1D *hExp = (TH1D*)fExp->Get(name); if (!hExp) cout << "Could not get " << name << endl;
+    hExp->Sumw2();
+    Double_t bg = (hExp->Integral(Gate_0(ch, FC), Gate_a(ch, FC)) + hExp->Integral(Gate_b(ch, FC), Gate_3(ch, FC))) / (Gate_a(ch, FC) - Gate_0(ch, FC) + Gate_3(ch, FC) - Gate_b(ch, FC));
+    // Background-subtracted
+//    sprintf(name, "%s/ToF/Signal/%s/H1AnaHZDRDtG_%i", FC.c_str(), Run.c_str(), ch+1);
+//    TH1D *hExp = (TH1D*)fAna->Get(name); if (!hExp) cout << "Could not get " << name << endl;
+//    Double_t bg = 0;
+
+    h = (TH1D*)H->Clone();
+    Double_t Range[] = {hExp->GetBinLowEdge(Gate_0(ch, FC)), hExp->GetBinLowEdge(Gate_3(ch, FC))};
+    Double_t Par[] = {(hExp->GetMaximum() - bg) / h->Integral(), 0, 3, bg};
+//    cout << Par[0] << " " << Par[1] << " " << Par[2] << " " << Par[3] << endl;
+    sprintf(name, "f%s_%i", Run.c_str(), ch+1);
+    TF1 *fit = new TF1(name, f, Range[0], Range[1], 4);
+    fit->SetParameters(Par[0], Par[1], Par[2], Par[3]);
+    fit->FixParameter(3, bg);
+//    fit->FixParameter(1, 0);
+
+    /// Fit /////////////////////////////////////
+    hExp->Fit(name, "LR0Q"); ////////////////////
+    /////////////////////////////////////////////
+
+//    for (Int_t p = 0; p < 4; p++)
+//        cout << fit->GetParameter(p) << " +- " << fit->GetParError(p) << endl;
+    cout << FC << "\t" << ch+1 << " \t" << fit->GetParameter(2) << " +- " << fit->GetParError(2) << endl;
+
+    // Save
+    Int_t N = h->GetNbinsX();
+    Double_t xmin = h->GetBinLowEdge(1);
+    Double_t xmax = h->GetBinLowEdge(N+1);
+    sprintf(name, "%s_FitT_%s_%i", FC.c_str(), key.c_str(), ch+1);
+    TH1D* hFit = new TH1D(name, name, N, xmin, xmax);
+    sprintf(name, "%s, Ch. %i, Fit simulated ToF spectrum", FC.c_str(), ch+1);
+    hFit->SetTitle(name);
+    for (Int_t bin = 1; bin < N+1; bin++)
+        hFit->SetBinContent(bin, fit->Eval(hFit->GetBinCenter(bin)));
+//    new TCanvas();
+//    hExp->Draw("p");
+//    hFit->Draw("same");
+    return hFit;
+}
+
+void MCNPtoROOT(Bool_t save, string Run = "NIF", string key = "real", string Path = "FCscat_PTB_weight/tally/FCscat_b", Long_t SimulatedN = 60000000000)
 { // Convert MCNP Track Length results to root
+    string FC = Run[0] == 'U' ? "UFC" : "PuFC";
     char name[128] = "";
     string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering";
     TH2D *h[8];
@@ -117,8 +193,13 @@ void MCNPtoROOT(Bool_t save, string FC = "PuFC", string key = "real", string Pat
 
         if (save)
         {
-//            cout << "Saving " << "Simulation/MCNP/ToFvsEkin/"<<PathTag(result_key) << endl;
             Save(fAna, "Simulation/MCNP/"+FC+"_"+key+"/ToFvsEkin", h[i]);
+            TH1D *hProj = TimeProjection(h[i], i, FC, key);
+            Save(fAna, "Simulation/MCNP/"+FC+"_"+key+"/EffToF", hProj);
+            if (strcmp(key.c_str(), "ideal")) {
+                TH1D *hFit = FitPeakForm(hProj, Run, i, "MCNP", key);
+                Save(fAna, "Simulation/MCNP/"+FC+"_"+key+"/FitToF", hFit);
+            }
         } else { // draw
             c1->cd(i + 1);
             gPad->SetLogz(1);
@@ -140,8 +221,9 @@ void MCNPtoROOT(Bool_t save, string FC = "PuFC", string key = "real", string Pat
     }
 }
 
-void Geant4toROOT(string FileName, string FC = "PuFC", string key = "real")
+void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 {
+    string FC = Run[0] == 'U' ? "UFC" : "PuFC";
     string FilePath = "/home/hoffma93/Programme/Geant4-Work/results";
     char name[128] = "";
     sprintf(name, "%s/%s", FilePath.c_str(), FileName.c_str());
@@ -173,10 +255,17 @@ void Geant4toROOT(string FileName, string FC = "PuFC", string key = "real")
         TH2D *pH2Tot = (TH2D*)fG4->Get(name);
         sprintf(name, "%s_ToFvsEkin_%s_Ch.%i", FC.c_str(), key.c_str(), i+1);
         pH2Tot->SetName(name);
-        cout << pH2Tot->Integral() << " ";
+//        cout << pH2Tot->Integral() << " ";
         if (pH2Tot->Integral() > 1)
             pH2Tot->Scale(1.0 / nEmit);
-        cout << pH2Tot->Integral() << endl;
+//        cout << pH2Tot->Integral() << endl;
+
+        TH1D *hProj = TimeProjection(pH2Tot, i, FC, key);
+        Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/EffToF", hProj);
+        if (strcmp(key.c_str(), "ideal")) {
+            TH1D *hFit = FitPeakForm(hProj, Run, i, "Geant4", key);
+            Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/FitToF", hFit);
+        }
 
         sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
         TH2D *pH2Sc = (TH2D*)fG4->Get(name);
@@ -194,11 +283,12 @@ void Geant4toROOT(string FileName, string FC = "PuFC", string key = "real")
 
 void MCNPtoROOT()
 {
-    Geant4toROOT("PuFC_real_5E7.root", "PuFC", "real");
-    Geant4toROOT("PuFC_ideal_5E7.root", "PuFC", "ideal");
-    Geant4toROOT("UFC_real_5E7.root", "UFC", "real");
-    Geant4toROOT("UFC_ideal_5E7.root", "UFC", "ideal");
-    MCNPtoROOT(1, "PuFC", "real", "FCscat_PTB_weight/tally/FCscat_b");
+    Geant4toROOT("PuFC_real_c_5E7.root", "NIF", "real");
+    Geant4toROOT("PuFC_ideal_c_5E7.root", "PuFC", "ideal");
+    Geant4toROOT("UFC_real_c_5E7.root", "UFC_NIF", "real");
+    Geant4toROOT("UFC_ideal_c_5E7.root", "UFC", "ideal");
+    Geant4toROOT("UFC_SB_c_5E7.root", "UFC_SB", "SB");
+    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
     MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
 }
 

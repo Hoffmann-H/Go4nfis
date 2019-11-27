@@ -1,6 +1,7 @@
 #include "SaveToFile.C"
 #include "TMultiGraph.h"
 #include "TLegend.h"
+#include "FC.C"
 
 void GetLimits(Int_t i, string FC, Int_t left, Int_t right, Int_t* l0, Int_t* l1, Int_t* l2, Int_t* l3)
 {
@@ -18,20 +19,25 @@ void GetLimits(Int_t i, string FC, Int_t left, Int_t right, Int_t* l0, Int_t* l1
     }
 }
 
-void GetPeak(Int_t i, TH1I* pH, string FC, Int_t left, Int_t right, Double_t* nif, Double_t* Dnif)
+void GetPeak(Int_t i, TH1I* pH, string FC, Int_t left, Int_t right, Int_t tail, Double_t* nif, Double_t* Dnif)
 {
-    Int_t l0, l1, l2, l3;
-    GetLimits(i, FC, left, right, &l0, &l1, &l2, &l3);
+    Int_t l0, la, l1, l2, lb, l3;
+//    GetLimits(i, FC, left, right, &l0, &l1, &l2, &l3);
+    l0 = Gate_0(i, FC);
+    la = Gate_a(i, FC, left);
+    l1 = Gate_1(i, FC, left);
+    l2 = Gate_2(i, FC, right);
+    lb = Gate_b(i, FC, tail);
+    l3 = Gate_3(i, FC);
     Double_t PeakInt = pH->Integral(l1, l2);
-    Double_t UgInt = pH->Integral(l0, l3) - PeakInt;
-    *nif = PeakInt - (l2-l1+1.0) / (l3-l2+l1-l0) * UgInt;
-    *Dnif = sqrt( PeakInt + pow((l2-l1+1) / (l3-l2+l1-l0), 2) * UgInt );
+    Double_t UgInt = pH->Integral(l0, la - 1) + pH->Integral(lb + 1, l3);
+    *nif = PeakInt - (l2-l1+1.0) / (l3-lb+la-l0) * UgInt;
+    *Dnif = sqrt( PeakInt + pow((l2-l1+1) / (l3-lb+la-l0), 2) * UgInt );
 }
 
-void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rStop, Int_t rStep)
+void PeakWidth(string file_name, string subfolder, string FC, Int_t lStart, Int_t lStop, Int_t rStart, Int_t rStop, Int_t n)
 {
     char name[64] = "";
-    Int_t n = (rStop - rStart) / rStep;
     Double_t avNIF[n];
     Double_t D2avNIF[n];
 
@@ -56,16 +62,19 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
                 avNIF[j] = 0;
                 D2avNIF[j] = 0;
             }
-            Int_t r = rStart + j * rStep;
+            Int_t r = rStart + j * (rStop - rStart) / (n - 1.0);
+            Int_t l = lStart + j * (lStop - lStart) / (n - 1.0);
             Double_t NIF, DNIF;
-            GetPeak(i, pH, FC, left, r, &NIF, &DNIF);
-            ge[i]->SetPoint(j, left + r, NIF);
+            GetPeak(i, pH, FC, l, r, rStop, &NIF, &DNIF);
+            ge[i]->SetPoint(j, l + r, NIF);
             ge[i]->SetPointError(j, 0, DNIF);
-            avNIF[j] += NIF / 8.0;
-            D2avNIF[j] += pow(DNIF / 8.0, 2);
+//            if (i != 4 && i != 7 && i != 3) {
+                avNIF[j] += NIF / 8.0;
+                D2avNIF[j] += pow(DNIF / 8.0, 2);
+//            }
             if (i == 7)
             { // After 8th deposit, fill average
-                geAv->SetPoint(j, left + r, avNIF[j]);
+                geAv->SetPoint(j, l + r, avNIF[j]);
                 geAv->SetPointError(j, 0, sqrt(D2avNIF[j]));
             }
         }
@@ -79,7 +88,7 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
         l->AddEntry(ge[i], name, "ep");
         mg->Add(ge[i]);
     }
-    Save(fAna, FC+"/ToF/Gate/Peak", geAv, "gPeak_av");
+    Save(fAna, FC+"/ToF/Gate/Peak/"+subfolder, geAv, "gPeak_av");
     geAv->SetLineColorAlpha(1, 0.5);
     geAv->SetLineWidth(2);
     geAv->SetMarkerColorAlpha(1, 0.5);
@@ -93,6 +102,85 @@ void PeakWidth(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSto
     fAna->Save();
     fAna->Close();
     f->Close();
+}
+
+void SimWidth(string Simulation, string FC, Int_t left, Int_t rStart, Int_t rStop, Int_t rStep)
+{
+    char name[64] = "";
+    Int_t n = (rStop - rStart) / rStep;
+    Double_t avNIF[n];
+    Double_t D2avNIF[n];
+
+//    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s", file_name.c_str());
+//    TFile *f = TFile::Open(name, "READ");
+    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TGraphErrors *ge[8];
+    TGraphErrors *geAv = new TGraphErrors(n);
+    TMultiGraph *mg = new TMultiGraph("mgSim", "ToF Peak; Gate[ns]; Peak");
+    sprintf(name, "%s Deposit", FC.c_str());
+    TLegend *l = new TLegend(0.9, 0.5, 1.0, 1.0, name);
+
+    for (Int_t i = 0; i < 8; i++)
+    {
+//        sprintf(name, "/Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
+//        TH1I* pExp = (TH1I*)f->Get(name);
+        sprintf(name, "Simulation/%s/%s_real/FitToF/%s_FitT_real_%i", Simulation.c_str(), FC.c_str(), FC.c_str(), i+1);
+        TH1D *pH = (TH1D*)fAna->Get(name); if (!pH) cout << "Could not get " << name << endl;
+        ge[i] = new TGraphErrors(n);
+        for (Int_t j = 0; j < n; j++)
+        {
+            if (i == 0)
+            {
+                avNIF[j] = 0;
+                D2avNIF[j] = 0;
+            }
+            Int_t r = rStart + j * rStep;
+            Double_t NIF, DNIF = 0;
+            Double_t bg = pH->GetBinContent(pH->GetNbinsX());
+            Double_t xc = pH->GetBinCenter(pH->GetMaximumBin());
+            Double_t x0 = xc - left; // - width;
+            Double_t x1 = xc + r; // + width;
+            Int_t bin0 = pH->FindBin(x0);
+            Int_t bin1 = pH->FindBin(x1);
+            Double_t w0 = (pH->GetBinLowEdge(bin0 + 1) - x0) / pH->GetBinWidth(bin0); // Constant bin interpolation
+            Double_t w1 = (x1 - pH->GetBinLowEdge(bin1)) / pH->GetBinWidth(bin1);
+            Double_t GatedIntegral = w0 * pH->GetBinContent(bin0) + pH->Integral(bin0 + 1, bin1 - 1) + w1 * pH->GetBinContent(bin1) - (w0 + bin1 - bin0 + 1 + w1) * bg;
+            NIF = GatedIntegral * pH->GetBinWidth(1);
+
+            ge[i]->SetPoint(j, left + r, NIF);
+            ge[i]->SetPointError(j, 0, DNIF);
+            avNIF[j] += NIF / 8.0;
+            D2avNIF[j] += pow(DNIF / 8.0, 2);
+            if (i == 7)
+            { // After 8th deposit, fill average
+                geAv->SetPoint(j, left + r, avNIF[j]);
+                geAv->SetPointError(j, 0, sqrt(D2avNIF[j]));
+            }
+        }
+        Save(fAna, FC+"/ToF/Gate/Peak", ge[i], "gSim_"+to_string(i+1));
+        ge[i]->SetLineColorAlpha(i+2, 0.5);
+        ge[i]->SetLineWidth(1);
+        ge[i]->SetMarkerColorAlpha(i+2, 0.5);
+        ge[i]->SetMarkerStyle(20);
+        ge[i]->SetMarkerSize(2);
+        sprintf(name, "%i", i+1);
+        l->AddEntry(ge[i], name, "ep");
+        mg->Add(ge[i]);
+    }
+    Save(fAna, FC+"/ToF/Gate/Peak", geAv, "gSim_av");
+    geAv->SetLineColorAlpha(1, 0.5);
+    geAv->SetLineWidth(2);
+    geAv->SetMarkerColorAlpha(1, 0.5);
+    geAv->SetMarkerStyle(20);
+    geAv->SetMarkerSize(2);
+    l->AddEntry(geAv, "av", "ep");
+    mg->Add(geAv);
+//    new TCanvas();
+//    mg->Draw("AP");
+//    l->Draw();
+    fAna->Save();
+    fAna->Close();
+//    f->Close();
 }
 
 void GetBackground(Int_t i, TH1I* pH, string FC, Int_t left, Int_t right, Double_t* L, Double_t* DL, Double_t* R, Double_t* DR)
@@ -159,10 +247,14 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
 
 void PeakWidth()
 {
-    PeakWidth("NIF.root", "PuFC", 15, 0, 100, 5);
-    Background("NIF.root", "PuFC", 15, 0, 50, 2);
-    PeakWidth("UFC_NIF.root", "UFC", 15, 0, 100, 5);
-    Background("UFC_NIF.root", "UFC", 15, 0, 100, 5);
+    PeakWidth("NIF.root", "Left", "PuFC", 0, 45, 35, 35, 16);
+    PeakWidth("NIF.root", "Right", "PuFC", 15, 15, 5, 100, 20);
+//    SimWidth("Geant4", "PuFC", 15, 5, 200, 5);
+//    Background("NIF.root", "PuFC", 15, 0, 50, 2);
+    PeakWidth("UFC_NIF.root", "Left", "UFC", 0, 30, 40, 40, 16);
+    PeakWidth("UFC_NIF.root", "Right", "UFC", 10, 10, 5, 100, 20);
+//    SimWidth("Geant4", "UFC", 15, 5, 100, 5);
+//    Background("UFC_NIF.root", "UFC", 15, 0, 100, 5);
 //    Background("NIF.root", "PuFC", 40, 0, 30, 1);
 //    PeakWidth("UFC_NIF.root", "UFC", 40, 0, 30, 1);
 }

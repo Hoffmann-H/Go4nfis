@@ -242,7 +242,7 @@ void ToF()
     DoToF("PuFC");
     DoToF("PuFC_FG");
     DoToF("PuFC_BG");
-    SubtractBackground("NIF");
+    cout << SubtractBackground("NIF") << endl;
     SubtractBackground("SB");
     //*/
     /*SubtractBackground("PuFC_FG_MS4", "PuFC");
