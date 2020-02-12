@@ -104,43 +104,7 @@ void GetJEFF()
     WeightCrossSectionUFC(StrFileOutPath, "JEFF_3.3");
 }
 
-TGraphErrors *g3 = 0;
-TGraphErrors *g4 = 0;
-TGraphErrors *g5 = 0;
-TGraphErrors *g6 = 0;
-TGraphErrors *g8 = 0;
-Double_t AddGraphs(Double_t *x, Double_t *par)
-{
-    return par[0] * g3->Eval(x[0]) +
-           par[1] * g4->Eval(x[0]) +
-           par[2] * g5->Eval(x[0]) +
-           par[3] * g6->Eval(x[0]) +
-           (1.-par[0]-par[1]-par[2]-par[3]) * g8->Eval(x[0]);
-}
-
-void CheckWeighting()
-{ // Given the weighted graph, try to fit the isotope vector
-////// No convergence!
-    g3 = GetCrossSectionToni("%lg %lg %lg");
-    g4 = GetCrossSectionToni("%lg %*lg %*lg %lg %lg");
-    g5 = GetCrossSectionToni("%lg %*lg %*lg %*lg %*lg %lg %lg");
-    g6 = GetCrossSectionToni("%lg %*lg %*lg %*lg %*lg %*lg %*lg %lg %lg");
-    g8 = GetCrossSectionToni("%lg %*lg %*lg %*lg %*lg %*lg %*lg %*lg %*lg %lg %lg");
-    TFile *f = TFile::Open("~/TrackLength/FissionXS.root", "READ"); if (!f) cout << "Could not open " << "~/TrackLength/FissionXS.root" << endl;
-    TGraphErrors *g = (TGraphErrors*)f->Get("JEFF_3.2/UTarget"); if (!g) cout << "Could not get " << "JEFF_3.2/UTarget" << endl;
-    TF1 *fit = new TF1("fit", AddGraphs, 0., 30., 4);
-    fit->SetParLimits(0, 0., 1.);
-    fit->SetParLimits(1, 0., 1.);
-    fit->SetParLimits(2, 0., 1.);
-    fit->SetParLimits(3, 0., 1.);
-    g->Fit("fit");
-    new TCanvas();
-    g->Draw();
-    fit->Draw("same");
-}
-
-TH2F* GetGeant4Data(string StrFileInPath, string FC, bool scat,
-                             Int_t Channel)
+TH2F* GetGeant4Data(TFile *f, string FC, bool scat, Int_t Channel)
 {   //function to get E_ToF vs. Ekin correlation histograms from a G4 simulation
     string InputPath;
 
@@ -151,61 +115,38 @@ TH2F* GetGeant4Data(string StrFileInPath, string FC, bool scat,
         else
             InputPath = FC + "/EToFvsEkin/Scattered/" + FC + "_EToFvsEkin_Sc_Ch."
                         + std::to_string(Channel+1);
-    }
-    else
-    {   if (FC=="H19")
+    } else {
+        if (FC=="H19")
             InputPath = FC + "/EToFvsEkin/" + FC + "_EToFvsEkin_Ch." +
                         std::to_string(Channel+1);
         else
             InputPath = FC + "/EToFvsEkin/" + FC + "_EToFvsEkin_Ch." +
                         std::to_string(Channel+1);
     }
-
     cout << InputPath << endl;
-
-
-    //open file containing the Geant 4 neutron "flux" histograms
-    TFile *f = new TFile(StrFileInPath.c_str(), "OPEN");
-    if (!f)
-    {   cerr << "Input data file not found!" << endl;
-        return 0;
-    }
 
     TH2F *pH2 = (TH2F*) f->Get(InputPath.c_str())->Clone();
         pH2->SetDirectory(0);
-
-    f->Close();
-
     return pH2;
 }
 
-TH1F* GetSourceSpectrum(string StrSimuFile)
+TH1F* GetSourceSpectrum(TFile *f)
 {
-    TFile *f = new TFile(StrSimuFile.c_str(), "OPEN");
-    if (!f) { cerr << "Input data file not found!" << endl; return 0; }
-
     string InputPath = "Source/nEnergy/Source_Ekin";
     TH1F *pH1source = (TH1F*)f->Get(InputPath.c_str())->Clone();
     pH1source->SetDirectory(0);
-    f->Close();
     return pH1source;
 }
 
-TH2F* WeightWithXS(TH2F *pH2In, string StrXSFileInPath, string StrFC,
-                             string StrEval)
+TH2F* WeightWithXS(TH2F *pH2In, TGraphErrors *pGrXS)
 {   //function to weight the E_ToF vs Ekin histograms with the fission cross
     //section to get a unnormalized fission rate
     //-> weight content in ToF bin by the cross section at energy bin
     Int_t NumBinX = pH2In->GetNbinsX();       //E(t) bins
     Int_t NumBinY = pH2In->GetNbinsY();       //Ekin bins
     Double_t Ekin, XS, Content, EContent;
-    TGraphErrors *pGrXS;
 
     TH2F *pH2 = (TH2F*)pH2In->Clone(); pH2->Clear();
-
-    //open cross section file and get it
-    TFile *f = new TFile(StrXSFileInPath.c_str(), "READ");
-        f->GetObject((StrEval+"/"+StrFC+"Target").c_str(), pGrXS); if (!pGrXS) cout << "Could not get " << StrEval << "/" << StrFC << "Target" << endl;
 
     for (int y_i=1; y_i<=NumBinY; y_i++)
     {   //get neutron kinetic energy of corresponding bin y_i
@@ -221,47 +162,17 @@ TH2F* WeightWithXS(TH2F *pH2In, string StrXSFileInPath, string StrFC,
             pH2->SetBinError(x_i, y_i, EContent);
         }
     }
-    pGrXS->Delete();
-    f->Close();
     return pH2;
 }
 
-//TH1F* WeightTH1withXS(TH1F *pH1In, TGraphErrors *pGrXS)
-//{   //function to weight a Ekin histogram with the fission cross
-//    //section to get a unnormalized fission rate
-
-//    Int_t NumBinX = pH1In->GetNbinsX();       //Ekin bins
-//    Double_t Ekin, XS, Content, EContent;
-
-//    TH1F *pH1 = (TH1F*)pH1In->Clone(); pH1->Clear();
-
-//    for (int x_i=1; x_i<=NumBinX; x_i++)
-//    {   //get neutron kinetic energy of corresponding bin x_i
-//        Ekin    = pH1In->GetXaxis()->GetBinCenter(x_i);
-//        //get cross section @ E=Ekin
-//        XS      = pGrXS->Eval(Ekin);
-//        //multiply bin content with cross section to get fission rate
-//        Content = pH1In->GetBinContent(x_i) * XS;
-//        EContent= pH1In->GetBinError(x_i) * XS;
-//        pH1->SetBinContent(x_i, Content);
-//        pH1->SetBinError(x_i, EContent);
-//    }
-//    return pH1;
-//}
-
-TH1F* WeightTH1withXS(TH1F *pH1In, string StrXSFileInPath, string StrFC, string StrEval)
+TH1F* WeightTH1withXS(TH1F *pH1In, TGraphErrors *pGrXS)
 {   //function to weight a Ekin histogram with the fission cross
     //section to get a unnormalized fission rate
 
     Int_t NumBinX = pH1In->GetNbinsX();       //Ekin bins
     Double_t Ekin, XS, Content, EContent;
-    TGraphErrors *pGrXS;
 
     TH1F *pH1 = (TH1F*)pH1In->Clone(); pH1->Clear();
-
-    //open cross section file and get it
-    TFile *f = new TFile(StrXSFileInPath.c_str(), "READ");
-        f->GetObject((StrEval+"/"+StrFC+"Target").c_str(), pGrXS); if (!pGrXS) cout << "Could not get " << StrEval << "/" << StrFC << "Target" << endl;
 
     for (int x_i=1; x_i<=NumBinX; x_i++)
     {   //get neutron kinetic energy of corresponding bin x_i
@@ -274,43 +185,98 @@ TH1F* WeightTH1withXS(TH1F *pH1In, string StrXSFileInPath, string StrFC, string 
         pH1->SetBinContent(x_i, Content);
         pH1->SetBinError(x_i, EContent);
     }
-    f->Close();
     return pH1;
 }
 
-TH1F* GetCorrection(string StrSimuFile, string StrFC, uint ch)
+//TH1F* WeightTH1withXS(TH1F *pH1In, string StrXSFileInPath, string StrFC, string StrEval)
+//{   //function to weight a Ekin histogram with the fission cross
+//    //section to get a unnormalized fission rate
+
+//    Int_t NumBinX = pH1In->GetNbinsX();       //Ekin bins
+//    Double_t Ekin, XS, Content, EContent;
+//    TGraphErrors *pGrXS;
+
+//    TH1F *pH1 = (TH1F*)pH1In->Clone(); pH1->Clear();
+
+//    //open cross section file and get it
+//    TFile *f = new TFile(StrXSFileInPath.c_str(), "READ");
+//        f->GetObject((StrEval+"/"+StrFC+"Target").c_str(), pGrXS); if (!pGrXS) cout << "Could not get " << StrEval << "/" << StrFC << "Target" << endl;
+
+//    for (int x_i=1; x_i<=NumBinX; x_i++)
+//    {   //get neutron kinetic energy of corresponding bin x_i
+//        Ekin    = pH1In->GetXaxis()->GetBinCenter(x_i);
+//        //get cross section @ E=Ekin
+//        XS      = pGrXS->Eval(Ekin);
+//        //multiply bin content with cross section to get fission rate
+//        Content = pH1In->GetBinContent(x_i) * XS;
+//        EContent= pH1In->GetBinError(x_i) * XS;
+//        pH1->SetBinContent(x_i, Content);
+//        pH1->SetBinError(x_i, EContent);
+//    }
+//    f->Close();
+//    return pH1;
+//}
+
+TGraphErrors* GetXS(string StrXSFileInPath, string StrFC, string StrEval)
+{
+    TFile *f = new TFile(StrXSFileInPath.c_str(), "READ");
+    TGraphErrors *pGrXS;
+    f->GetObject((StrEval+"/"+StrFC+"Target").c_str(), pGrXS); if (!pGrXS) cout << "Could not get " << StrEval << "/" << StrFC << "Target" << endl;
+    f->Close();
+    return pGrXS;
+}
+
+TH1F* GetCorrection(TFile *f, string StrFC, uint ch, TGraphErrors *pGrXS)
 {   //method to determine a correction factor C from geometric and vacuum simulation
     //C(E(t)) = vacuum fission rate at E(t) / total detected fission rate at E(t)
+    string SumName, ProjName, CorrName;
 
     //get Energy-ToF-Correlation histogram of all G4 simulated neutrons
-    TH2F* pH2Tot = GetGeant4Data(StrSimuFile, StrFC, false, ch);
+    TH2F* pH2Tot = GetGeant4Data(f, StrFC, false, ch);
+    //get Energy-ToF-Correlation histogram of scattered neutrons
+    TH2F* pH2Sc = GetGeant4Data(f, StrFC, true, ch);
+    //get Energy-ToF-Correlation histogram of direct neutrons
+    SumName = StrFC + "_EToFvsEkin_Dir_Ch." + std::to_string(ch+1);
+    TH2F* pH2Dir = (TH2F*)pH2Tot->Clone(SumName.c_str());
+    pH2Dir->Add(pH2Tot, pH2Sc, 1.0, -1.0);
+    //get Energy distribution of direct neutrons
+    ProjName = StrFC + "_Ekin_Dir_Ch." + std::to_string(ch+1);
+    TH1F* pH1Dir = (TH1F*)pH2Dir->ProjectionY(ProjName.c_str(), 0, -1, "e");
+        // x and y projections should be equal,
+        // but they aren't, probably due to binning.
     //get source spectrum
-    TH1F *pFCSource = (TH1F*)GetSourceSpectrum(StrSimuFile);
-    //convert total and source histogram to fission rate histograms
-    TH2F *pH2TotW = WeightWithXS(pH2Tot, "~/TrackLength/FissionXS.root", StrFC, "JEFF_3.3");
-    TH1F *pFCSourceW = WeightTH1withXS(pFCSource, "~/TrackLength/FissionXS.root", StrFC, "JEFF_3.3");
+    TH1F *pFCSource = (TH1F*)GetSourceSpectrum(f);
+
+    //convert direct, scattered and source histogram to fission rate histograms
+    TH1F *pFCDir = WeightTH1withXS(pH1Dir, pGrXS);
+    TH2F *pH2ScW = WeightWithXS(pH2Sc, pGrXS);
+    TH1F *pFCSourceW = WeightTH1withXS(pFCSource, pGrXS);
     // ...or even dont
-//    TH2F *pH2TotW = (TH2F*)pH2Tot->Clone();
+//    TH1F *pFCDir = pH1Dir->Clone();
+//    TH2F *pH2ScW = (TH2F*)pH2Sc->Clone();
 //    TH1F *pFCSourceW = (TH1F*)pFCSource->Clone();
+
     //get projection to the E(t) axis
-    TH1F *pFCTot, *pFCCorr;
-    string ProjName, CorrName;
-    ProjName = "G4Total_"+StrFC+"_Ch."+std::to_string(ch+1)+"_Hist";
-    pFCTot = (TH1F*)pH2TotW->ProjectionX(ProjName.c_str(), 0, -1, "e");
+    ProjName = "G4Sc_"+StrFC+"_Ch."+std::to_string(ch+1)+"_Hist";
+    TH1F* pFCSc = (TH1F*)pH2ScW->ProjectionX(ProjName.c_str(), 0, -1, "e");
+    //add direct and scattered fission rate
+    SumName = "G4Total_"+StrFC+"_Ch."+std::to_string(ch+1)+"_Hist";
+    TH1F* pFCTot = (TH1F*)pFCDir->Clone(SumName.c_str());
+    pFCTot->Add(pFCDir, pFCSc, 1.0, 1.0);
     CorrName = "C_"+StrFC+"_"+std::to_string(ch+1);
-    pFCCorr = (TH1F*)pFCTot->Clone(CorrName.c_str()); //pFCCorr->Clear();
-        pFCCorr->Divide(pFCSourceW, pFCTot, 1.0, 1.0);
+    TH1F* pFCCorr = (TH1F*)pFCTot->Clone(CorrName.c_str()); //pFCCorr->Clear();
+          pFCCorr->Divide(pFCSourceW, pFCTot, 1.0, 1.0);
     return pFCCorr;
 }
 
-TH1F* GetTransm(string StrSimuFile, string StrFC, uint ch)
+TH1F* GetTransm(TFile *f, string StrFC, uint ch)
 {
     //T = direct neutron rate / source neutron rate
 
     //get Energy-ToF-Correlation histogram of all G4 simulated neutrons
-    TH2F* pH2Tot    = GetGeant4Data(StrSimuFile, StrFC, false, ch);
+    TH2F* pH2Tot    = GetGeant4Data(f, StrFC, false, ch);
     //get Energy-ToF-Correlation histogram of all scattered neutrons
-    TH2F* pH2Scat   = GetGeant4Data(StrSimuFile, StrFC, true,  ch);
+    TH2F* pH2Scat   = GetGeant4Data(f, StrFC, true,  ch);
     //get Energy-ToF-Correlation histogram of all un-scattered neutrons
     TH2F* pH2UnScat = (TH2F*)pH2Tot->Clone("UnScat");
         pH2UnScat->Add(pH2Tot, pH2Scat, 1., -1.);
@@ -319,8 +285,8 @@ TH1F* GetTransm(string StrSimuFile, string StrFC, uint ch)
     TH1F *pFCUnScat, *pFCSource, *pFCTransm;
     string ProjName;
     ProjName = "G4UnScattered_"+StrFC+"_Ch."+std::to_string(ch+1)+"_Hist";
-    pFCUnScat = (TH1F*)pH2UnScat->ProjectionX(ProjName.c_str(), 0, -1, "e");
-    pFCSource = (TH1F*)GetSourceSpectrum(StrSimuFile);
+    pFCUnScat = (TH1F*)pH2UnScat->ProjectionY(ProjName.c_str(), 0, -1, "e");
+    pFCSource = (TH1F*)GetSourceSpectrum(f);
     pFCTransm = (TH1F*)pFCUnScat->Clone("CorrLoss");
     pFCTransm->Divide(pFCUnScat, pFCSource, 1., 1.);
     return pFCTransm;
@@ -339,7 +305,7 @@ void CreateColorGradient()
     TColor::CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont);
     gStyle->SetNumberContours(NCont);
 }
-
+/*
 TH1F* GetCorrLoss(string StrSimuFile, string StrFC, uint ch, Bool_t Draw = 0)
 {   //method to determine a correction factor k concerning the loss of kinetic
     //energy and ToF of scattered neutrons
@@ -471,21 +437,23 @@ TH1F* GetCorrLoss(string StrSimuFile, string StrFC, uint ch, Bool_t Draw = 0)
     pFCCorr->SetTitle(ObjTitle.c_str());
 
     delete pH2Scat, pH2UnScat, pH2Tot;
-//*/
 
     return pFCCorr;
 }
-
+*/
 void CompareWeighting(string StrHistoFileName)
 { // file name without .root ending
-    TFile *f = TFile::Open((StrHistoFileName+"_result.root").c_str(), "UPDATE");
+    TFile *fH = TFile::Open((StrHistoFileName+".root").c_str(), "READ"); // histogrammed simulation data, without track length weighting
+//    TFile *fW = TFile::Open((StrHistoFileName+"_w.root").c_str(), "READ");
+    TFile *fout = TFile::Open((StrHistoFileName+"_result.root").c_str(), "UPDATE");
 
     string FCs[] = {"H19", "UFC"};
     Int_t NumCh[] = {10, 8};
     for (Int_t i_FC = 0; i_FC < 2; i_FC++)
     {
         string FC = FCs[i_FC];
-        for (Int_t channel = 0; channel < NumCh[i_FC]; channel++)
+        TGraphErrors *pGrXS = GetXS("~/TrackLength/FissionXS.root", FC, "JEFF_3.3");
+        for (Int_t channel = 0; channel < 2/*NumCh[i_FC]*/; channel++)
         {
 //            TH1F *pk_H = GetCorrLoss((StrHistoFileName+".root").c_str(), FC, channel);
 //            pk_H->SetName(("H_k_"+FC+"_"+std::to_string(channel+1)).c_str());
@@ -501,18 +469,18 @@ void CompareWeighting(string StrHistoFileName)
 //            pT_W->SetName(("W_T_"+FC+"_"+std::to_string(channel+1)).c_str());
 //            SaveToFile(f, "TrackLength/Transmisssion", pT_W);
 
-            TH1F *pC_H = GetCorrection((StrHistoFileName+".root").c_str(), FC, channel);
+            TH1F *pC_H = GetCorrection(fH, FC, channel, pGrXS);
             pC_H->SetDirectory(0);
             pC_H->SetName(("H_C_"+FC+"_"+std::to_string(channel+1)).c_str());
-            SaveToFile(f, "Hit/Correction", pC_H);
+            SaveToFile(fout, "Hit/Correction", pC_H);
 //            TH1F *pC_W = GetCorrection((StrHistoFileName+"_w.root").c_str(), FC, channel);
 //            pC_W->SetName(("W_C_"+FC+"_"+std::to_string(channel+1)).c_str());
 //            SaveToFile(f, "TrackLength/Correction", pC_W);
         }
     }
-
-    f->Save();
-    f->Close();
+    fH->Close();
+    fout->Save();
+    fout->Close();
 
 //    new TCanvas((FC+"_"+std::to_string(channel+1)).c_str());
 //    pCorrH->Draw();
@@ -524,7 +492,7 @@ void CompareWeighting(string StrHistoFileName)
 //    l->Draw();
 }
 
-void avWeight(string StrHistoFileName)
+/*void avWeight(string StrHistoFileName)
 {
     TFile *f = TFile::Open((StrHistoFileName+"_result.root").c_str(), "UPDATE");
 
@@ -566,7 +534,7 @@ void avWeight(string StrHistoFileName)
     }
     f->Save();
     f->Close();
-}
+}*/
 
 void CorrectionRefH19(string StrHistoFileName, Bool_t w = 0)
 {
@@ -663,55 +631,6 @@ void scriptH(string StrFileInPath = "~/TrackLength/G4UFCvsH19_1E9_hist_result.ro
     g->Close();
 }
 
-void ArealDensities(string StrFileInPath)
-{ /// Calculate the change in 2016 nELBE areal densities.
-  /// Deprecated. Use scriptW or scriptH and FC-Analysis/2016.06
-    string Name = "";
-    TH1F *hC_W[8], *hC_H[8], *mA_H[8], *mA_W[8];
-    TFile *f = TFile::Open((StrFileInPath+"_result.root").c_str());
-    if (!f) cout << "Could not open " << StrFileInPath << ".root" << endl;
-    else cout << f << endl;
-    for (Int_t ch = 0; ch < 8; ch++)
-    {
-        // Get correction factor hists
-        Name = "TrackLength/Correction/RefH19/W_C_UFC_RefH19_"+std::to_string(ch+1);
-        hC_W[ch] = (TH1F*)f->Get(Name.c_str()); if (!hC_W[ch]) cout << "Could not get " << Name << endl;
-        Name = "Hit/Correction/RefH19/H_C_UFC_RefH19_"+std::to_string(ch+1);
-        hC_H[ch] = (TH1F*)f->Get(Name.c_str()); if (!hC_H[ch]) cout << "Could not get " << Name << endl;
-        // Get 2014 UFC areal densities
-        Name = "~/TrackLength/UFC_ArealDensities_"+std::to_string(ch+1)+".hdat";
-        TGraphErrors *g = new TGraphErrors(Name.c_str(), "%lg %*lg %*lg %lg");
-        g->SetName(std::to_string(ch+1).c_str());
-        // Prapare UFC areal density histogram
-        Name = "H_UFC_ArealDensities_"+std::to_string(ch+1);
-        mA_H[ch] = (TH1F*)hC_W[ch]->Clone(Name.c_str());
-        mA_H[ch]->SetDirectory(0);
-        mA_H[ch]->GetYaxis()->SetTitle("#font[12]{#varepsilonm_{A}} / #mug/cm^{2}");
-        mA_H[ch]->GetYaxis()->SetTitleSize(0.07);
-        mA_H[ch]->GetYaxis()->SetLabelSize(0.07);
-        Name = "W_UFC_ArealDensities_"+std::to_string(ch+1);
-        mA_W[ch] = (TH1F*)mA_H[ch]->Clone(Name.c_str());
-        mA_W[ch]->SetDirectory(0);
-
-        for (Int_t i = 0; i < g->GetN(); i++)
-        {
-            Double_t x, y;
-            g->GetPoint(i, x, y);
-            Int_t bin = i+1;
-            mA_H[ch]->SetBinContent(bin, y);
-            Double_t CorrectionFactorTL = hC_W[ch]->GetBinContent(bin);
-            Double_t CorrectionFactorHit = hC_H[ch]->GetBinContent(bin);
-            Double_t mA = CorrectionFactorHit==0 ? 0 : y * CorrectionFactorTL / CorrectionFactorHit;
-            mA_W[ch]->SetBinContent(bin, mA);
-//            cout << i+1 << " " << y << "*" << CorrectionFactorTL << "/" << CorrectionFactorHit << "=" << mA << endl;
-        }
-        SaveToFile(f, "ArealDensities/Hit", mA_H[ch]);
-        SaveToFile(f, "ArealDensities/TrackLength", mA_W[ch]);
-    }
-    f->Save();
-    f->Close();
-}
-
 void nELBEsim()
 {
 //    GetCorrLoss("~/TrackLength/G4UFCvsH19_1E8_hist.root", "UFC", 0, 1);
@@ -720,11 +639,11 @@ void nELBEsim()
     string File2 = "/home/hoffma93/TrackLength/G4UFCvsH19_23082016_hist_repr";
     string File3 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E6_fast_Phi";
     string File4 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E6_fast_Theta";
-//    CompareWeighting(File3);
+    CompareWeighting(File1);
 //    avWeight(StrFileInPath);
 //    scriptW(File1+"_result.root");
 //    scriptH(File1+"_result.root");
-    CompareWeighting(File2);
+//    CompareWeighting(File2);
 //    CorrectionRefH19(File2);
 //    scriptH(File2+"_result.root");
 }

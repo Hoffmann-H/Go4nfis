@@ -214,51 +214,6 @@ void DrawRefH19(string StrFileName, Int_t ch)
     l->Draw();
 }
 
-void DrawAD(string StrFileName)
-{ /// Draw areal densities.
-  /// Deprecated since nELBEsim.C::script_W/H
-    LoadStyles();
-    gROOT->SetStyle("SinglePadStyle");
-    gROOT->ForceStyle(kTRUE);
-    gStyle->SetLegendFont(132);
-    TFile *f = TFile::Open(StrFileName.c_str(), "READ");
-    if (!f) cout << "Could not open " << StrFileName << endl;
-    string HistName[2] = {"ArealDensities/Hit/H_UFC_ArealDensities_1",
-                          "ArealDensities/TrackLength/W_UFC_ArealDensities_1"};
-    TH1F *h1old = (TH1F*)f->Get(HistName[0].c_str());
-    TH1F *h1new = (TH1F*)f->Get(HistName[1].c_str());
-    h1old->GetXaxis()->SetRange(h1old->FindBin(0.5)+1, h1old->FindBin(10.));
-    h1new->GetXaxis()->SetRange(h1new->FindBin(0.5)+1, h1new->FindBin(10.));
-    h1old->SetLineColor(kRed);
-    h1new->SetLineColor(kBlack);
-
-    TFitResultPtr r = h1old->Fit("pol0", "LSQ");
-    Double_t mAold  = r->Parameter(0);
-    Double_t DmAold = r->ParError(0);
-    r = h1new->Fit("pol0", "LSQ");
-    Double_t mAnew  = r->Parameter(0);
-    Double_t DmAnew = r->ParError(0);
-
-    TCanvas *cAD = new TCanvas("cAD");
-    gPad->SetTicks(1,1);
-    gPad->SetLogx();
-    h1old->GetXaxis()->SetRangeUser(0.5, 10.);
-    h1old->GetYaxis()->SetRangeUser(100, 700);
-    h1old->Draw("hist");
-    h1new->Draw("same hist");
-
-    TLatex *t1 = new TLatex();
-    string Name = "alt "+std::to_string(mAold)+" #pm "+std::to_string(DmAold);
-    t1->SetTextColor(kRed);
-    t1->DrawLatex(1, 650, Name.c_str());
-    TLatex *t2 = new TLatex();
-    Name = "neu "+std::to_string(mAnew)+" #pm "+std::to_string(DmAnew);
-    t2->SetTextColor(kBlack);
-    t2->DrawLatex(1, 600, Name.c_str());
-    cAD->Modified();
-    cAD->Update();
-}
-
 void DrawWspectrum(string StrTreeFile = "~/TrackLength/G4UFCvsH19_1E7_tree.root", string FC = "H19", Int_t ch = 0)
 {
     string Name = "";
@@ -509,25 +464,6 @@ void CompCF(TFile *f, string FC, Int_t ch)
     hDiff->Draw("hist");
 }
 
-void Diff2d(TFile *f0, string descr0, TFile *f1, string descr1, string FC, Int_t ch, string var = "ToFvsEkin", Bool_t sc = 0)
-{ /// Plot a 2D variable's difference for 2 simulations, given their hist files.
-  /// Variables "ToFvsEkin", "EToFvsEkin".
-  // Does not work properly yet! Set z range?
-    char name[128] = "";
-    if (sc) sprintf(name, "%s/%s/Scattered/%s_%s_Sc_Ch.%i", FC.c_str(), var.c_str(), FC.c_str(), var.c_str(), ch+1);
-    else    sprintf(name, "%s/%s/%s_%s_Ch.%i", FC.c_str(), var.c_str(), FC.c_str(), var.c_str(), ch+1);
-    TH2F *h0 = (TH2F*)f0->Get(name); if (!h0) cout << "Could not get " << name << " from " << f0->GetName() << endl;
-    TH2F *h1 = (TH2F*)f1->Get(name); if (!h1) cout << "Could not get " << name << " from " << f1->GetName() << endl;
-    h0->Add(h1, -1.0);
-    h0->SetStats(0);
-    h0->SetLineColor(kRed);
-    sprintf(name, "%s, ch.%i%s, %s, (%s) - (%s)", FC.c_str(), ch+1, sc?", sc":"", var.c_str(), descr0.c_str(), descr1.c_str());
-    h0->SetTitle(name);
-    TCanvas *cD = new TCanvas("cD");
-    h0->Draw();
-    cD->Update();
-}
-
 void drawTL()
 {
     LoadStyles();
@@ -552,5 +488,4 @@ void drawTL()
 //    DrawFissionEE(f, "UFC", 0, 0, 0);
 //    CompSimRes(f, "2020", g, "2016", "UFC", 2, "dual", "Ekin", 1);
     CompCF(f, "UFC", 7);
-//    Diff2d(f, "2020", g, "2016", "UFC", 0, "ToFvsEkin", 0);
 }
