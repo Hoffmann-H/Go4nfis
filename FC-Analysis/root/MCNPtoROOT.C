@@ -1,7 +1,7 @@
-#include "SaveToFile.C"
 #include "FC.C"
-#include <fstream>
+#include "SaveToFile.C"
 #include "TH2D.h"
+#include <fstream>
 #include "TGraphErrors.h"
 #include "TCanvas.h"
 
@@ -27,8 +27,10 @@ void GetBinning(string file_to_read)
 }
 
 TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", string key = "real", Int_t ch = 0)
-{
+{ // Get MCNP 2D histogram
     char name[64] = "";
+    Double_t maxRad = 0.08446522295019329;
+    Double_t norm = 1.0 / (1.0 - pow(cos(maxRad), 2));
     Int_t N;
 
         // Open tabular as graph
@@ -81,6 +83,7 @@ TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "PuFC", string key 
         pHist->SetBinContent(binT, binE, C);
         pHist->SetBinError(binT, binE, DC * C);
     }
+    pHist->Scale(1.0 / norm);
     if (draw)
     {
         sprintf(name, "%s_EvsT_%i", FC.c_str(), ch + 1);
@@ -96,7 +99,7 @@ TH1D* TimeProjection(TH2D *pH2, Int_t ch, string FC = "PuFC", string key = "real
 {
     char name[64] = "";
     sprintf(name, "%s_ProjT_%s_%i", FC.c_str(), key.c_str(), ch + 1);
-    TH1D *h = (TH1D*)pH2->ProjectionX(name);
+    TH1D *h = (TH1D*)pH2->ProjectionX(name, 2, -1);
 //    h->SetName(name);
     sprintf(name, "%s, ToF, %s, ch.%i", FC.c_str(), key.c_str(), ch + 1);
     h->SetTitle(name);
@@ -116,7 +119,7 @@ Double_t f(Double_t *x, Double_t *par)
     return s + par[3];
 }
 
-TH1D* FitPeakForm(TH1D *H, string Run = "NIF", Int_t ch = 0, string Simulation = "Geant4", string key = "real")
+TF1* FitPeakForm(TH1D *H, string Run = "NIF", Int_t ch = 0, string Simulation = "Geant4", string key = "real")
 { // Fit simulated ToF folding to data
     string FC = Run[0] == 'U' ? "UFC" : "PuFC";
     char name[128] = "";
@@ -134,7 +137,7 @@ TH1D* FitPeakForm(TH1D *H, string Run = "NIF", Int_t ch = 0, string Simulation =
 //    Double_t bg = 0;
 
     h = (TH1D*)H->Clone();
-    Double_t Range[] = {hExp->GetBinLowEdge(Gate_0(ch, FC)), hExp->GetBinLowEdge(Gate_3(ch, FC))};
+    Double_t Range[] = {hExp->GetBinCenter(hExp->GetMaximumBin()) - 15, hExp->GetBinCenter(hExp->GetMaximumBin()) + 35};//{hExp->GetBinLowEdge(Gate_a(ch, FC)), hExp->GetBinLowEdge(Gate_b(ch, FC))};
     Double_t Par[] = {(hExp->GetMaximum() - bg) / h->Integral(), 0, 3, bg};
 //    cout << Par[0] << " " << Par[1] << " " << Par[2] << " " << Par[3] << endl;
     sprintf(name, "f%s_%i", Run.c_str(), ch+1);
@@ -149,22 +152,10 @@ TH1D* FitPeakForm(TH1D *H, string Run = "NIF", Int_t ch = 0, string Simulation =
 
 //    for (Int_t p = 0; p < 4; p++)
 //        cout << fit->GetParameter(p) << " +- " << fit->GetParError(p) << endl;
-    cout << FC << "\t" << ch+1 << " \t" << fit->GetParameter(2) << " +- " << fit->GetParError(2) << endl;
-
-    // Save
-    Int_t N = h->GetNbinsX();
-    Double_t xmin = h->GetBinLowEdge(1);
-    Double_t xmax = h->GetBinLowEdge(N+1);
-    sprintf(name, "%s_FitT_%s_%i", FC.c_str(), key.c_str(), ch+1);
-    TH1D* hFit = new TH1D(name, name, N, xmin, xmax);
-    sprintf(name, "%s, Ch. %i, Fit simulated ToF spectrum", FC.c_str(), ch+1);
-    hFit->SetTitle(name);
-    for (Int_t bin = 1; bin < N+1; bin++)
-        hFit->SetBinContent(bin, fit->Eval(hFit->GetBinCenter(bin)));
-//    new TCanvas();
-//    hExp->Draw("p");
-//    hFit->Draw("same");
-    return hFit;
+//    cout << FC << "\t" << ch+1 << " \t" << fit->GetParameter(2) << " +- " << fit->GetParError(2) << endl;
+    cout << fit->GetNDF() << endl;
+    fit->SetNpx(1000);
+    return fit;
 }
 
 void MCNPtoROOT(Bool_t save, string Run = "NIF", string key = "real", string Path = "FCscat_PTB_weight/tally/FCscat_b", Long_t SimulatedN = 60000000000)
@@ -189,15 +180,26 @@ void MCNPtoROOT(Bool_t save, string Run = "NIF", string key = "real", string Pat
         sprintf(name, "%s/%s_tally-2%i4_xyz_0.dmp", DirName.c_str(), Path.c_str(), 8 - i);
 
         // Create 2D histogram
-        h[i] = MakeEvsT(name, 0, "PuFC", key, i);
+        h[i] = MakeEvsT(name, 0, FC, key, i);
 
         if (save)
         {
             Save(fAna, "Simulation/MCNP/"+FC+"_"+key+"/ToFvsEkin", h[i]);
             TH1D *hProj = TimeProjection(h[i], i, FC, key);
             Save(fAna, "Simulation/MCNP/"+FC+"_"+key+"/EffToF", hProj);
-            if (strcmp(key.c_str(), "ideal")) {
-                TH1D *hFit = FitPeakForm(hProj, Run, i, "MCNP", key);
+            if (!strcmp(key.c_str(), "real")) {
+                //// Fit peak form ///////////////////////////////////////
+                TF1 *fit = FitPeakForm(hProj, Run, i, "MCNP", key); ////
+                //////////////////////////////////////////////////////////
+                Save(fAna, "Simulation/MCNP/"+FC+"_"+key+"/FitToF", fit);
+                // convert fit into hist
+                Int_t N = hProj->GetNbinsX();
+                sprintf(name, "%s_FitT_%s_%i", FC.c_str(), key.c_str(), i+1);
+                TH1D* hFit = new TH1D(name, name, N, hProj->GetBinLowEdge(1), hProj->GetBinLowEdge(N+1));
+                sprintf(name, "%s, Ch. %i, Fit simulated ToF spectrum", FC.c_str(), i+1);
+                hFit->SetTitle(name);
+                for (Int_t bin = 1; bin < N+1; bin++)
+                    hFit->SetBinContent(bin, fit->Eval(hFit->GetBinCenter(bin)));
                 Save(fAna, "Simulation/MCNP/"+FC+"_"+key+"/FitToF", hFit);
             }
         } else { // draw
@@ -224,6 +226,7 @@ void MCNPtoROOT(Bool_t save, string Run = "NIF", string key = "real", string Pat
 void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 {
     string FC = Run[0] == 'U' ? "UFC" : "PuFC";
+//    string key = strcmp(key.c_str(), "real") ? "ideal" : "real";
     string FilePath = "/home/hoffma93/Programme/Geant4-Work/results";
     char name[128] = "";
     sprintf(name, "%s/%s", FilePath.c_str(), FileName.c_str());
@@ -234,11 +237,13 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 
     // Emitted neutrons
     TH1F *pHemit = (TH1F*)fG4->Get("Source/Source_Theta");
-    Double_t maxTheta = 0.08446522295019329 * 180 / TMath::Pi();
+    Double_t maxRad = 0.08446522295019329;
+    Double_t maxTheta = maxRad * 180 / TMath::Pi();
     Int_t lastBin = pHemit->FindBin(maxTheta);
     Double_t WeightLastBin = (maxTheta - pHemit->GetBinLowEdge(lastBin)) / pHemit->GetBinWidth(lastBin);
     Double_t nEmit = pHemit->Integral(0, lastBin - 1) + WeightLastBin * pHemit->GetBinContent(lastBin);
     cout << "Smeared angular distribution correction: " << nEmit / pHemit->Integral() << endl;
+    Double_t norm = nEmit / (1.0 - pow(cos(maxRad), 2));
 //    TGraphErrors *geEmit = new TGraphErrors(8);
 //    for (Int_t i = 0; i < 8; i++)
 //    {
@@ -256,25 +261,38 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
         sprintf(name, "%s_ToFvsEkin_%s_Ch.%i", FC.c_str(), key.c_str(), i+1);
         pH2Tot->SetName(name);
 //        cout << pH2Tot->Integral() << " ";
-        if (pH2Tot->Integral() > 1)
-            pH2Tot->Scale(1.0 / nEmit);
+//        if (pH2Tot->Integral() > 1)
+            pH2Tot->Scale(1.0 / norm);
 //        cout << pH2Tot->Integral() << endl;
 
         TH1D *hProj = TimeProjection(pH2Tot, i, FC, key);
         Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/EffToF", hProj);
-        if (strcmp(key.c_str(), "ideal")) {
-            TH1D *hFit = FitPeakForm(hProj, Run, i, "Geant4", key);
+
+        if (!strcmp(key.c_str(), "real") || !strcmp(key.c_str(), "SB")) {
+            // for geometrical(non-vac) FG and SB runs:
+            //// Fit peak form ///////////////////////////////////////
+            TF1 *fit = FitPeakForm(hProj, Run, i, "Geant4", key); ////
+            //////////////////////////////////////////////////////////
+            Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/FitToF", fit);
+            // convert fit into hist
+            Int_t N = hProj->GetNbinsX();
+            sprintf(name, "%s_FitT_%s_%i", FC.c_str(), key.c_str(), i+1);
+            TH1D* hFit = new TH1D(name, name, N, hProj->GetBinLowEdge(1), hProj->GetBinLowEdge(N+1));
+            sprintf(name, "%s, Ch. %i, Fit simulated ToF spectrum", FC.c_str(), i+1);
+            hFit->SetTitle(name);
+            for (Int_t bin = 1; bin < N+1; bin++)
+                hFit->SetBinContent(bin, fit->Eval(hFit->GetBinCenter(bin)));
             Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/FitToF", hFit);
         }
 
-        sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
-        TH2D *pH2Sc = (TH2D*)fG4->Get(name);
-//        , FC+"_ToFvsEkin_"+key+"_Sc_Ch."+to_string(i+1)
-        sprintf(name, "%s_ToFvsEkin_Sc_%s_Ch.%i", FC.c_str(), key.c_str(), i+1);
-        if (pH2Sc->Integral() > 1)
-            pH2Sc->Scale(1.0 / nEmit);
-
-        Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin/Scattered", pH2Sc);
+        if (!strcmp(key.c_str(), "real"))
+        {
+            sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+            TH2D *pH2Sc = (TH2D*)fG4->Get(name);
+//            if (pH2Sc->Integral() > 1)
+                pH2Sc->Scale(1.0 / norm);
+            Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin/Scattered", pH2Sc);
+        }
         Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin", pH2Tot);
     }
     fAna->Save();
@@ -283,13 +301,21 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 
 void MCNPtoROOT()
 {
-    Geant4toROOT("PuFC_real_c_5E7.root", "NIF", "real");
-    Geant4toROOT("PuFC_ideal_c_5E7.root", "PuFC", "ideal");
-    Geant4toROOT("UFC_real_c_5E7.root", "UFC_NIF", "real");
-    Geant4toROOT("UFC_ideal_c_5E7.root", "UFC", "ideal");
-    Geant4toROOT("UFC_SB_c_5E7.root", "UFC_SB", "SB");
-    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
-    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
+    Geant4toROOT("PuFC_real_c_5E7_v2.root", "NIF", "real");
+//    Geant4toROOT("PuFC_ideal_c_FG+BG.root", "PuFC", "ideal");
+//    Geant4toROOT("PuFC_ideal_c_FG.root", "PuFC", "ideal_dir");
+//    Geant4toROOT("UFC_real_c_5E7.root", "UFC_NIF", "real");
+//    Geant4toROOT("UFC_ideal_c_FG+BG.root", "UFC", "ideal");
+//    Geant4toROOT("UFC_ideal_c_FG.root", "UFC", "ideal_dir");
+//    Geant4toROOT("UFC_SB_5E7.root", "UFC_SB", "SB");
+//    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
+//    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
+//    MCNPtoROOT(1, "UFC_NIF", "real", "FCscat_PTB_UFC_weight/tally/FCscat_a");
+//    MCNPtoROOT(1, "UFC", "ideal_dir", "FCscat_PTB_UFC_weight_void_dir/tally/FCscat_a");
+//    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void/tally/FCscat_a");
+
+
+//    Geant4toROOT("PuFC_real_VII.0.root", "NIF", "real");
 }
 
 void unused_functions()

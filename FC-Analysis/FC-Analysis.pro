@@ -31,23 +31,44 @@ unix {
 }
 
 # Input
-HEADERS += include/FC.h \
-           include/PuFC.h \
-           include/UFC.h \
-           include/Sim.h \
-           include/AnaSim.h \
-           include/Plot.h \
-           include/ToF.h
+#HEADERS += include/FC.h \
+#           include/PuFC.h \
+#           include/UFC.h \
+#           include/Sim.h \
+#           include/AnaSim.h \
+#           include/Plot.h \
+#           include/ToF.h
 
 SOURCES += \
+#    src/FC.cpp \
+#    src/PuFC.cpp \
+#    src/UFC.cpp \
+#    src/Sim.cpp \
+#    src/AnaSim.cpp \
+#    src/Plot.cpp \
+#    src/ToF.cpp \
     main.cpp \
-    src/FC.cpp \
-    src/PuFC.cpp \
-    src/UFC.cpp \
-    src/Sim.cpp \
-    src/AnaSim.cpp \
-    src/Plot.cpp \
-    src/ToF.cpp
+    root/AnaSim.C \
+    root/Carlson.C \
+    root/Correction.C \
+    root/CrossSection.C \
+    root/Deposit.C \
+    root/DrawPics.C \
+    root/drawTL.C \
+    root/FC.C \
+    root/MCNPtoROOT.C \
+    root/nELBEsim.C \
+    root/NeutronField.C \
+    root/NumberOfAtoms.C \
+    root/PeakWidth.C \
+    root/QDCmin.C \
+    root/Runs.C \
+    root/SaveToFile.C \
+    root/ShadowCone.C \
+    root/Stability.C \
+    root/Target.C \
+    root/ToF.C \
+    root/VglSim.C
 
 !exists ($(ROOTSYS)/include/rootcintrule.pri):message ("The rootcintrules.pri was not found")
 exists ($(ROOTSYS)/include/rootcintrule.pri) {
@@ -57,17 +78,5 @@ exists ($(ROOTSYS)/include/rootcintrule.pri) {
     CREATE_ROOT_DICT_FOR_CLASSES -= ui_mainwindow
 
 OTHER_FILES += \
-    DrawPics.C \
-    root/SaveToFile.C \
-    root/QDCmin.C \
-    root/PeakWidth.C \
-    root/NumberOfAtoms.C \
-    root/Carlson.C \
-    root/MCNPtoROOT.C \
-    root/AnaSim.C \
-    root/FC.C \
-    root/ToF.C \
-    root/NeutronField.C \
-    root/CrossSection.C \
-    root/Runs.C
+        ../../../StyleSheets/StyleSheet.C \
 }

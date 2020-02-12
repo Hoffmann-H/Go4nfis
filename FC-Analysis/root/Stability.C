@@ -147,6 +147,121 @@ TH1D* ConstantSignal(string FC_Setup, Int_t ch, Int_t r = 1)
     return h;
 }
 
+TF1* Statistics(TGraphErrors *g, Double_t start = 0, Double_t stop = 0)
+{
+    char name[64] = "";
+    sprintf(name, "%s_fit", g->GetName());
+    TF1 *fFit = new TF1(name, "pol0", start, stop ? stop : g->GetN() + 0.5);
+    g->Fit(name, "R0Q");
+    cout << fFit->GetParameter(0) << " +- " << fFit->GetParError(0) << endl << fFit->GetChisquare() << " / " << fFit->GetNDF() << " = " << fFit->GetChisquare() / fFit->GetNDF() << endl;
+    return fFit;
+}
+
+void IndFisYield(TFile *fAna, string RunName, Int_t ch, Double_t &Y, Double_t &DY)
+{
+    string FC = RunName[0] == 'U' ? "UFC" : "PuFC";
+    char name[128] = "";
+    Double_t monitor, delta_rel, t_real;
+    Double_t x, IndFis, DIndFis;
+
+    // Get Run's monitor counts
+    GetRun(RunName, monitor, delta_rel, t_real);
+    // Get Run's (n,f)-Signal
+    sprintf(name, "%s/ToF/Signal/%s/InducedFission", FC.c_str(), RunName.c_str());
+    TGraphErrors *geIndFis = (TGraphErrors*) fAna->Get(name); if (!geIndFis) cout << "Could not get " << name << endl;
+    geIndFis->GetPoint(ch, x, IndFis);
+    DIndFis = geIndFis->GetErrorY(ch);
+    // Divide (n,f) / monitor
+    Y = IndFis / monitor;
+    DY = TMath::Abs(Y) * sqrt( pow(DIndFis / IndFis, 2) + pow(delta_rel, 2) );
+    cout << Y << " +- " << DY << endl;
+    return;
+}
+
+void IndFisStabilityPu(TFile *fAna)
+{
+    char name[64] = "";
+//    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    for (Int_t i = 0; i < 8; i++)
+    {
+        TGraphErrors *geCnf = new TGraphErrors(7);
+        sprintf(name, "PuFC_nf_%i", i+1);
+        geCnf->SetName(name);
+        sprintf(name, "PuFC Ch. %i; Run nr.; #font[12]{C}_{(n,f)} / #font[12]{NM}", i+1);
+        geCnf->SetTitle(name);
+        Double_t Y, DY;
+        IndFisYield(fAna, "PuFC_FG_MS4", i, Y, DY);
+        geCnf->SetPoint(0, 1, Y);
+        geCnf->SetPointError(0, 0, DY);
+        IndFisYield(fAna, "PuFC_FG_MS5", i, Y, DY);
+        geCnf->SetPoint(1, 2, Y);
+        geCnf->SetPointError(1, 0, DY);
+        IndFisYield(fAna, "PuFC_FG_MS6", i, Y, DY);
+        geCnf->SetPoint(2, 3, Y);
+        geCnf->SetPointError(2, 0, DY);
+        IndFisYield(fAna, "PuFC_FG_MS7", i, Y, DY);
+        geCnf->SetPoint(3, 4, Y);
+        geCnf->SetPointError(3, 0, DY);
+        IndFisYield(fAna, "PuFC_BG_MS9", i, Y, DY);
+        geCnf->SetPoint(4, 5, Y);
+        geCnf->SetPointError(4, 0, DY);
+        IndFisYield(fAna, "PuFC_BG_MS10", i, Y, DY);
+        geCnf->SetPoint(5, 6, Y);
+        geCnf->SetPointError(5, 0, DY);
+        IndFisYield(fAna, "PuFC_BG_MS11", i, Y, DY);
+        geCnf->SetPoint(6, 7, Y);
+        geCnf->SetPointError(6, 0, DY);
+        Save(fAna, "PuFC/Stability", geCnf);
+
+        TF1 *fFG = Statistics(geCnf, 0.0, 4.5);
+        Save(fAna, "PuFC/Stability/FG", fFG);
+        TF1 *fBG = Statistics(geCnf, 4.5);
+        Save(fAna, "PuFC/Stability/BG", fBG);
+    }
+}
+
+void IndFisStabilityU(TFile *fAna)
+{
+    char name[64] = "";
+//    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    for (Int_t i = 0; i < 8; i++)
+    {
+        TGraphErrors *geCnf = new TGraphErrors(7);
+        sprintf(name, "UFC_nf_%i", i+1);
+        geCnf->SetName(name);
+        sprintf(name, "UFC Ch. %i; Run nr.; #font[12]{C}_{(n,f)} / #font[12]{NM}", i+1);
+        geCnf->SetTitle(name);
+        Double_t Y, DY;
+        IndFisYield(fAna, "UFC_FG_MS20_2", i, Y, DY);
+        geCnf->SetPoint(0, 1, Y);
+        geCnf->SetPointError(0, 0, DY);
+        IndFisYield(fAna, "UFC_FG_MS20_3", i, Y, DY);
+        geCnf->SetPoint(1, 2, Y);
+        geCnf->SetPointError(1, 0, DY);
+        IndFisYield(fAna, "UFC_FG_MS20_4", i, Y, DY);
+        geCnf->SetPoint(2, 3, Y);
+        geCnf->SetPointError(2, 0, DY);
+        IndFisYield(fAna, "UFC_FG_MS21_2", i, Y, DY);
+        geCnf->SetPoint(3, 4, Y);
+        geCnf->SetPointError(3, 0, DY);
+        IndFisYield(fAna, "UFC_FG_MS21_3", i, Y, DY);
+        geCnf->SetPoint(4, 5, Y);
+        geCnf->SetPointError(4, 0, DY);
+        IndFisYield(fAna, "UFC_BG_MS20_5", i, Y, DY);
+        geCnf->SetPoint(5, 6, Y);
+        geCnf->SetPointError(5, 0, DY);
+        IndFisYield(fAna, "UFC_BG_MS21_4", i, Y, DY);
+        geCnf->SetPoint(6, 7, Y);
+        geCnf->SetPointError(6, 0, DY);
+        Save(fAna, "UFC/Stability", geCnf);
+
+        TF1 *fFG = Statistics(geCnf, 0.0, 5.5);
+        Save(fAna, "UFC/Stability/FG", fFG);
+        TF1 *fBG = Statistics(geCnf, 5.5);
+        Save(fAna, "UFC/Stability/BG", fBG);
+    }
+}
+
 TH1D *hFit;
 Bool_t reject;
 Double_t fconst(Double_t *x, Double_t *par)
@@ -207,32 +322,38 @@ void Stability()
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     for (Int_t i = 0; i < 8; i++)
     {
-//        TH1D* hUFC_FG = ConstantSignal("UFC_FG", i, 60);
-//        TF1 *fUFC_FG = Statistics(hUFC_FG);
-//        Save(fAna, "UFC/Stability/FG", hUFC_FG);
-//        Save(fAna, "UFC/Stability/FG", fUFC_FG);
-//        TH1D* hUFC_BG = ConstantSignal("UFC_BG", i, 60);
-//        TF1 *fUFC_BG = Statistics(hUFC_BG);
-//        Save(fAna, "UFC/Stability/BG", hUFC_BG);
-//        Save(fAna, "UFC/Stability/BG", fUFC_BG);
-        TH1D* hPuFC_FG = ConstantSignal("PuFC_FG", i, 60);
-        TF1 *fPuFC_FG = Statistics(hPuFC_FG);
-        Save(fAna, "PuFC/Stability/FG", hPuFC_FG);
+/*        TGraphErrors* gUFC_FG = SignalStability(fAna, "UFC_FG", i);
+        TF1 *fUFC_FG = Statistics(gUFC_FG);
+        Save(fAna, "UFC/Stability/FG", gUFC_FG);
+        Save(fAna, "UFC/Stability/FG", fUFC_FG);
+        TGraphErrors* gUFC_BG = SignalStability(fAna, "UFC_BG", i);
+        TF1 *fUFC_BG = Statistics(gUFC_BG);
+        Save(fAna, "UFC/Stability/BG", gUFC_BG);
+        Save(fAna, "UFC/Stability/BG", fUFC_BG);
+        TGraphErrors* gPuFC_FG = SignalStability(fAna, "PuFC_FG", i);
+        TF1 *fPuFC_FG = Statistics(gPuFC_FG);
+        Save(fAna, "PuFC/Stability/FG", gPuFC_FG);
         Save(fAna, "PuFC/Stability/FG", fPuFC_FG);
-        TH1D* hPuFC_BG = ConstantSignal("PuFC_BG", i, 60);
-        TF1 *fPuFC_BG = Statistics(hPuFC_BG);
-        Save(fAna, "PuFC/Stability/BG", hPuFC_BG);
+        TGraphErrors* gPuFC_BG = SignalStability(fAna, "PuFC_BG", i);
+        TF1 *fPuFC_BG = Statistics(gPuFC_BG);
+        Save(fAna, "PuFC/Stability/BG", gPuFC_BG);
         Save(fAna, "PuFC/Stability/BG", fPuFC_BG);
+        TGraphErrors* gPuFC = SignalStability(fAna, "PuFC", i);
+        Save(fAna, "PuFC/Stability/FG+BG", gPuFC);*/
 
-//        TH1D *hUFC_C = ConstantBackground("UFC", i, 60);
-//        TF1 *fUFC_C = Statistics(hUFC_C);
-//        Save(fAna, "UFC/Stability/SF", hUFC_C);
-//        Save(fAna, "UFC/Stability/SF", fUFC_C);
-//        TH1D *hPuFC_C = ConstantBackground("PuFC", i, 60);
-//        TF1 *fPuFC_C = Statistics(hPuFC_C);
-//        Save(fAna, "PuFC/Stability/SF", hPuFC_C);
-//        Save(fAna, "PuFC/Stability/SF", fPuFC_C);
+        TH1D *hUFC_C = ConstantBackground("UFC", i, 60);
+        TF1 *fUFC_C = Statistics(hUFC_C);
+        Save(fAna, "UFC/Stability/SF", hUFC_C);
+        Save(fAna, "UFC/Stability/SF", fUFC_C);
+        TH1D *hPuFC_C = ConstantBackground("PuFC", i, 60);
+        TF1 *fPuFC_C = Statistics(hPuFC_C);
+        Save(fAna, "PuFC/Stability/SF", hPuFC_C);
+        Save(fAna, "PuFC/Stability/SF", fPuFC_C);
     }
+//    fAna->Save();
+//    fAna->Close();
+    IndFisStabilityPu(fAna);
+    IndFisStabilityU(fAna);
     fAna->Save();
     fAna->Close();
 }

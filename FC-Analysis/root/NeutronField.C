@@ -3,9 +3,10 @@
 #include "SaveToFile.C"
 #include "Runs.C"
 #include "FC.C"
+#include "/gpfs/home/hoffma93/StyleSheets/StyleSheet.C"
 #include <fstream>
 
-void Freifeld()
+void Freifeld(Bool_t Draw = 1)
 {
     Int_t nFreifeld = 11;
     Double_t Q[] = {9.502182, 5.283354, 1.756110, 1.747356, 46.947156, 57.481554, 53.542836, 96.288870, 6.377172, 50.632404, 8.310576};
@@ -36,11 +37,45 @@ void Freifeld()
         gNM->SetPointError(j, 0, sqrt(NM[j]) / PLC[j] * nFreifeld / sNM);
         cout << j << " " << Q[j] / PLC[j] * nFreifeld / sQ << " " << He3[j] / PLC[j] * nFreifeld / sHe3 << endl;
     }
-//    TCanvas *c = new TCanvas();
-//    gQ->Draw();
-//    gHe3->Draw("same");
-//    gNM->Draw("same");
-//    c->Update();
+    if (Draw)
+    {
+        LoadStyles();
+        gROOT->SetStyle("SinglePadStyle");
+        gROOT->ForceStyle(kTRUE);
+
+        gQ->SetMarkerColor(kRed);
+        gQ->SetLineColor(kRed);
+        gQ->SetLineWidth(2);
+        gQ->SetMarkerSize(2);
+        gQ->SetMarkerStyle(21);
+        gHe3->SetMarkerColor(kGreen);
+        gHe3->SetLineColor(kGreen);
+        gHe3->SetLineWidth(2);
+        gHe3->SetMarkerSize(2);
+        gHe3->SetMarkerStyle(21);
+        gNM->SetMarkerColor(kBlue);
+        gNM->SetLineColor(kBlue);
+        gNM->SetLineWidth(2);
+        gNM->SetMarkerSize(2);
+        gNM->SetMarkerStyle(21);
+        TLegend *l = new TLegend(0.65, 0.2, 0.9, 0.45);
+        l->SetTextFont(132);
+        l->AddEntry(gQ, "Q / PLC", "PE");
+        l->AddEntry(gHe3, "{}^{3}He / PLC", "PE");
+        l->AddEntry(gNM, "NM / PLC", "PE");
+        TCanvas *c = new TCanvas();
+        c->SetGrid();
+        gPad->SetTicks(1,1);
+        gQ->Draw("AP");
+        gQ->SetTitle("; Freifeld-Messung; Z#ddot{a}hlraten-Verh#ddot{a}ltnis");
+        gQ->GetXaxis()->SetRangeUser(0.5, 11.5);
+        gQ->GetXaxis()->SetNdivisions(112);
+        gQ->GetYaxis()->SetNdivisions(207);
+        gHe3->Draw("sameP");
+        gNM->Draw("sameP");
+        l->Draw();
+        c->Update();
+    }
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     Save(fAna, "Freifeld", gQ, "Q");
     Save(fAna, "Freifeld", gHe3, "He3");
@@ -115,6 +150,8 @@ string NeutronFieldRun(string Run)
         Double_t nDensity = nFlux / tReal;
         Double_t DnDensity = DnFlux / tReal;
 
+        cout << i+1 << " " << Monitor << " " << Yield << " " << w << " " << nFluence << " " << area << " " << nFlux << " " << tReal << " " << nDensity << endl;
+
         geFluence->SetPoint(i, i+1, nFluence);
         geFluence->SetPointError(i, 0, DnFluence);
         geFlux->SetPoint(i, i+1, nFlux);
@@ -167,17 +204,17 @@ void NeutronField()
 {
     Freifeld();
 
-    DoNeutronField("UFC");
-    DoNeutronField("UFC_FG");
-    DoNeutronField("UFC_BG");
-    NeutronFieldRun("UFC_NIF");
-    NeutronFieldRun("UFC_SB");
+//    DoNeutronField("UFC");
+//    DoNeutronField("UFC_FG");
+//    DoNeutronField("UFC_BG");
+//    NeutronFieldRun("UFC_NIF");
+//    NeutronFieldRun("UFC_SB");
 
-    DoNeutronField("PuFC");
-    DoNeutronField("PuFC_FG");
-    DoNeutronField("PuFC_BG");
-    NeutronFieldRun("NIF");
-    NeutronFieldRun("SB");
+//    DoNeutronField("PuFC");
+//    DoNeutronField("PuFC_FG");
+//    DoNeutronField("PuFC_BG");
+//    NeutronFieldRun("NIF");
+//    NeutronFieldRun("SB");
 }
 
 #endif

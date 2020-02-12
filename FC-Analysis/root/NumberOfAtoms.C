@@ -3,6 +3,7 @@
 
 void NumberOfPuAtoms()
 {
+    Double_t eff = 0.986;
     char name[128] = "";
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     TFile *fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "READ");
@@ -67,7 +68,7 @@ void NumberOfPuAtoms()
 
         Double_t nAtoms = BgRate * PuSFT2 / log(2.0);
         Double_t DnAtoms = DBgRate * PuSFT2 / log(2.0);
-        sprintf(name, "%.3f(%i) & %.3f(%i)", nAtoms*1.E-19, (Int_t)(DnAtoms*1.E-15), N_Toni[i], (Int_t)(1000*DN_Toni[i]));
+        sprintf(name, "%.3f(%i) & %.3f(%i)", N_Toni[i], (Int_t)(1000*DN_Toni[i]), nAtoms*1.E-19 / eff, (Int_t)(DnAtoms*1.E-15 / eff));
         cout << i+1 << " & " << name << " \\\\" << endl;
         geAtoms->SetPoint(i, i+1, nAtoms);
         geAtoms->SetPointError(i, 0, DnAtoms);
@@ -91,8 +92,11 @@ TGraphErrors* EffUmA()
 
 void NumberOfUAtoms()
 {
-    Double_t Deposit_radius = 3.70; // cm
-    Double_t Deposit_area = TMath::Pi() * pow(Deposit_radius, 2); // cm^2
+//    Double_t Deposit_radius = 3.70; // cm
+//    Double_t Deposit_area = TMath::Pi() * pow(Deposit_radius, 2); // cm^2
+    Double_t Deposit_area[] = {42.7736, 41.5982, 43.3861, 43.4792, 43.2923, 43.1283, 42.7877, 43.6696}; // cm^2
+//    Double_t Deposit_area[] = {43, 43, 43, 43, 43, 43, 43, 43};
+    Double_t DeltaDepositArea = 0.7; // cm^2
     Double_t MolarMass = 235.3175644086;
     Double_t u = 1.660539E-24; // [g]
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
@@ -103,9 +107,9 @@ void NumberOfUAtoms()
         Double_t x, y, yerr;
         gEffUmA->GetPoint(i, x, y); // y = effUmA [mg/cm^2]
         yerr = gEffUmA->GetErrorY(i);
-        Double_t effNU = Deposit_area * (y / 1000) / (MolarMass * u);
-        Double_t DeffNU = Deposit_area * (yerr / 1000) / (MolarMass * u);
-//        cout << " " << i+1 << "   " << effNU << "+-" << DeffNU << endl;
+        Double_t effNU = Deposit_area[i] * (y / 1000) / (MolarMass * u);
+        Double_t DeffNU = effNU * sqrt( pow(DeltaDepositArea / Deposit_area[i], 2) + pow(yerr / y, 2) );
+        cout << " " << i+1 << "   " << effNU << "+-" << DeffNU << endl;
         gEffNU->SetPoint(i, i+1, effNU);
         gEffNU->SetPointError(i, 0, DeffNU);
     }

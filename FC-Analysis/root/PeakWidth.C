@@ -66,7 +66,7 @@ void PeakWidth(string file_name, string subfolder, string FC, Int_t lStart, Int_
             Int_t l = lStart + j * (lStop - lStart) / (n - 1.0);
             Double_t NIF, DNIF;
             GetPeak(i, pH, FC, l, r, rStop, &NIF, &DNIF);
-            ge[i]->SetPoint(j, l + r, NIF);
+            ge[i]->SetPoint(j, r, NIF);
             ge[i]->SetPointError(j, 0, DNIF);
 //            if (i != 4 && i != 7 && i != 3) {
                 avNIF[j] += NIF / 8.0;
@@ -74,7 +74,7 @@ void PeakWidth(string file_name, string subfolder, string FC, Int_t lStart, Int_
 //            }
             if (i == 7)
             { // After 8th deposit, fill average
-                geAv->SetPoint(j, l + r, avNIF[j]);
+                geAv->SetPoint(j, r, avNIF[j]);
                 geAv->SetPointError(j, 0, sqrt(D2avNIF[j]));
             }
         }
@@ -187,10 +187,22 @@ void GetBackground(Int_t i, TH1I* pH, string FC, Int_t left, Int_t right, Double
 {
     Int_t l0, l1, l2, l3;
     GetLimits(i, FC, left, right, &l0, &l1, &l2, &l3);
-    *L = pH->Integral(l0, l1 - 1) / (l1 - l0);
-    *DL = sqrt(pH->Integral(l0, l1 - 1)) / (l1 - l0);
-    *R = pH->Integral(l2 + 1, l3) / (l3 - l2);
-    *DR = sqrt(pH->Integral(l2 + 1, l3)) / (l3 - l2);
+    char name[64] = "";
+    sprintf(name, "fL_%s_%i", FC.c_str(), i+1);
+    TF1 *fL = new TF1(name, "[0]", pH->GetBinLowEdge(l0), pH->GetBinLowEdge(l1));
+    pH->Fit(fL, "LR0Q");
+    *L = fL->GetParameter(0);
+    *DL = fL->GetParError(0);
+    sprintf(name, "fR_%s_%i", FC.c_str(), i+1);
+    TF1 *fR = new TF1(name, "[0]", pH->GetBinLowEdge(l2+1), pH->GetBinLowEdge(l3+1));
+    pH->Fit(fR, "LR0Q");
+    *R = fR->GetParameter(0);
+    *DR = fR->GetParError(0);
+    cout << TMath::Prob(fR->GetChisquare(), fR->GetNDF()) << "\t";
+//    *L = pH->Integral(l0, l1 - 1) / (l1 - l0);
+//    *DL = sqrt(pH->Integral(l0, l1 - 1)) / (l1 - l0);
+//    *R = pH->Integral(l2 + 1, l3) / (l3 - l2);
+//    *DR = sqrt(pH->Integral(l2 + 1, l3)) / (l3 - l2);
 }
 
 void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rStop, Int_t rStep)
@@ -215,6 +227,7 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
         TH1I* pH = (TH1I*)f->Get(name);
         gL[i] = new TGraphErrors(n);
         gR[i] = new TGraphErrors(n);
+        cout << i+1 << "\t";
         for (Int_t j = 0; j < n; j++)
         {
             Int_t r = rStart + j * rStep;
@@ -226,6 +239,7 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
             gR[i]->SetPointError(j, 0, DR);
 //            cout << r << "  " << L << "+-" << DL << " " << R << "+-" << DR << endl;
         }
+        cout << endl;
         Save(fAna, FC+"/ToF/Gate/Background/Left", gL[i], "gBgL_"+to_string(i+1));
         Save(fAna, FC+"/ToF/Gate/Background/Right", gR[i], "gBgR_"+to_string(i+1));
         gR[i]->SetLineColorAlpha(i+2, 0.5);
@@ -237,9 +251,9 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
         l->AddEntry(gR[i], name, "ep");
         mg->Add(gR[i]);
     }
-//    new TCanvas();
-//    mg->Draw("AP");
-//    l->Draw();
+    new TCanvas();
+    mg->Draw("AP");
+    l->Draw();
     fAna->Save();
     fAna->Close();
     f->Close();
@@ -247,14 +261,14 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
 
 void PeakWidth()
 {
-    PeakWidth("NIF.root", "Left", "PuFC", 0, 45, 35, 35, 16);
+//    PeakWidth("NIF.root", "Left", "PuFC", 0, 45, 35, 35, 16);
     PeakWidth("NIF.root", "Right", "PuFC", 15, 15, 5, 100, 20);
 //    SimWidth("Geant4", "PuFC", 15, 5, 200, 5);
 //    Background("NIF.root", "PuFC", 15, 0, 50, 2);
-    PeakWidth("UFC_NIF.root", "Left", "UFC", 0, 30, 40, 40, 16);
-    PeakWidth("UFC_NIF.root", "Right", "UFC", 10, 10, 5, 100, 20);
+//    PeakWidth("UFC_NIF.root", "Left", "UFC", 0, 30, 40, 40, 16);
+    PeakWidth("UFC_NIF.root", "Right", "UFC", 15, 15, 5, 100, 20);
 //    SimWidth("Geant4", "UFC", 15, 5, 100, 5);
-//    Background("UFC_NIF.root", "UFC", 15, 0, 100, 5);
+//    Background("UFC_SB.root", "UFC", 15, 0, 100, 5);
 //    Background("NIF.root", "PuFC", 40, 0, 30, 1);
 //    PeakWidth("UFC_NIF.root", "UFC", 40, 0, 30, 1);
 }

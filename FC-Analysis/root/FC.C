@@ -11,17 +11,25 @@ using namespace std;
 Int_t Left(string FC)
 {
     if (!strcmp(FC.c_str(), "PuFC"))
-        return 15;
+        return 15;//7;//
     else // UFC
-        return 10;
+        return 15;
 }
 
 Int_t Right(string FC)
 {
     if (!strcmp(FC.c_str(), "PuFC"))
-        return 35;
+        return 35;//7;//
     else // UFC
         return 40;
+}
+
+Int_t Tail(string FC)
+{
+    if (!strcmp(FC.c_str(), "PuFC"))
+        return 35;
+    else // UFC
+        return 50;
 }
 
 Double_t PeakCenter(Int_t ch, string FC = "PuFC")
@@ -42,10 +50,10 @@ Double_t PeakCenter(Int_t ch, string FC = "PuFC")
 
 Int_t Gate_0(Int_t ch, string FC = "PuFC")
 {
-    return 42;
+    return 62;
 }
 
-Int_t Gate_a(Int_t ch, string FC = "PuFC", Int_t l = 0)
+Int_t Gate_a(Int_t ch, string FC = "PuFC", Int_t l = 15)
 {
     return (Int_t)(PeakCenter(ch, FC)+0.5) - (l ? l : Left(FC));
 }
@@ -62,7 +70,7 @@ Int_t Gate_2(Int_t ch, string FC = "PuFC", Int_t r = 0)
 
 Int_t Gate_b(Int_t ch, string FC = "PuFC", Int_t t = 0)
 {
-    return (Int_t)(PeakCenter(ch, FC)+0.5) + (t ? t : Right(FC));
+    return (Int_t)(PeakCenter(ch, FC)+0.5) + (t ? t : Tail(FC));
 }
 
 Int_t Gate_3(Int_t ch, string FC = "PuFC")
@@ -154,7 +162,7 @@ string br(Double_t val, Double_t err)
 
 void FC()
 {
-    string FC = "UFC";
+    string FC = "PuFC";
     for (Int_t i = 0; i < 8; i++)
         cout << " " << i+1 << "   " << Distance(i, FC) <<  "   " << SolidAngle(i, FC) <<  "   " << Gate_1(i, FC) <<  "   " << Gate_2(i, FC) << endl;
 //    cout << br(1.159E+19, 2.7813E+15) << endl;

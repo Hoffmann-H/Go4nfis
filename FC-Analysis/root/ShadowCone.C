@@ -2,8 +2,9 @@
 #define SHADOW_CONE_H
 #include "FC.C"
 #include "SaveToFile.C"
-#include "AnaSim.C"
-//#include "DrawPics.C"
+#include "Target.C"
+#include "DrawPics.C"
+#include "TLegend.h"
 
 TGraphErrors* ExpShadowCone(TFile *fAna, string RunFG = "NIF", string RunBG = "SB")
 {
@@ -21,9 +22,10 @@ TGraphErrors* ExpShadowCone(TFile *fAna, string RunFG = "NIF", string RunBG = "S
     TGraphErrors *gS = new TGraphErrors(8);
     sprintf(name, "%s_SB_Exp", FC.c_str());
     gS->SetName(name);
-    gS->SetTitle("Shadow Cone scattered portion, experimental; Deposit; (n,f)_{sc} / (n,f)_{tot}");
+    gS->SetTitle("Shadow Cone scattered portion, experimental; Deposit; (n,f) #font[12]{C}_{sc} / #font[12]{C}_{tot}");
 
     Double_t x, fisFG, fisBG, fluFG, fluBG, dfisFG, dfisBG, dfluFG, dfluBG, S, dS;
+    cout << "ch\t fisFG\t fisBG\t fluFG\t fluBG" << endl;
     for (Int_t i = 0; i < 8; i++)
     {
         gFisFG->GetPoint(i, x, fisFG);
@@ -39,6 +41,22 @@ TGraphErrors* ExpShadowCone(TFile *fAna, string RunFG = "NIF", string RunBG = "S
         cout << i+1 << "  \t" << fisFG << "  \t" << fisBG << "  \t" << fluFG << "  \t" << fluBG << "  \t" << S << endl;
         gS->SetPoint(i, i+1, S);
         gS->SetPointError(i, 0, dS * S);
+    }
+    return gS;
+}
+
+TGraphErrors* ExpShadowConeHardCode()
+{
+    char name[64] = "";
+    TGraphErrors *gS = new TGraphErrors(8);
+    gS->SetName("UFC_SB_Exp");
+    gS->SetTitle("Shadow Cone scattered portion, experimental; Deposit; (n,f)_{sc} / (n,f)_{tot}");
+    Double_t S[] = {0.0974296259, 0.1051633466, 0.1202697731, 0.1647621571, 0.142541863, 0.1067283051, 0.0952544876, 0.1264492991};
+    Double_t DS[] = {0.0109502724, 0.0131367478, 0.0138942925, 0.014743786, 0.0135914887, 0.0125611275, 0.0128016384, 0.0135880239};
+    for (Int_t i = 0; i < 8; i++)
+    {
+        gS->SetPoint(i, i+1, S[i]);
+        gS->SetPointError(i, 0, DS[i]);
     }
     return gS;
 }
@@ -104,6 +122,35 @@ TGraphErrors* SimShadowCone2(TFile *fAna, string Simulation = "Geant4", string F
     return gS;
 }
 
+TGraphErrors* SimScatteredPart(TFile *fAna, string Simulation = "Geant4", string FC = "UFC")
+{
+    char name[128] = "";
+    // Get correction factor
+    sprintf(name, "%s/Correction/%s_%s_real_C", FC.c_str(), Simulation.c_str(), FC.c_str());
+    TGraphErrors *gCf = (TGraphErrors*)fAna->Get(name); if (!gCf) cout << "Could not get " << name << endl;
+
+    // Create scattered portion graph
+    TGraphErrors *gSc = new TGraphErrors(8);
+    sprintf(name, "%s_SB_SimSc", FC.c_str());
+    gSc->SetName(name);
+    sprintf(name, "%s Simulated Scattered Portion; Deposit; (n,f)_{sc} / (n,f)_{tot}", FC.c_str());
+    gSc->SetTitle(name);
+
+    Double_t x, cf, Dcf;
+    // Loop over Deposits
+    for (Int_t i = 0; i < 8; i++)
+    {
+        // Read correction factor
+        gCf->GetPoint(i, x, cf);
+        Dcf = gCf->GetErrorY(i);
+
+        // Write scattered portion to graph
+        gSc->SetPoint(i, i+1, 1.0 - cf);
+        gSc->SetPointError(i, 0, Dcf);
+    }
+    return gSc;
+}
+
 TGraphErrors* AnalyticTransmission(string FC = "PuFC", string file = "TransMis.dat")
 {
     char name[128] = "";
@@ -130,52 +177,60 @@ TGraphErrors* SimTransmission(TFile* fAna, string FC = "PuFC", string Simulation
         TH2D *h2Ideal = (TH2D*)fAna->Get(name); if (!h2Ideal) cout << "Could not get " << name << endl;
         Double_t T1 = (h2Tot->GetEntries() - h2Sc->GetEntries()) / h2Ideal->GetEntries() / fTarget;
         Double_t DT1 = T1 * sqrt(1.0 / (h2Tot->GetEntries() - h2Sc->GetEntries()) + 1.0 / h2Ideal->GetEntries());
-        Int_t b0 = h2Ideal->GetYaxis()->FindBin(14.7);
-        Int_t b1 = h2Ideal->GetYaxis()->FindBin(15.1);
+        Int_t b0 = h2Ideal->GetYaxis()->FindBin(14.0);
+        Int_t b1 = h2Ideal->GetYaxis()->FindBin(16.0);
         Double_t T2 = (h2Tot->Integral(0, -1, b0, b1) - h2Sc->Integral(0, -1, b0, b1)) / h2Ideal->Integral(0, -1, b0, b1) / fTarget;
-        Double_t DT2 = T2 * sqrt(1.0 / (h2Tot->GetEntries() - h2Sc->GetEntries()) + 1.0 / h2Ideal->GetEntries());
+        Double_t DT2 = T2 * sqrt(1.0 / (h2Tot->Integral(0, -1, b0, b1) - h2Sc->Integral(0, -1, b0, b1)) * (h2Tot->Integral() - h2Sc->Integral()) / (h2Tot->GetEntries() - h2Sc->GetEntries()) + 1.0 / h2Ideal->Integral(0, -1, b0, b1) * h2Ideal->Integral() / h2Ideal->GetEntries());
 //        cout << i+1 << "\t " << T1 << " +/- " << DT1 << endl;
 
-        ge->SetPoint(i, i+1, T1);
-        ge->SetPointError(i, 0, DT1);
+        ge->SetPoint(i, i+1, T2);
+        ge->SetPointError(i, 0, DT2);
     }
     return ge;
 }
 
-void BiasX(TGraphErrors *pG, Double_t dx)
-{
-    Double_t x, y;
-    for (Int_t i = 0; i < pG->GetN(); i++)
-    {
-        pG->GetPoint(i, x, y);
-        pG->SetPoint(i, x + dx, y);
-    }
-}
+//void BiasX(TGraphErrors *pG, Double_t dx)
+//{
+//    Double_t x, y;
+//    for (Int_t i = 0; i < pG->GetN(); i++)
+//    {
+//        pG->GetPoint(i, x, y);
+//        pG->SetPoint(i, x + dx, y);
+//    }
+//}
 
-void Transmission()
+void Transmission(string file = "TransMis.dat")
 {
     TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
 
     // UFC
-    TGraphErrors *geAnaU = AnalyticTransmission("UFC", "TransMis.dat");
+    TGraphErrors *geAnaU = AnalyticTransmission("UFC", file);
     TGraphErrors *geSimU = SimTransmission(fAna, "UFC");
     // PuFC
-    TGraphErrors *geAnaPu = AnalyticTransmission("PuFC", "TransMis.dat");
+    TGraphErrors *geAnaPu = AnalyticTransmission("PuFC", file);
     TGraphErrors *geSimPu = SimTransmission(fAna, "PuFC");
-
+    geAnaU->SetTitle("; Deposit; #font[12]{T}");
 //    SetSize(geAnaU);
     geAnaU->GetXaxis()->SetNdivisions(109);
     geAnaU->SetLineColor(kRed);
 //    geAnaU->SetLineStyle(0);
+    geAnaU->SetLineWidth(2);
+    geAnaU->SetMarkerSize(2);
     geAnaU->SetMarkerStyle(20);
     geAnaU->SetMarkerColor(kRed);
     geSimU->SetLineColor(kRed);
+    geSimU->SetLineWidth(2);
+    geSimU->SetMarkerSize(2);
     geSimU->SetMarkerStyle(21);
     geSimU->SetMarkerColor(kRed);
     geAnaPu->SetLineColor(kBlue);
+    geAnaPu->SetLineWidth(2);
+    geAnaPu->SetMarkerSize(2);
     geAnaPu->SetMarkerStyle(20);
     geAnaPu->SetMarkerColor(kBlue);
+    geSimPu->SetLineWidth(2);
     geSimPu->SetLineColor(kBlue);
+    geSimPu->SetMarkerSize(2);
     geSimPu->SetMarkerStyle(21);
     geSimPu->SetMarkerColor(kBlue);
     BiasX(geAnaU, -0.15);
@@ -199,21 +254,49 @@ void Transmission()
 
 void ShadowCone()
 {
+    LoadStyles();
+    gROOT->SetStyle("SinglePadStyle");
+    gROOT->ForceStyle(kTRUE);
     TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-//    TGraphErrors *gExp = ExpShadowCone(fAna, "UFC_NIF", "UFC_SB");
-//    TGraphErrors *gSim = SimShadowCone(fAna, "Geant4", "UFC");
+//    TGraphErrors *gExp = ExpShadowCone(fAna, "UFC_NIF", "UFC_BG_MS20_5");
+//    TGraphErrors *gExp = ExpShadowCone(fAna, "UFC_NIF", "UFC_BG_MS21_4");
+    TGraphErrors *gExp = ExpShadowCone(fAna, "UFC_NIF", "UFC_SB");
+//    TGraphErrors *gExp = ExpShadowConeHardCode();
+    TGraphErrors *gSim = SimShadowCone(fAna, "Geant4", "UFC");
 //    TGraphErrors *gSim2 = SimShadowCone2(fAna, "Geant4", "UFC");
+    TGraphErrors *gSimSc = SimScatteredPart(fAna, "Geant4", "UFC");
 
-//    gSim2->SetLineColor(kRed);
-//    TLegend *l = new TLegend(0.2, 0.4, 0.2, 0.4);
-//    l->AddEntry(gExp, "exp.");
-//    l->AddEntry(gSim2, "sim.");
-//    new TCanvas();
-//    gExp->Draw();
-////    gSim->Draw("same");
-//    gSim2->Draw("same");
-//    l->Draw();
+    BiasX(gExp, -0.05);
+    BiasX(gSim, +0.05);
+    SetSize(gExp);
+    gExp->SetLineWidth(2);
+    gExp->SetMarkerSize(2);
+    gExp->SetMarkerStyle(22);
+    gSim->SetLineWidth(2);
+    gSim->SetMarkerSize(2);
+    gSim->SetMarkerStyle(22);
+    gSim->SetMarkerColor(kRed);
+    gSim->SetLineColor(kRed);
+    gSimSc->SetLineWidth(2);
+    gSimSc->SetMarkerSize(2);
+    gSimSc->SetMarkerStyle(20);
+    gSimSc->SetMarkerColor(kBlue);
+    gSimSc->SetLineColor(kBlue);
+    TLegend *l = new TLegend(0.3, 0.2, 0.8, 0.4);
+    l->AddEntry(gExp, "Messung: SB / offen", "PE");
+    l->AddEntry(gSim, "Simulation: SB / offen", "P");
+    l->AddEntry(gSimSc, "Simulation: offen / Vakuum", "P");
+    l->SetTextFont(132);
+    new TCanvas();
+    gExp->Draw("AP");
+    gExp->GetYaxis()->SetRangeUser(0, 0.14);
+    gExp->GetYaxis()->SetTitle("#font[12]{C}_{sc} / #font[12]{C}_{tot}");
+    gExp->GetYaxis()->SetNdivisions(505);
+    gExp->GetXaxis()->SetNdivisions(110);
+    gSim->Draw("same P");
+    gSimSc->Draw("same P");
+    l->Draw();
 
-    Transmission();
+//    Transmission("TransMis.dat");
 }
 #endif

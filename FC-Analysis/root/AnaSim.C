@@ -31,41 +31,6 @@ TH1D* GetProjection(TFile *f, Int_t ch, string SimulationPath = "Simulation/Gean
     return h;
 }
 
-/*TH1D* GetProjection(TH2 *pH2, TGraphErrors *pSigma, Int_t ch, string FC = "PuFC")
-{
-    char name[128] = "";
-
-    // create projection histogram
-    Int_t NbinsX = pH2->GetNbinsX();
-    Int_t NbinsY = pH2->GetNbinsY();
-    Double_t xmin = pH2->GetXaxis()->GetBinLowEdge(1);
-    Double_t xmax = pH2->GetXaxis()->GetBinLowEdge(NbinsX + 1);
-    Double_t ymin = pH2->GetYaxis()->GetBinLowEdge(1);
-    Double_t ymax = pH2->GetYaxis()->GetBinLowEdge(NbinsY + 1);
-    sprintf(name, "%s%i", FC.c_str(), ch + 1);
-    TH1D *pH1x = new TH1D(name, name, NbinsX, xmin, xmax);
-    sprintf(name, "%s, Time profile, Ch.%i; #font[12]{t} / ns; Effective neutrons", FC.c_str(), ch + 1);
-    pH1x->SetTitle(name);
-    pH1x->Sumw2();
-
-//    cout << "E   w   eff.N" << endl;
-
-    // Loop over neutron energies
-    for (Int_t ybin = 0; ybin < NbinsY + 2; ybin++)
-    {
-        Double_t E = pH2->GetYaxis()->GetBinCenter(ybin);
-        Double_t w = pSigma->Eval(E) / pSigma->Eval(15);
-        TH1D *row = pH2->ProjectionX("px", ybin, ybin);
-
-//        cout << E << "  " << w << "  " << row->Integral() << endl;
-
-        // Fill projection row by row
-        pH1x->Add(row, w);
-    }
-
-    return pH1x;
-}//*/
-
 void Projections(string SimulationPath = "Simulation/Geant4/PuFC_real", string FC = "PuFC", string key = "real")
 {
     char name[64] = "";
@@ -81,80 +46,6 @@ void Projections(string SimulationPath = "Simulation/Geant4/PuFC_real", string F
     fAna->Save();
     fAna->Close();
 }//*/
-
-//TH1D *h = 0;
-//Double_t f(Double_t *x, Double_t *par)
-//{ // return: histogram h, folded by gaussian (p0 ampl, p1 mean, p2 width), evaluated at x.
-//    Double_t s = 0;
-//    for (Int_t j = 1; j < h->GetNbinsX()+1; j++)
-//    {
-//        s += h->GetBinContent(j) * par[0] * exp(-pow((x[0] - h->GetBinCenter(j) - par[1]) / par[2], 2));
-//    }
-//    return s + par[3];
-//}
-
-//void FitPeakForm(TFile *fAna, string Run = "NIF", Int_t ch = 0, string Simulation = "Geant4", string key = "real", Bool_t Draw = 0)
-//{ // Fit simulated ToF folding to data
-//    string FC = Run[0] == 'U' ? "UFC" : "PuFC";
-//    char name[128] = "";
-////    sprintf(name, "Simulation/%s/%s_real/EffToF/%s_ProjT_real_%i", Simulation.c_str(), FC.c_str(), FC.c_str(), ch+1);
-////    h = (TH1D*)fAna->Get(name); if (!h) cout << "Could not get " << name << endl;
-//    h = GetProjection(fAna, ch, "Simulation/"+Simulation+"/"+FC+"_"+key, FC, key);
-
-//    // With Background
-//    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
-//    TFile *fExp = TFile::Open(name); if (!fExp) cout << "Could not open " << name << endl;
-//    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
-//    TH1D *hExp = (TH1D*)fExp->Get(name); if (!hExp) cout << "Could not get " << name << endl;
-//    hExp->Sumw2();
-//    Double_t bg = (hExp->Integral(Gate_0(ch, FC), Gate_a(ch, FC)) + hExp->Integral(Gate_b(ch, FC), Gate_3(ch, FC))) / (Gate_a(ch, FC) - Gate_0(ch, FC) + Gate_3(ch, FC) - Gate_b(ch, FC));
-//    // Background-subtracted
-////    sprintf(name, "%s/ToF/Signal/%s/H1AnaHZDRDtG_%i", FC.c_str(), Run.c_str(), ch+1);
-////    TH1D *hExp = (TH1D*)fAna->Get(name); if (!hExp) cout << "Could not get " << name << endl;
-////    Double_t bg = 0;
-
-//    Double_t Range[] = {hExp->GetBinLowEdge(Gate_0(ch, FC)), hExp->GetBinLowEdge(Gate_3(ch, FC))};
-//    Double_t Par[] = {(hExp->GetMaximum() - bg) / h->Integral(), 0, 1, bg};
-//    sprintf(name, "f%s_%i", Run.c_str(), ch+1);
-//    TF1 *fit = new TF1(name, f, Range[0], Range[1], 4);
-//    fit->SetParameters(Par[0], Par[1], Par[2], Par[3]);
-//    fit->FixParameter(3, bg);
-////    fit->FixParameter(1, 0);
-
-//    hExp->Fit(name, "LR0Q");
-////    for (Int_t p = 0; p < 4; p++)
-////        cout << fit->GetParameter(p) << " +- " << fit->GetParError(p) << endl;
-//    cout << FC << "\t" << ch+1 << " \t" << fit->GetParameter(2) << " +- " << fit->GetParError(2) << endl;
-
-//    if (Draw) {
-//        sprintf(name, "c%s_%i", Run.c_str(), ch+1);
-//        new TCanvas(name, "Fit folding");
-//        hExp->Draw("hist");
-//        fit->SetNpx(1000);
-//        fit->Draw("same");
-//    } else { // Save
-//        Int_t N = h->GetNbinsX();
-//        Double_t xmin = h->GetBinLowEdge(1);
-//        Double_t xmax = h->GetBinLowEdge(N+1);
-//        sprintf(name, "%s_FoldT_Fit_%i", FC.c_str(), ch+1);
-//        TH1D* hFit = new TH1D(name, name, N, xmin, xmax);
-//        sprintf(name, "%s, Ch. %i, Fit simulated ToF spectrum", FC.c_str(), ch+1);
-//        hFit->SetTitle(name);
-//        for (Int_t bin = 1; bin < N+1; bin++)
-//            hFit->SetBinContent(bin, fit->Eval(hFit->GetBinCenter(bin)) /*- bg*/);
-//        Save(fAna, "Simulation/"+Simulation+"/"+FC+"_"+key+"/FitToF", hFit);
-//    }
-//}
-
-//void PeakPosition(string Run = "NIF", string Simulation = "Geant4", string key = "real")
-//{
-//    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-////    Int_t i = 2;
-//    for (Int_t i = 0; i < 4; i++)
-//        FitPeakForm(fAna, Run, i, Simulation, key, 1);
-//    fAna->Save();
-//    fAna->Close();
-//}
 
 TH1D* GetPeakForm(TH1D *pH1ToF, Int_t ch = 0, string FC = "PuFC", Double_t IntExp = 1)
 {
@@ -216,41 +107,32 @@ TH1D* GetPeakForm(TH1D *pH1ToF, Int_t ch = 0, string FC = "PuFC", Double_t IntEx
     return pH1Peak;
 }
 
-Double_t GatingCorrection(TH1D *pH1Peak, Int_t ch, string FC = "PuFC", Double_t width = 15.0)
+Double_t GatingCorrection(TH1D *pH1Real, TH1D *pH1Peak, Int_t ch, string FC = "PuFC", Double_t width = 15.0)
 {
     Double_t bg = pH1Peak->GetBinContent(pH1Peak->GetNbinsX());
-    Double_t xc = pH1Peak->GetBinCenter(pH1Peak->GetMaximumBin());
-    Double_t x0 = xc - LEFT; // - width;
-    Double_t x1 = xc + RIGHT; // + width;
-    Int_t bin0 = pH1Peak->FindBin(x0);
-    Int_t bin1 = pH1Peak->FindBin(x1);
-    Double_t w0 = (pH1Peak->GetBinLowEdge(bin0 + 1) - x0) / pH1Peak->GetBinWidth(bin0); // Constant bin interpolation
-    Double_t w1 = (x1 - pH1Peak->GetBinLowEdge(bin1)) / pH1Peak->GetBinWidth(bin1);
-    Double_t Integral = pH1Peak->Integral() - pH1Peak->GetNbinsX() * bg;
-    Double_t GatedIntegral = w0 * pH1Peak->GetBinContent(bin0) + pH1Peak->Integral(bin0 + 1, bin1 - 1) + w1 * pH1Peak->GetBinContent(bin1) - (w0 + bin1 - bin0 + 1 + w1) * bg;
-//    cout << x0 << " " << x1 << " " << bin0 << " " << bin1 << " " << w0 << " " << w1 << " " << bg << " " << Integral << " " << GatedIntegral << endl;
-    return Integral / GatedIntegral;
-}
+    Int_t tMax = (Int_t)pH1Peak->GetBinCenter(pH1Peak->GetMaximumBin());
+    Int_t bl = pH1Peak->FindBin(tMax - Left(FC));
+    Int_t br = pH1Peak->FindBin(tMax + Right(FC) + 1.0) - 1;
+    Double_t Peak = pH1Peak->Integral() - pH1Peak->GetNbinsX() * bg;
+    Double_t GatedPeak = pH1Peak->Integral(bl, br) - (br - bl + 1) * bg;
 
-Double_t TargetFactor(TFile *fAna)
-{
-    char name[32] = "";
-    sprintf(name, "Simulation/Target/E_Dir");
-    TH1D *hTargetDir = (TH1D*)fAna->Get(name);
-    if (!hTargetDir) cout << "Could not get " << name << endl;
-    sprintf(name, "Simulation/Target/E_Tot");
-    TH1D *hTargetTot = (TH1D*)fAna->Get(name);
-    if (!hTargetTot) cout << "Could not get " << name << endl;
-    return hTargetDir->Integral() / hTargetTot->Integral();
+    tMax = (Int_t)pH1Real->GetBinCenter(pH1Real->GetMaximumBin());
+    bl = pH1Real->FindBin(tMax - Left(FC));
+    br = pH1Real->FindBin(tMax + Right(FC) + 1.0) - 1;
+    Double_t Real = pH1Real->Integral();
+    Double_t GatedReal = pH1Real->Integral(bl, br);
+//    cout << Peak << " " << GatedPeak << " " << Real << " " << GatedReal << endl;
+    return Peak / GatedPeak * GatedReal / Real;
 }
 
 void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
 { // SimToF == 0: force SimToF recalculation. 1: Use SimToF if possible. 2: Use FitToF if possible. Otherwise create it.
-    cout << "Analyzing " << FC << " " << Simulation << " simulation results" << endl;
+    cout << "Analyzing " << Simulation << " " << FC << " " << key << " simulation results" << endl;
     char name[128] = "";
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     if (!fAna) cout << "Could not open " << "Analysis.root" << endl;
-    Double_t fTarget = TargetFactor(fAna);
+    sprintf(name, "%s/Correction/%s_Target_Gate", FC.c_str(), FC.c_str());
+    TGraphErrors *geT = (TGraphErrors*) fAna->Get(name); if (!geT) cout << "Could not get " << name << endl;
 
     TGraphErrors *geC = new TGraphErrors(8);
     sprintf(name, "%s_%s_%s_C", Simulation.c_str(), FC.c_str(), key.c_str());
@@ -269,18 +151,33 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
         TH1D *hProjReal = (TH1D*)fAna->Get(name); if (!hProjReal) cout << "Could not get " << name << endl;
         sprintf(name, "Simulation/%s/%s_ideal/EffToF/%s_ProjT_ideal_%i", Simulation.c_str(), FC.c_str(), FC.c_str(), i+1);
         TH1D *hProjIdeal = (TH1D*)fAna->Get(name); if (!hProjIdeal) cout << "Could not get " << name << endl;
+        Int_t tMax = (Int_t)hProjIdeal->GetBinCenter(hProjIdeal->GetMaximumBin());
+        Int_t bl = hProjIdeal->FindBin(tMax - Left(FC));
+        Int_t br = hProjIdeal->FindBin(tMax + Right(FC) + 1.0) - 1;
+//        cout << bl << " " << br << endl;
 
         /// Calculate correction factor //////////////////////////////////////////////////////
-        geC->SetPoint(i, i+1, hProjIdeal->Integral() / hProjReal->Integral() * fTarget); /////
+        geC->SetPoint(i, i+1, hProjIdeal->Integral(bl, br) / hProjReal->Integral(bl, br)); ///
         //////////////////////////////////////////////////////////////////////////////////////
 //        cout << "Channel " << i+1 << " \t" << hProjIdeal->Integral() << " / " << hProjReal->Integral() << " * " << fTarget << " = \t" << hProjIdeal->Integral() / hProjReal->Integral() * fTarget << endl;
+
+        Double_t C = hProjIdeal->Integral(bl, br) / hProjReal->Integral(bl, br);
+        Double_t D = sqrt(1.0 / hProjIdeal->GetEntries() + 1.0 / hProjReal->GetEntries());
+//        if (!strcmp(Simulation.c_str(), "MCNP"))
+//        {
+//            Double_t x, T;
+//            geT->GetPoint(i, x, T);
+//            C /= T;
+//        }
 
         if (!strcmp(key.c_str(), "real")) {
             sprintf(name, "Simulation/%s/%s_real/FitToF/%s_FitT_real_%i", Simulation.c_str(), FC.c_str(), FC.c_str(), i+1);
             TH1D *hFitReal = (TH1D*)fAna->Get(name); if (!hFitReal) cout << "Could not get " << name << endl;
-            Double_t G = GatingCorrection(hFitReal, i, FC);
+            Double_t G = GatingCorrection(hProjReal, hFitReal, i, FC);
             geG->SetPoint(i, i+1, G);
-        }
+            cout << i+1 << "   " << C << " +- " << C*D << "   " << G << endl;
+        } else
+            cout << i+1 << "   " << C << " +- " << C*D << endl;
     }
     if (!strcmp(key.c_str(), "real"))
         Save(fAna, FC+"/Correction", geG);
@@ -295,7 +192,8 @@ void AnaSim()
     AnaSim("Geant4", "PuFC", "real");
     AnaSim("Geant4", "UFC", "real");
     AnaSim("Geant4", "UFC", "SB");
-//    AnaSim("MCNP", "PuFC", GATE, 1);
+//    AnaSim("MCNP", "PuFC", "real");
+//    AnaSim("MCNP", "UFC", "real");
 //    PeakPosition("NIF", "MCNP");
 //    PeakPosition("NIF", "Geant4");
 //    PeakPosition("UFC_NIF", "Geant4");

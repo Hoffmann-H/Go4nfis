@@ -200,6 +200,24 @@ Double_t WeightedIntegral(TGraph *weight, TGraph *f)
     return sum_val / sum;
 }
 
+Double_t WeightedUpperEdge(TGraph *weight, TGraph *f)
+{ // assumption: weighting function has closer data points, these are upper bin edges
+    Double_t x1, x2, w, val, sum = 0, sum_val = 0;
+    Double_t N = weight->GetN();
+    for (Int_t j = 0; j < N-1; j++)
+    {
+        weight->GetPoint(j, x1, w);
+        weight->GetPoint(j+1, x2, w);
+
+        val = f->Eval(0.5*(x1+x2));
+
+        sum_val += w * (x2 - x1) * val;
+        sum += w * (x2 - x1);
+//        cout << sum_val << " " << sum << endl;
+    }
+    return sum_val / sum;
+}
+
 void G4Results(Int_t isotope, string spectrum, Bool_t save = 0)
 {
     char name[128] = "";

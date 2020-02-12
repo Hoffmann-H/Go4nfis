@@ -98,8 +98,7 @@ string SubtractBackground(string Run, Bool_t print = 0)
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     char name[128] = "";
     sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
-    TFile *f = TFile::Open(name, "READ");
-    if (!f) cout << "Error opening " << name << endl;
+    TFile *f = TFile::Open(name, "READ"); if (!f) cout << "Error opening " << name << endl;
 
     // live time
     TH1D *pHt = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_47");
@@ -125,6 +124,7 @@ string SubtractBackground(string Run, Bool_t print = 0)
     {
         // Open ToF spectrum
         TH1F *pH = GetToF(f, i, FC);
+        Save(fAna, FC+"/ToF/Total/"+Run, pH);
         Double_t C_total, DC_total;
         C_total = pH->IntegralAndError(0, -1, DC_total);
         // Fit
@@ -138,7 +138,10 @@ string SubtractBackground(string Run, Bool_t print = 0)
         Double_t x1, x2;
         fTotal->GetRange(x1, x2);
 //        cout << x1 << " " << x2 << " " << pH->FindBin(x1) << " " << pH->FindBin(x2) << endl;
-        pH->Add(fTotal, -1);
+//        if (Run[0] == 'U') // UFC only uses left background interval
+//            pH->Add(fLeft, -1);
+//        else
+            pH->Add(fTotal, -1);
         Save(fAna, FC+"/ToF/Signal/"+Run, pH);
 
         // chi2 / dof
@@ -181,6 +184,7 @@ string SubtractBackground(string Run, Bool_t print = 0)
         geNIFrate->SetPoint(i, i+1, C_nif / t_live);
         geNIFrate->SetPointError(i, 0, DC_nif / t_live);
 
+//        cout << DC_nif / C_nif << endl;
         line << " " << C_nif << " " << DC_nif << " " << C_nif / t_live << " " << DC_nif / t_live;
     }
     Save(fAna, FC+"/ToF/Signal/"+Run, geNIF, "InducedFission");
@@ -236,7 +240,7 @@ void ToF()
     DoToF("UFC");
     DoToF("UFC_FG");
     DoToF("UFC_BG");
-    SubtractBackground("UFC_NIF");
+    cout << SubtractBackground("UFC_NIF") << endl;
     SubtractBackground("UFC_SB");
 
     DoToF("PuFC");

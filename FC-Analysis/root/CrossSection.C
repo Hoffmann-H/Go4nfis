@@ -56,6 +56,7 @@ string CrossSectionRun(string Run)
         geCrossSection->SetPoint(i, i+1, CrossSection);
         geCrossSection->SetPointError(i, 0, DCrossSection);
 
+//        cout << DCrossSection / CrossSection << " = " << DFissionRate / FissionRate << " + " << DAtoms / Atoms << " + " << DFlux / Flux << endl;
         line << " " << CrossSection << " " << DCrossSection;
     }
     sprintf(name, "%s_CS_raw", Run.c_str());
