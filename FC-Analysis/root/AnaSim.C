@@ -2,6 +2,7 @@
 #define ANASIM_H
 #include "SaveToFile.C"
 #include "MCNPtoROOT.C"
+//#include "Target.C"
 #include "FC.C"
 
 TH2D* GetSpectrum(TFile *f, Int_t ch, string SimulationPath, string FC = "PuFC", string key = "real")
@@ -131,8 +132,10 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
     char name[128] = "";
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     if (!fAna) cout << "Could not open " << "Analysis.root" << endl;
+//    Double_t fTarget = TargetFactor(fAna);
     sprintf(name, "%s/Correction/%s_Target_Gate", FC.c_str(), FC.c_str());
     TGraphErrors *geT = (TGraphErrors*) fAna->Get(name); if (!geT) cout << "Could not get " << name << endl;
+    // geT unused! Is that N_{FG} / N_{FG+BG} ?
 
     TGraphErrors *geC = new TGraphErrors(8);
     sprintf(name, "%s_%s_%s_C", Simulation.c_str(), FC.c_str(), key.c_str());
@@ -191,9 +194,9 @@ void AnaSim()
 //    MCNPtoROOT();
     AnaSim("Geant4", "PuFC", "real");
     AnaSim("Geant4", "UFC", "real");
-    AnaSim("Geant4", "UFC", "SB");
-//    AnaSim("MCNP", "PuFC", "real");
-//    AnaSim("MCNP", "UFC", "real");
+//    AnaSim("Geant4", "UFC", "SB");
+    AnaSim("MCNP", "PuFC", "real");
+    AnaSim("MCNP", "UFC", "real");
 //    PeakPosition("NIF", "MCNP");
 //    PeakPosition("NIF", "Geant4");
 //    PeakPosition("UFC_NIF", "Geant4");

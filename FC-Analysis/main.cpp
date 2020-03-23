@@ -22,6 +22,8 @@
 #include "root/ToF.C"
 #include "root/NumberOfAtoms.C"
 #include "root/CrossSection.C"
+#include "root/Carlson.C"
+#include "root/Correction.C"
 #include "root/Runs.C"
 
 using namespace std;
@@ -42,13 +44,17 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
-    Target();
-    AnaSim();
+    QDCmin();
     PeakWidth();
+    Target();
+    MCNPtoROOT();
+    AnaSim();
     ToF();
     NumberOfAtoms();
     NeutronField();
     CrossSection();
+    Carlson();
+    Correction();
     Runs();
 
 

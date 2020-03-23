@@ -4,6 +4,7 @@
 #include "Runs.C"
 #include "FC.C"
 #include "/gpfs/home/hoffma93/StyleSheets/StyleSheet.C"
+#include "TGraphErrors.h"
 #include <fstream>
 
 void Freifeld(Bool_t Draw = 1)
@@ -150,7 +151,7 @@ string NeutronFieldRun(string Run)
         Double_t nDensity = nFlux / tReal;
         Double_t DnDensity = DnFlux / tReal;
 
-        cout << i+1 << " " << Monitor << " " << Yield << " " << w << " " << nFluence << " " << area << " " << nFlux << " " << tReal << " " << nDensity << endl;
+//        cout << i+1 << " " << Monitor << " " << Yield << " " << w << " " << nFluence << " " << area << " " << nFlux << " " << tReal << " " << nDensity << endl;
 
         geFluence->SetPoint(i, i+1, nFluence);
         geFluence->SetPointError(i, 0, DnFluence);
@@ -170,6 +171,33 @@ string NeutronFieldRun(string Run)
     return line.str();
 }
 
+Double_t GetStartTime(string Run)
+{
+    char name[128] = "";
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    TFile *f = TFile::Open(name);
+    TH1D *pH = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_48");
+    Int_t N = pH->GetNbinsX();
+    Int_t bin = 0;
+    do {
+        bin++;
+    } while (bin < N && pH->GetBinContent(bin) == 0);
+    return pH->GetBinLowEdge(bin);
+}
+
+Double_t GetRealTime(string Run)
+{
+    char name[  128] = "";
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    TFile *f = TFile::Open(name);
+    if (!f)
+        cout << "Could not open " << name << endl;
+    TH1D *pH = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_48");
+    if (!pH)
+        cout << "Could not open " << "Histograms/Raw/Scaler/Rates/H1RawRate_48" << endl;
+    return pH->Integral();
+}
+
 void DoNeutronField(string FC)
 {
     string FileName = "NeutronField_"+FC+".txt";
@@ -183,6 +211,27 @@ void DoNeutronField(string FC)
         output << j+1 << " " << NeutronFieldRun(Run) << endl;
     }
     output.close();
+
+    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TGraphErrors *gMon = new TGraphErrors(("../results/"+FileName).c_str(), "%lg %*s %*lg %*lg %lg %lg");
+    if (!gMon) cout << "Could not create TGraphErrors " << FileName << endl;
+    gMon->SetName((FC+"_MonitorRate").c_str());
+    Double_t x, y, yerr, tStart, tLength;
+    for (Int_t j = 0; j < 7; j++)
+    {
+        gMon->GetPoint(j, x, y);
+        yerr = gMon->GetErrorY(j);
+        string Run = GetRunName(FC, j);
+        tStart = GetStartTime(Run);
+        tLength = GetRealTime(Run);
+        gMon->SetPoint(j, tStart + 0.5*tLength, y);
+        gMon->SetPointError(j, 0.5*tLength, yerr);
+    }
+    SaveToFile(fAna, FC+"/NeutronField", gMon);
+    fAna->Save();
+    fAna->Close();
+    new TCanvas();
+    gMon->Draw();
 }
 
 void DoNeutronField()
@@ -204,17 +253,17 @@ void NeutronField()
 {
     Freifeld();
 
-//    DoNeutronField("UFC");
+    DoNeutronField("UFC");
 //    DoNeutronField("UFC_FG");
 //    DoNeutronField("UFC_BG");
-//    NeutronFieldRun("UFC_NIF");
-//    NeutronFieldRun("UFC_SB");
+    NeutronFieldRun("UFC_NIF");
+    NeutronFieldRun("UFC_SB");
 
-//    DoNeutronField("PuFC");
+    DoNeutronField("PuFC");
 //    DoNeutronField("PuFC_FG");
 //    DoNeutronField("PuFC_BG");
-//    NeutronFieldRun("NIF");
-//    NeutronFieldRun("SB");
+    NeutronFieldRun("NIF");
+    NeutronFieldRun("SB");
 }
 
 #endif

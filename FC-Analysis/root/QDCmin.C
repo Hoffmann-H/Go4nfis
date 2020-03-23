@@ -196,8 +196,52 @@ void FindUMinima()
     fUSB->Close();
 }
 
+void CheckIntegral(TFile *f, string FC, Int_t ch)
+{
+    char name[64] = "";
+//    sprintf(name, "Histograms/Raw/QDC/low/H1RawQDCl_%i", ch+1);
+    sprintf(name, "Histograms/Analysis/FC/QDC/low/trig/H1AnaQDCl_trig_%i", ch+1);
+    TH1I *hQDC = (TH1I*)f->Get(name); if (!hQDC) cerr << "Could not get " << name << endl;
+    sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
+    TH1I *hTDC = (TH1I*)f->Get(name); if (!hTDC) cerr << "Could not get " << name << endl;
+    sprintf(name, "Histograms/Analysis/FC/QDC/low/H1AnaQDCl_%i", ch+1);
+    TH1I *hQDCg = (TH1I*)f->Get(name); if (!hQDCg) cerr << "Could not get " << name << endl;
+
+    Double_t qdc_min_Pu[] = {899.24,  853.668, 895.652, 849.393, 1046.41, 891.396, 906.123, 837.486}; // PuFC
+    Double_t qdc_min_U[]  = {220.396, 500.964, 219.016, 214.101, 199.19,  171.929, 169.046, 121.56}; // UFC
+    Double_t qdc_min = 0;
+    if (FC[0] == 'U')
+        qdc_min = qdc_min_U[ch];
+    else
+        qdc_min = qdc_min_Pu[ch];
+    Int_t bin_min = hQDC->GetXaxis()->FindBin(qdc_min);
+
+    cout << f->GetName() << ", " << FC << ", " << ch+1 << endl;
+    cout << "\tQDC\t" << hQDC->Integral(bin_min+1, hQDC->GetNbinsX()) << endl;
+    cout << "\tQDCg\t" << hQDCg->Integral(bin_min+1, hQDCg->GetNbinsX()) << endl;
+    cout << "\tTDC\t" << hTDC->Integral(0, hTDC->GetNbinsX()+1) << endl;
+
+//    sprintf(name, "Diff_%s_%i", FC.c_str(), ch+1);
+//    TH1I *hDiff = (TH1I*) hQDC->Clone(name);
+//    hDiff->Add(hQDCg, -1.0);
+    cout << "\tDiff\t" << hQDC->GetBinContent(hQDC->GetNbinsX()+1) << " - " << hQDCg->GetBinContent(hQDCg->GetNbinsX()+1) << endl;
+//    new TCanvas();
+//    hDiff->Draw();
+//    hQDC->Draw();
+//    hQDCg->Draw("same");
+}
+
+void CheckIntegrals()
+{
+//    TFile *f = TFile::Open("~/Programme/Go4nfis/offline/results/Backup/backupNIF.root");
+    TFile *f = TFile::Open("~/Programme/Go4nfis/offline/results/UFC_NIF.root");
+    for (Int_t i = 0; i < 8; i++)
+        CheckIntegral(f, "PuFC", i);
+}
+
 void QDCmin()
 {
     FindPuMinima();
     FindUMinima();
+//    CheckIntegrals();
 }

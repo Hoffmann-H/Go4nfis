@@ -176,7 +176,7 @@ void TargetGateU(Bool_t Draw = 0)
         Int_t br = hTot->FindBin(tMax + Right("UFC") + 1.0) - 1;
         gLim1->SetPoint(i, i+1, bl / 10);
         gLim2->SetPoint(i, i+1, br / 10);
-        Double_t k = hFG->Integral() * fTarget / hTot->Integral(bl, br);
+        Double_t k = fTarget;// * hFG->Integral() / hTot->Integral(bl, br);
         cout << hTot->GetBinWidth(1) << " " << hTot->GetMaximumBin() << " " << tMax << " " << bl << "-" << br << " " << k << endl;
         geU->SetPoint(i, i+1, k);
         if (Draw)
@@ -250,7 +250,7 @@ void TargetGatePu(Bool_t Draw = 0)
         Int_t br = hTot->FindBin(tMax + Right("PuFC") + 1.0) - 1;
         gLim1->SetPoint(i, i+1, bl / 10);
         gLim2->SetPoint(i, i+1, br / 10);
-        Double_t k = hFG->Integral() / hTot->Integral(bl, br);
+        Double_t k = fTarget;// * hFG->Integral() / hTot->Integral(bl, br);
         cout << hTot->GetBinWidth(1) << " " << tMax << " " << bl << "-" << br << " " << k << endl;
         gePu->SetPoint(i, i+1, k);
         if (Draw)
@@ -303,10 +303,10 @@ void Target()
     gROOT->SetStyle("SinglePadStyle");
     gROOT->ForceStyle(kTRUE);
     gStyle->SetLegendFont(132);
-//    TargetE("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_ENE", "", 100000000);
-//    TargetToF("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_TOF", "");
-//    TargetGateU(0);
-    TargetGatePu(1);
+    TargetE("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_ENE", "", 100000000);
+    TargetToF("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_TOF", "");
+    TargetGateU(1);
+    TargetGatePu(0);
 
 //    TargetE("/home/hoffma93/Programme/TARGET/Results/Variation/Double_Distance/FC_STARGET_15MEENE", "3.3m", 100000000);
 

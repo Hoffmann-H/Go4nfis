@@ -404,11 +404,3 @@ void Carlson()
     fAna->Save();
     fAna->Close();
 }
-
-
-//void f()
-//{
-//    TGraph *g = Spectrum("nELBE");
-//    TFile *f = TFile::Open("/home/hoffma93/Experiment/Carlson-Korrektur/results/Carlson.root", "UPDATE");
-
-//}

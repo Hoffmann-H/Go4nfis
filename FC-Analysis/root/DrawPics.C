@@ -389,57 +389,13 @@ void DrawPuCorrection(TFile *f)
     c->Update();
 }
 
-Double_t GetStartTime(string Run)
-{
-    char name[128] = "";
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
-    TFile *f = TFile::Open(name);
-    TH1D *pH = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_48");
-    Int_t N = pH->GetNbinsX();
-    Int_t bin = 0;
-    do {
-        bin++;
-    } while (bin < N && pH->GetBinContent(bin) == 0);
-    return pH->GetBinLowEdge(bin);
-}
-
-Double_t GetRealTime(string Run)
-{
-    char name[  128] = "";
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
-    TFile *f = TFile::Open(name);
-    if (!f)
-        cout << "Could not open " << name << endl;
-    TH1D *pH = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_48");
-    if (!pH)
-        cout << "Could not open " << "Histograms/Raw/Scaler/Rates/H1RawRate_48" << endl;
-    return pH->Integral();
-}
-
 void DrawMonitorRate()
 {
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "READ");
-    TGraphErrors *gU = new TGraphErrors("~/Programme/Go4nfis/FC-Analysis/results/NeutronField_UFC.txt", "%lg %*s %*lg %*lg %lg %lg");
-    TGraphErrors *gPu = new TGraphErrors("~/Programme/Go4nfis/FC-Analysis/results/NeutronField_PuFC.txt", "%lg %*s %*lg %*lg %lg %lg");
-    Double_t x, y, yerr, tStart, tLength;
-    for (Int_t j = 0; j < 7; j++)
-    {
-        gU->GetPoint(j, x, y);
-        yerr = gU->GetErrorY(j);
-        string Run = GetRunName("UFC", j);
-        tStart = GetStartTime(Run);
-        tLength = GetRealTime(Run);
-        gU->SetPoint(j, tStart + 0.5*tLength, y);
-        gU->SetPointError(j, 0.5*tLength, yerr);
-
-        gPu->GetPoint(j, x, y);
-        yerr = gPu->GetErrorY(j);
-        Run = GetRunName("PuFC", j);
-        tStart = GetStartTime(Run);
-        tLength = GetRealTime(Run);
-        gPu->SetPoint(j, tStart + 0.5*tLength, y);
-        gPu->SetPointError(j, 0.5*tLength, yerr);
-    }
+    TGraphErrors *gU = (TGraphErrors*)fAna->Get("UFC/NeutronField/UFC_MonitorRate");
+    if (!gU) cout << "Could not get " << "UFC/NeutronField/UFC_MonitorRate" << ", run NeutronField.C" << endl;
+    TGraphErrors *gPu = (TGraphErrors*)fAna->Get("PuFC/NeutronField/PuFC_MonitorRate");
+    if (!gPu) cout << "Could not get " << "PuFC/NeutronField/PuFC_MonitorRate" << ", run NeutronField.C" << endl;
     gU->SetLineWidth(1);
     gU->SetMarkerStyle(5);
     gPu->SetLineWidth(1);
@@ -469,6 +425,10 @@ void DrawMonitorRate()
     mg->Draw("AP");
     l->Draw();
     c1->Update();
+    SaveToFile(fAna, "UFC/NeutronField", gU);
+    SaveToFile(fAna, "PuFC/NeutronField", gPu);
+    fAna->Save();
+    fAna->Close();
 }
 
 Int_t Color(Int_t i)
@@ -584,6 +544,33 @@ void DrawSimPeak(TFile *f, string Run, string key, Int_t ch, string Simulation)
 //    t->SetTextColor(kRed);
 //    t->DrawLatexNDC(0.5, 0.5, name);
     c->Update();//*/
+}
+
+Double_t GetStartTime(string Run)
+{
+    char name[128] = "";
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    TFile *f = TFile::Open(name);
+    TH1D *pH = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_48");
+    Int_t N = pH->GetNbinsX();
+    Int_t bin = 0;
+    do {
+        bin++;
+    } while (bin < N && pH->GetBinContent(bin) == 0);
+    return pH->GetBinLowEdge(bin);
+}
+
+Double_t GetRealTime(string Run)
+{
+    char name[  128] = "";
+    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    TFile *f = TFile::Open(name);
+    if (!f)
+        cout << "Could not open " << name << endl;
+    TH1D *pH = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_48");
+    if (!pH)
+        cout << "Could not open " << "Histograms/Raw/Scaler/Rates/H1RawRate_48" << endl;
+    return pH->Integral();
 }
 
 void DrawMonitorRatio(TFile *f, Int_t ch)
@@ -725,8 +712,8 @@ void DrawPuSponFis()
     TFile *fSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root");
     TFile *fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root");
 //    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
-    TGraphErrors *geNIF = (TGraphErrors*)fNIF->Get("Analysis/results/effSponFis");
-    TGraphErrors *geSB = (TGraphErrors*)fSB->Get("Analysis/results/effSponFis");
+    TGraphErrors *geNIF = (TGraphErrors*)fNIF->Get("Analysis/results/effSponFis"); if (!geNIF) cout << "Could not get " << "Analysis/results/effSponFis" << endl;
+    TGraphErrors *geSB = (TGraphErrors*)fSB->Get("Analysis/results/effSponFis"); if (!geSB) cout << "Could not get " << "Analysis/results/effSponFis" << endl;
     TGraphErrors *geSF = new TGraphErrors(8);
     TGraphErrors *geToni = new TGraphErrors(8);
 
@@ -737,7 +724,7 @@ void DrawPuSponFis()
     for (Int_t i = 0; i < 8; i++)
     {
         sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", i+1);
-        TH1I *pHDt = (TH1I*)fSF->Get(name);
+        TH1I *pHDt = (TH1I*)fSF->Get(name); if (!pHDt) cout << "Could not get " << name << endl;
         Double_t Integral = pHDt->Integral();
         geSF->SetPoint(i, i+1, Integral / t_live);
         geSF->SetPointError(i, 0, sqrt(Integral) / t_live);
@@ -1595,6 +1582,84 @@ void DrawSponFisStability(TFile *fAna, string FC)
     cST->Update();
 }
 
+void IndFisSum(TFile *fAna, string FC)
+{
+    Int_t color = kBlack;
+    char name[64] = "";
+
+    /// sum up plots: Signal vs Run nr
+    TGraphErrors *g[8];
+    for (Int_t i = 0; i < 8; i++)
+    {
+        sprintf(name, "%s/Stability/%s_nf_%i", FC.c_str(), FC.c_str(), i+1);
+        g[i] = (TGraphErrors*) fAna->Get(name); if (!g[i]) cout << "Could not get " << name << endl;
+    }
+    sprintf(name, "%s_nf_sum", FC.c_str());
+    TGraphErrors *gCnf = (TGraphErrors*)g[0]->Clone(name);
+
+    for (Int_t j = 0; j < 7; j++) // Iterate over graph points
+    {
+        Double_t x, y, ex, ey, sum = 0, sume2 = 0;
+        for (Int_t i = 0; i < 8; i++)
+        {
+            g[i]->GetPoint(j, x, y);
+            sum += y; // sum up y
+//            sume2 += pow(g[i]->GetErrorY(j), 2); // sum up squared y error
+            sume2 += g[i]->GetErrorY(j); // sum up y error
+        }
+        gCnf->SetPoint(j, x, sum);
+//        gCnf->SetPointError(j, 0, sqrt(sume2));
+        gCnf->SetPointError(j, 0, sume2);
+    }
+
+    /// Do constant fit
+    sprintf(name, "%s_nf_FG_fit", FC.c_str());
+    TF1 *fFG = new TF1(name, "pol0", 0, 5.5);
+//    sprintf(name, "%s_nf_BG_fit", FC.c_str());
+//    TF1 *fFG = new TF1(name, "pol0", 5.5, 8);
+    gCnf->Fit(name, "LR0Q");
+
+    /// Drawing properties
+    sprintf(name, "%s all ch; Run number; #font[12]{C}_{(n,f)} / #font[12]{C}_{NM}", FC.c_str());
+    gCnf->SetTitle(name);
+    SetSize(gCnf);
+    gCnf->SetLineColor(color);
+    gCnf->SetMarkerColor(color);
+    gCnf->SetMarkerStyle(20);
+    gCnf->SetMarkerSize(0.5);
+    fFG->SetLineColor(color);
+//    fBG->SetLineColor(color);
+
+    /// Draw
+    TCanvas *cNFS = new TCanvas("cNFS");
+    gPad->SetTicks(1, 1);
+    gPad->SetTopMargin(0.06);
+    gCnf->Draw("ap");
+//    gCnf->GetYaxis()->SetRangeUser(0.0, 0.0001); //-0.00002, 0.00004);//
+    gCnf->GetXaxis()->SetNdivisions(110);
+    gCnf->GetXaxis()->SetLabelOffset(0.0);
+    fFG->Draw("same");
+    TLatex *tFG = new TLatex();
+    tFG->SetNDC();
+    sprintf(name, "#chi^{2} / #font[12]{dof} = %.2f", fFG->GetChisquare() / fFG->GetNDF());
+    tFG->SetTextColor(color);
+    tFG->SetTextSize(0.08);
+    tFG->DrawLatex(0.3, 0.5, name);
+
+//    fBG->Draw("same");
+//    TLatex *tBG = new TLatex();
+//    tBG->SetNDC();
+//    sprintf(name, "#chi^{2} / #font[12]{dof} = %.2f", fBG->GetChisquare() / fBG->GetNDF());
+//    tBG->SetTextColor(color[ch]);
+//    tBG->SetTextSize(0.05);
+//    tBG->DrawLatex(0.75, 0.6, name);
+
+    TLine *line = new TLine(0.72, gPad->GetBottomMargin(), 0.72, 1 - gPad->GetTopMargin());//4.5, -0.00002, 4.5, 0.00004);//
+    line->SetLineStyle(3);
+    line->SetNDC();
+    line->Draw();
+}
+
 void IndFisStability(TFile *fAna, string FC, Int_t ch)
 {
     Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
@@ -1608,7 +1673,7 @@ void IndFisStability(TFile *fAna, string FC, Int_t ch)
     TF1 *fBG = (TF1*) fAna->Get(name); if (!fBG) cout << "Could not get " << name << endl;
 
     // Drawing properties
-    sprintf(name, "%s Ch. %i; Messung; #font[12]{C}_{(n,f)} / #font[12]{C}_{NM}", FC.c_str(), ch+1);
+    sprintf(name, "%s Ch. %i; Run number; #font[12]{C}_{(n,f)} / #font[12]{C}_{NM}", FC.c_str(), ch+1);
     gCnf->SetTitle(name);
     SetSize(gCnf);
     gCnf->SetLineColor(color[ch]);
@@ -1620,9 +1685,11 @@ void IndFisStability(TFile *fAna, string FC, Int_t ch)
 
     // Draw
     gPad->SetTicks(1, 1);
+    gPad->SetTopMargin(0.06);
     gCnf->Draw("ap");
-    gCnf->GetYaxis()->SetRangeUser(0.0, 0.0001); //-0.00002, 0.00004);//
+    gCnf->GetYaxis()->SetRangeUser(-0.00002, 0.00004);//0.0, 0.0001); //
     gCnf->GetXaxis()->SetNdivisions(110);
+    gCnf->GetXaxis()->SetLabelOffset(0.0);
     fFG->Draw("same");
     TLatex *tFG = new TLatex();
     tFG->SetNDC();
@@ -1631,13 +1698,13 @@ void IndFisStability(TFile *fAna, string FC, Int_t ch)
     tFG->SetTextSize(0.08);
     tFG->DrawLatex(0.3, 0.5, name);
 
-//    fBG->Draw("same");
+    fBG->Draw("same");
 //    TLatex *tBG = new TLatex();
 //    tBG->SetNDC();
 //    sprintf(name, "#chi^{2} / #font[12]{dof} = %.2f", fBG->GetChisquare() / fBG->GetNDF());
 //    tBG->SetTextColor(color[ch]);
 //    tBG->SetTextSize(0.05);
-//    tBG->DrawLatex(0.8, 0.7, name);
+//    tBG->DrawLatex(0.75, 0.6, name);
 
     TLine *line = new TLine(0.72, gPad->GetBottomMargin(), 0.72, 1 - gPad->GetTopMargin());//4.5, -0.00002, 4.5, 0.00004);//
     line->SetLineStyle(3);
@@ -1650,14 +1717,15 @@ void DrawIndFisStability(TFile *fAna, string FC)
     char name[64] = "";
     sprintf(name, "cST_%s", FC.c_str());
     TCanvas *cST = new TCanvas(name);
-    cST->Divide(2, 2);
-    for (Int_t i = 0; i < 4; i++)
+//    cST->Divide(2, 2);
+//    for (Int_t i = 0; i < 4; i++)
+    Int_t i = 0;
     {
         cST->cd(i+1);
         gPad->SetTopMargin(0.06);
 //        sprintf(name, "cST_%s_%i", FC.c_str(), i+1);
 //        TCanvas *cST = new TCanvas(name);
-        IndFisStability(fAna, FC, i+4);
+        IndFisStability(fAna, FC, i+7);
 //        cST->Update();
     }
     cST->Update();
@@ -2592,14 +2660,14 @@ int DrawPics()
 //    TColor::InvertPalette();
 
     TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
-    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+//    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
 //    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
 
 //    DrawSigma(242);
 //    DrawCrossSectionRuns(fAna);
 //    DrawUscattering(fAna);
 //    DrawPuCorrection(fAna);
-//    DrawMonitorRate();
+    DrawMonitorRate();
 //    DrawPeakWidth(fAna, "PuFC");
 //    DrawPeakWidth(fAna, "UFC");
 //    DrawSimPeak(fAna, "UFC_NIF", "real", 1, "Geant4");
@@ -2634,6 +2702,7 @@ int DrawPics()
 //        DrawIndFisStability(fAna, "UFC", i);
 //    DrawIndFisStability(fAna, "PuFC");
 //    DrawIndFisStability(fAna, "UFC");
+//    IndFisSum(fAna, "UFC");
 //    DrawSponFisStability(fAna, "UFC");
 //    DrawSponFisStability(fAna, "PuFC");
 //    DrawSignalStability();
@@ -2644,7 +2713,7 @@ int DrawPics()
 //        DrawTvsE(fAna, "MCNP", "PuFC", "real", i, 0);
 //        DrawTvsE(fAna, "MCNP", "UFC", "real", i, 0);
 //        DrawTvsE(fAna, "Geant4", "UFC", "SB", i, 1);
-//        DrawT(fAna, "MCNP", "PuFC", i, 1);
+//        DrawT(fAna, "Geant4", "UFC", 0, 1);
 //    DrawSimNotebook(fAna, 1, 1);
 //    DrawG4vsMCNP(fAna, "PuFC", 0, 0);
 //    DrawResult(fAna);
@@ -2656,7 +2725,7 @@ int DrawPics()
 //    DrawEvaluationU();
 //    DrawExpData();
 //    DrawExpAbs();
-    DrawExpU();
+//    DrawExpU();
 
     return 1;
 }

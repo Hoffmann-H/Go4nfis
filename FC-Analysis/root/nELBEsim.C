@@ -3,6 +3,7 @@
 #include "TGraphErrors.h"
 #include "TH2F.h"
 #include "TLatex.h"
+#include "TRandom2.h"
 
 TGraphErrors* GetCrossSectionData(string StrElement, Int_t Z, string StrEval)
 {
@@ -98,7 +99,7 @@ void WeightCrossSectionUFC(string StrFileOutPath, string StrEval)
 }
 
 void GetJEFF()
-{
+{/// Create and save deposits' cross section graphs
     string StrFileOutPath = "/home/hoffma93/TrackLength/FissionXS.root";
     WeightCrossSectionH19(StrFileOutPath, "JEFF_3.3");
     WeightCrossSectionUFC(StrFileOutPath, "JEFF_3.3");
@@ -226,6 +227,33 @@ TGraphErrors* GetXS(string StrXSFileInPath, string StrFC, string StrEval)
     return pGrXS;
 }
 
+//TH1F* GetCorrection(TFile *f, string StrFC, uint ch, TGraphErrors *pGrXS)
+//{   //method to determine a correction factor C from geometric and vacuum simulation
+//    //C(E(t)) = vacuum fission rate at E(t) / total detected fission rate at E(t)
+//    string ProjName, CorrName;
+
+//    //get Energy-ToF-Correlation histogram of all G4 simulated neutrons
+//    TH2F* pH2Tot = GetGeant4Data(f, StrFC, false, ch);
+//    //get source spectrum
+//    TH1F *pFCSource = (TH1F*)GetSourceSpectrum(f);
+
+//    //convert total and source histogram to fission rate histograms
+//    TH2F *pH2TotW = WeightWithXS(pH2Tot, pGrXS);
+//    TH1F *pFCSourceW = WeightTH1withXS(pFCSource, pGrXS);
+//    // ...or even dont
+////    TH2F *pH2TotW = pH2Tot->Clone();
+////    TH1F *pFCSourceW = pFCSource->Clone();
+//    //get projection to the E(t) axis
+//    ProjName = "G4Total_"+StrFC+"_Ch."+std::to_string(ch+1)+"_Hist";
+//    TH1F* pFCTot = (TH1F*)pH2TotW->ProjectionX(ProjName.c_str(), 0, -1, "e");
+//    //calculate correction factor C(E(t))
+//    CorrName = "C_"+StrFC+"_"+std::to_string(ch+1);
+//    TH1F* pFCCorr = (TH1F*)pFCTot->Clone(CorrName.c_str()); //pFCCorr->Clear();
+//          pFCCorr->Divide(pFCSourceW, pFCTot, 1.0, 1.0);
+//    pFCCorr->SetDirectory(0);
+//    return pFCCorr;
+//}
+
 TH1F* GetCorrection(TFile *f, string StrFC, uint ch, TGraphErrors *pGrXS)
 {   //method to determine a correction factor C from geometric and vacuum simulation
     //C(E(t)) = vacuum fission rate at E(t) / total detected fission rate at E(t)
@@ -265,7 +293,17 @@ TH1F* GetCorrection(TFile *f, string StrFC, uint ch, TGraphErrors *pGrXS)
     pFCTot->Add(pFCDir, pFCSc, 1.0, 1.0);
     CorrName = "C_"+StrFC+"_"+std::to_string(ch+1);
     TH1F* pFCCorr = (TH1F*)pFCTot->Clone(CorrName.c_str()); //pFCCorr->Clear();
-          pFCCorr->Divide(pFCSourceW, pFCTot, 1.0, 1.0);
+    pFCCorr->Divide(pFCSourceW, pFCTot, 1.0, 1.0);
+    pFCCorr->SetDirectory(0);
+    //if correction factor >> 1, probably normation 1/A_dep missing
+    if (pFCCorr->Integral() / pFCCorr->GetNbinsX() > 5.0)
+    {
+        // UFC: r = 3,7cm, H19: r = 3,8cm
+        Double_t r = strcmp(StrFC.c_str(), "H19") ? 3.7 : 3.8;
+        Double_t A = TMath::Pi() * r * r; // [A] = cm^2
+        cout << "Scaling source spectrum with 1/" << A << endl;
+        pFCCorr->Scale(1.0/A);
+    }
     return pFCCorr;
 }
 
@@ -441,10 +479,50 @@ TH1F* GetCorrLoss(string StrSimuFile, string StrFC, uint ch, Bool_t Draw = 0)
     return pFCCorr;
 }
 */
-void CompareWeighting(string StrHistoFileName)
+
+
+void CorrectionRefH19(TFile *f, Bool_t w = 0)
+{
+    string Name = "";
+    TH1F *pH1_H19[10], *pH1_sumH19, *pH1_UFC[8], *pH1_Ref[8];
+    for (Int_t channel = 0; channel < 10; channel++)
+    {
+        if (w) Name = "TrackLength/Correction/W_C_H19_"+std::to_string(channel+1);
+        else   Name = "Hit/Correction/H_C_H19_"+std::to_string(channel+1);
+        pH1_H19[channel] = (TH1F*)f->Get(Name.c_str());
+        if (!pH1_H19[channel]) cout << "Could not get " << Name << endl;
+        if (channel==0) {
+            pH1_sumH19 = (TH1F*)pH1_H19[0]->Clone(w?"W_C_H19":"H_C_H19");
+            if (!pH1_sumH19) cout << "Could not get " << Name << endl;
+            pH1_sumH19->SetDirectory(0);
+        } else
+            pH1_sumH19->Add(pH1_H19[channel], 1.0);
+    }
+    pH1_sumH19->Scale(0.1);
+    if (w) Name = "TrackLength/Correction";
+    else   Name = "Hit/Correction";
+    SaveToFile(f, Name.c_str(), pH1_sumH19);
+    for (Int_t channel = 0; channel < 8; channel++)
+    {
+        if (w) Name = "TrackLength/Correction/W_C_UFC_"+std::to_string(channel+1);
+        else   Name = "Hit/Correction/H_C_UFC_"+std::to_string(channel+1);
+        pH1_UFC[channel] = (TH1F*)f->Get(Name.c_str());
+        if (!pH1_UFC[channel]) cout << "Could not get " << Name << endl;
+        if (w) Name = "W_C_UFC_RefH19_"+std::to_string(channel+1);
+        else   Name = "H_C_UFC_RefH19_"+std::to_string(channel+1);
+        pH1_Ref[channel] = (TH1F*)pH1_UFC[channel]->Clone(Name.c_str());
+        pH1_Ref[channel]->SetDirectory(0);
+        pH1_Ref[channel]->Divide(pH1_UFC[channel], pH1_sumH19, 1.0, 1.0);
+        if (!pH1_Ref[channel]) cout << "Could not get " << Name << endl;
+        if (w) Name = "TrackLength/Correction/RefH19";
+        else   Name = "Hit/Correction/RefH19";
+        SaveToFile(f, Name.c_str(), pH1_Ref[channel]);
+    }
+}
+
+void DoCorrectionH(string StrHistoFileName)
 { // file name without .root ending
     TFile *fH = TFile::Open((StrHistoFileName+".root").c_str(), "READ"); // histogrammed simulation data, without track length weighting
-//    TFile *fW = TFile::Open((StrHistoFileName+"_w.root").c_str(), "READ");
     TFile *fout = TFile::Open((StrHistoFileName+"_result.root").c_str(), "UPDATE");
 
     string FCs[] = {"H19", "UFC"};
@@ -453,43 +531,54 @@ void CompareWeighting(string StrHistoFileName)
     {
         string FC = FCs[i_FC];
         TGraphErrors *pGrXS = GetXS("~/TrackLength/FissionXS.root", FC, "JEFF_3.3");
-        for (Int_t channel = 0; channel < 2/*NumCh[i_FC]*/; channel++)
+        for (Int_t channel = 0; channel < NumCh[i_FC]; channel++)
         {
 //            TH1F *pk_H = GetCorrLoss((StrHistoFileName+".root").c_str(), FC, channel);
 //            pk_H->SetName(("H_k_"+FC+"_"+std::to_string(channel+1)).c_str());
 //            SaveToFile(f, "Hit/CorrLoss", pk_H);
-//            TH1F *pk_W = GetCorrLoss((StrHistoFileName+"_w.root").c_str(), FC, channel);
-//            pk_W->SetName(("W_k_"+FC+"_"+std::to_string(channel+1)).c_str());
-//            SaveToFile(f, "TrackLength/CorrLoss", pk_W);
-
 //            TH1F *pT_H = GetTransm((StrHistoFileName+".root").c_str(), FC, channel);
 //            pT_H->SetName(("H_T_"+FC+"_"+std::to_string(channel+1)).c_str());
 //            SaveToFile(f, "Hit/Transmission", pT_H);
-//            TH1F *pT_W = GetTransm((StrHistoFileName+"_w.root").c_str(), FC, channel);
-//            pT_W->SetName(("W_T_"+FC+"_"+std::to_string(channel+1)).c_str());
-//            SaveToFile(f, "TrackLength/Transmisssion", pT_W);
-
             TH1F *pC_H = GetCorrection(fH, FC, channel, pGrXS);
             pC_H->SetDirectory(0);
             pC_H->SetName(("H_C_"+FC+"_"+std::to_string(channel+1)).c_str());
             SaveToFile(fout, "Hit/Correction", pC_H);
-//            TH1F *pC_W = GetCorrection((StrHistoFileName+"_w.root").c_str(), FC, channel);
-//            pC_W->SetName(("W_C_"+FC+"_"+std::to_string(channel+1)).c_str());
-//            SaveToFile(f, "TrackLength/Correction", pC_W);
         }
     }
     fH->Close();
+    CorrectionRefH19(fout, 0);
     fout->Save();
     fout->Close();
+}
 
-//    new TCanvas((FC+"_"+std::to_string(channel+1)).c_str());
-//    pCorrH->Draw();
-//    pCorrW->SetLineColor(kRed);
-//    pCorrW->Draw("same");
-//    TLegend *l = new TLegend(0.2, 0.5, 0.6, 0.8);
-//    l->AddEntry(pCorrH, "Hit");
-//    l->AddEntry(pCorrW, "Track length");
-//    l->Draw();
+void DoCorrectionW(string StrHistoFileName)
+{ // file name without _w.root ending
+    TFile *fW = TFile::Open((StrHistoFileName+"_w.root").c_str(), "READ"); // histogrammed simulation data, with track length weighting
+    TFile *fout = TFile::Open((StrHistoFileName+"_result.root").c_str(), "UPDATE");
+
+    string FCs[] = {"H19", "UFC"};
+    Int_t NumCh[] = {10, 8};
+    for (Int_t i_FC = 0; i_FC < 2; i_FC++)
+    {
+        string FC = FCs[i_FC];
+        TGraphErrors *pGrXS = GetXS("~/TrackLength/FissionXS.root", FC, "JEFF_3.3");
+        for (Int_t channel = 0; channel < NumCh[i_FC]; channel++)
+        {
+//            TH1F *pk_W = GetCorrLoss((StrHistoFileName+"_w.root").c_str(), FC, channel);
+//            pk_W->SetName(("W_k_"+FC+"_"+std::to_string(channel+1)).c_str());
+//            SaveToFile(fout, "TrackLength/CorrLoss", pk_W);
+//            TH1F *pT_W = GetTransm((StrHistoFileName+"_w.root").c_str(), FC, channel);
+//            pT_W->SetName(("W_T_"+FC+"_"+std::to_string(channel+1)).c_str());
+//            SaveToFile(fout, "TrackLength/Transmisssion", pT_W);
+            TH1F *pC_W = GetCorrection(fW, FC, channel, pGrXS);
+            pC_W->SetName(("W_C_"+FC+"_"+std::to_string(channel+1)).c_str());
+            SaveToFile(fout, "TrackLength/Correction", pC_W);
+        }
+    }
+    fW->Close();
+    CorrectionRefH19(fout, 1);
+    fout->Save();
+    fout->Close();
 }
 
 /*void avWeight(string StrHistoFileName)
@@ -536,51 +625,9 @@ void CompareWeighting(string StrHistoFileName)
     f->Close();
 }*/
 
-void CorrectionRefH19(string StrHistoFileName, Bool_t w = 0)
-{
-    TFile *f = TFile::Open((StrHistoFileName+"_result.root").c_str(), "UPDATE");
-    string Name = "";
-    TH1F *pH1_H19[10], *pH1_sumH19, *pH1_UFC[8], *pH1_Ref[8];
-    for (Int_t channel = 0; channel < 10; channel++)
-    {
-        if (w) Name = "TrackLength/Correction/W_C_H19_"+std::to_string(channel+1);
-        else   Name = "Hit/Correction/H_C_H19_"+std::to_string(channel+1);
-        pH1_H19[channel] = (TH1F*)f->Get(Name.c_str());
-        if (!pH1_H19[channel]) cout << "Could not get " << Name << endl;
-        if (channel==0) {
-            pH1_sumH19 = (TH1F*)pH1_H19[0]->Clone(w?"W_C_H19":"H_C_H19");
-            if (!pH1_sumH19) cout << "Could not get " << Name << endl;
-            pH1_sumH19->SetDirectory(0);
-        } else
-            pH1_sumH19->Add(pH1_H19[channel], 1.0);
-    }
-    pH1_sumH19->Scale(0.1);
-    if (w) Name = "TrackLength/Correction";
-    else   Name = "Hit/Correction";
-    SaveToFile(f, Name.c_str(), pH1_sumH19);
-    for (Int_t channel = 0; channel < 8; channel++)
-    {
-        if (w) Name = "TrackLength/Correction/W_C_UFC_"+std::to_string(channel+1);
-        else   Name = "Hit/Correction/H_C_UFC_"+std::to_string(channel+1);
-        pH1_UFC[channel] = (TH1F*)f->Get(Name.c_str());
-        if (!pH1_UFC[channel]) cout << "Could not get " << Name << endl;
-        if (w) Name = "W_C_UFC_RefH19_"+std::to_string(channel+1);
-        else   Name = "H_C_UFC_RefH19_"+std::to_string(channel+1);
-        pH1_Ref[channel] = (TH1F*)pH1_UFC[channel]->Clone(Name.c_str());
-        pH1_Ref[channel]->SetDirectory(0);
-        pH1_Ref[channel]->Divide(pH1_UFC[channel], pH1_sumH19, 1.0, 1.0);
-        if (!pH1_Ref[channel]) cout << "Could not get " << Name << endl;
-        if (w) Name = "TrackLength/Correction/RefH19";
-        else   Name = "Hit/Correction/RefH19";
-        SaveToFile(f, Name.c_str(), pH1_Ref[channel]);
-    }
-    f->Save();
-    f->Close();
-}
-
 void scriptW(string StrFileInPath = "~/TrackLength/G4UFCvsH19_1E8_hist_result.root")
 { /// Copy the 9 FC channels' correction factor histograms
-    /// from StrFileInPath into the 2016/06 analysis root file
+  /// from StrFileInPath into the 2016/06 analysis root file
 
     TFile *f = TFile::Open(StrFileInPath.c_str()); if (!f) cout << "Could not open " << StrFileInPath << endl;
     TH1F *h[9];
@@ -631,19 +678,266 @@ void scriptH(string StrFileInPath = "~/TrackLength/G4UFCvsH19_1E9_hist_result.ro
     g->Close();
 }
 
+TH2D* MakeEvsT(string file_to_read, Bool_t draw, string FC = "UFC", string key = "real", Int_t ch = 0)
+{ // Get MCNP 2D histogram
+    cout << "Reading MCNP result " << file_to_read << endl;
+    char name[64] = "";
+    string PrototypeFile = "~/TrackLength/G4UFCvsH19_1E8_hist.root";
+
+    // Open tabular as graph
+    TGraphErrors *gTE = new TGraphErrors(file_to_read.c_str(), "%lg %lg %lg %lg");
+    Int_t N = gTE->GetN();
+    cout << N << " entries" << endl;
+
+    // Open a 2D histogram as axis prototype
+    TFile *f = TFile::Open(PrototypeFile.c_str()); if (!f) cout << "Could not open " << PrototypeFile << endl;
+    sprintf(name, "%s/ToFvsEkin/%s_ToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), ch+1);
+    TH2F *pProto = (TH2F*)f->Get(name); if (!pProto) cout << "Could not get prototype histogram file " << name << endl;
+    sprintf(name, "%s_ToFvsEkin_%s_Ch.%i", FC.c_str(), key.c_str(), ch + 1);
+    TH2D *pHist = (TH2D*)pProto->Clone(name);
+    sprintf(name, "%s, ToF vs Ekin, %s, ch.%i", FC.c_str(), key.c_str(), ch + 1);
+    pHist->SetTitle(name);
+    pHist->GetXaxis()->SetTitle("#font[12]{t} / ns");
+    pHist->GetYaxis()->SetTitle("#font[12]{E} / MeV");
+
+    Double_t T, E, binwx, binwy, bT, bE, C, DC;
+    Int_t binT, binE;
+    TRandom2 *rand = new TRandom2();
+
+    pHist->Scale(0.0);
+
+    for (Int_t i = 0; i < N; i++)
+    {
+        // read from graph
+        gTE->GetPoint(i, T, E);
+        T *= 10; // unit: 1 ns
+        C = gTE->GetErrorX(i);
+        DC = gTE->GetErrorY(i);
+
+        // skip emty entries
+        if (C == 0.0) continue;
+
+        binwx = pHist->GetXaxis()->GetBinWidth(
+                        pHist->GetXaxis()->FindBin(T));
+        binwy = pHist->GetYaxis()->GetBinWidth(
+                        pHist->GetYaxis()->FindBin(E));
+        bT = T + 0.1*binwx;
+        bE = E + 0.1*binwy;
+        binT = pHist->GetXaxis()->FindBin(bT);
+        binE = pHist->GetYaxis()->FindBin(bE);
+
+        pHist->SetBinContent(binT, binE, C);
+        pHist->SetBinError(binT, binE, DC * C);
+    }
+    if (draw)
+    {
+        sprintf(name, "%s_EvsT_%i", FC.c_str(), ch + 1);
+        TCanvas *c1 = new TCanvas(name, name, 200, 10, 700, 500);
+        gPad->SetLogx();
+        gPad->SetLogy();
+        gPad->SetLogz();
+        pHist->SetStats(0);
+        pHist->Draw("colz");
+    }
+//    cout << pHist->Integral() << endl;
+    return pHist;
+}
+
+TH2F* GetMCNPbins(string in_file_path, string FC = "H19", Int_t channel = 0)
+{ /// Find MCNP's time and energy binning.
+    string TabularFile = in_file_path + std::to_string(channel+1) + "4";
+    // Open tabular as filestream
+    std::ifstream input(TabularFile.c_str());
+    Bool_t stop = 0;
+    string line, word, HistName, HistTitle;
+    Double_t E, T, C[10];
+    vector<float> *ToFBins = new vector<float>();
+    vector<float> *EnergyBins = new vector<float>();
+    // Loop over all time headlines
+    do {
+        // Find start of time headline
+        do {
+            input >> word;
+        } while (strcmp(word.c_str(), "time:"));
+        // Read head line
+        Int_t i = 0; // i: time columns
+        for (i = 0; i < 5; i++) {
+            input >> word;
+            if (!strcmp(word.c_str(), "energy")) break;
+            if (!strcmp(word.c_str(), "total")) break;
+            T = std::stod(word); // unit in file: [t] = 10ns
+            //Save T
+            ToFBins->push_back(10*T); // unit: [t] = 1ns
+        }
+        // Check if last table block is reached
+        if (!strcmp(word.c_str(), "total"))
+            stop = 1;
+        // Move on until "energy"
+        while (strcmp(word.c_str(), "energy"))
+            input >> word;
+    } while (!stop);
+    input >> word;
+    while (strcmp(word.c_str(), "total")) {
+        E = std::stod(word);
+        EnergyBins->push_back(E);
+        getline(input, line);
+        input >> word;
+    }
+    int nBinsX = ToFBins->size()-1;
+    int nBinsY = EnergyBins->size()-1;
+    cout << FC << " ch." << channel+1 << " MCNP bins:" << endl;
+    cout << "\tToF:\t" << nBinsX << " bins \t" << ToFBins->at(0) << " - " << ToFBins->at(nBinsX) << endl;
+    cout << "\tE:\t"   << nBinsY << " bins \t" << EnergyBins->at(0) << " - " << EnergyBins->at(nBinsY) << endl;
+
+    HistName = FC + "_TvsE_MCNPbins_Ch." + std::to_string(channel+1);
+    HistTitle = "ToF vs Ekin, " + FC + " ch." + std::to_string(channel+1) + ", MCNP bins";
+    TH2F *h2 = new TH2F( HistName.c_str(), HistTitle.c_str(),
+                         nBinsX, &(ToFBins->at(0)),
+                         nBinsY, &(EnergyBins->at(0)));
+    return h2;
+}
+
+Double_t CalculateNeutronEnergy(Float_t FlightPath, Float_t ToF)
+{   //calculates the kinetic energy of the neutron in MeV, [L] = m, [ToF] = ns!
+    //E_kin = m_n c^2 (gamma-1)
+    Double_t E_kin   = 0;
+    Double_t L       = FlightPath;       //n flight path to the i-th deposit [L] = m
+    Double_t t       = ToF*1e-9;         //neutron time of flight [t] = s
+    Double_t c       = 299792458.0;      //speed of light [c] = m/s
+    Double_t m_nc2   = 939.56537921;     //neutron rest mass [MeV/c²]*c²
+
+    Double_t beta = L/(c*t);
+    Double_t gamma= 1./sqrt(1.-pow(beta,2));
+
+    E_kin = m_nc2*(gamma - 1.0);
+
+    return E_kin;
+}
+
+void HistoMCNP(string in_file_path, string FC, Int_t channel, TFile* f)
+{ // Create TvsE and EvsE histograms from MCNP simulation results, save to file f
+    char name[64] = "";
+    TH2F *hM = GetMCNPbins(in_file_path, FC, channel);
+    // FCscat_c_tally_2*4_xyz_0.dmp
+    TGraphErrors *gTE = new TGraphErrors((in_file_path+std::to_string(channel+1)+"4_xyz_0.dmp").c_str(), "%lg %lg %lg %lg");
+    Int_t N = gTE->GetN();
+    cout << "N=" << N << endl;
+    Double_t T, E, C, DC;
+    Int_t binT, binE;
+    for (Int_t i = 0; i < N; i++)
+    {
+        gTE->GetPoint(i, T, E);
+        T *= 10; // unit: 1 ns
+        C = gTE->GetErrorX(i);
+        DC = gTE->GetErrorY(i);
+        if (C == 0.0) continue;
+        binT = hM->GetXaxis()->FindBin(T);
+        binE = hM->GetYaxis()->FindBin(E);
+        if(T > hM->GetXaxis()->GetBinCenter(binT))
+            binT++;
+        if(E > hM->GetYaxis()->GetBinCenter(binE))
+            binE++;
+//        cout << binT << " " << binE << " " << C << " " << DC * C << endl;
+        hM->SetBinContent(binT, binE, C);
+        hM->SetBinError(binT, binE, DC * C);
+    }
+//    new TCanvas();
+//    gPad->SetLogz();
+//    hM->Draw("colz");
+//    cout << "hM: " << hM->Integral() << endl;
+
+    // Open a 2D histogram as axis prototype
+    string PrototypeFile = "~/TrackLength/G4UFCvsH19_1E8_hist.root";
+    TFile *p = TFile::Open(PrototypeFile.c_str()); if (!p) cout << "Could not open " << PrototypeFile << endl;
+    sprintf(name, "%s/ToFvsEkin/%s_ToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), channel+1);
+    TH2F *protoTvsE = (TH2F*)p->Get(name); if (!protoTvsE) cout << "Could not get prototype histogram file " << name << endl;
+    sprintf(name, "%s_ToFvsEkin_prototype_Ch.%i", FC.c_str(), channel+1);
+    protoTvsE->SetName(name);
+    sprintf(name, "%s_ToFvsEkin_Ch.%i", FC.c_str(), channel+1);
+    TH2D *hTvsE = (TH2D*)protoTvsE->Clone(name);
+    sprintf(name, "%s, ToF vs Ekin, ch.%i", FC.c_str(), channel+1);
+    hTvsE->SetTitle(name);
+    hTvsE->GetXaxis()->SetTitle("#font[12]{t} / ns");
+    hTvsE->GetYaxis()->SetTitle("#font[12]{E} / MeV");
+    hTvsE->Scale(0.0);
+
+    sprintf(name, "%s/EToFvsEkin/%s_EToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), channel+1);
+    TH2F *protoEvsE = (TH2F*)p->Get(name); if (!protoEvsE) cout << "Could not get prototype histogram file " << name << endl;
+    sprintf(name, "%s_EToFvsEkin_prototype_Ch.%i", FC.c_str(), channel+1);
+    protoEvsE->SetName(name);
+    sprintf(name, "%s_EToFvsEkin_Ch.%i", FC.c_str(), channel+1);
+    TH2D *hEvsE = (TH2D*)protoEvsE->Clone(name);
+    sprintf(name, "%s, E(ToF) vs Ekin, ch.%i", FC.c_str(), channel+1);
+    hEvsE->SetTitle(name);
+    hEvsE->GetXaxis()->SetTitle("#font[12]{E(t)} / MeV");
+    hEvsE->GetYaxis()->SetTitle("#font[12]{E} / MeV");
+    hEvsE->Scale(0.0);
+
+    TRandom2 *rnd = new TRandom2();
+    Int_t n = 2000000;
+    Double_t step = hM->Integral() / n;
+    Double_t H19_FlightPath[10]  = { 5.976, 5.977, 5.986, 5.987, 5.996,
+                                       5.997, 6.006, 6.007, 6.016, 6.017};
+    Double_t UFC_FlightPath[8]   = { 6.262, 6.251, 6.241, 6.230,
+                                       6.220, 6.209, 6.199, 6.188};
+    Double_t FlightPath = strcmp(FC.c_str(), "H19") ? UFC_FlightPath[channel] : H19_FlightPath[channel];
+    for (binT = 1; binT <= hM->GetNbinsX(); binT++)
+        for (binE = 1; binE <= hM->GetNbinsY(); binE++)
+        {
+            C = hM->GetBinContent(binT, binE);
+            while (C > 0)
+            {
+                T = hM->GetXaxis()->GetBinLowEdge(binT) + rnd->Uniform(0, hM->GetXaxis()->GetBinWidth(binT));
+                E = hM->GetYaxis()->GetBinLowEdge(binE) + rnd->Uniform(0, hM->GetYaxis()->GetBinWidth(binE));
+                DC = (C > step) ? step : C;
+                hTvsE->Fill(T, E, DC);
+                hEvsE->Fill(CalculateNeutronEnergy(FlightPath, T), E, DC);
+                C -= step;
+            }
+        }
+//    cout << "hTvsE: " << hTvsE->Integral() << endl;
+    string Path = FC+"/ToFvsEkin/";
+    SaveToFile(f, Path, hTvsE);
+    Path = FC+"/EToFvsEkin/";
+    SaveToFile(f, Path, hEvsE);
+//    hEvsE->Draw("colz");
+}
+
+void ReadMCNP()
+{
+    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_c_tally-2";
+//    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_b_tally-2";
+    string OutFileName = "/gpfs/home/hoffma93/TrackLength/MCNP_hist_w.root";
+    cout << "Reading MCNP results from .dmp files" << endl
+         << "\tInput path: " << InFilePath << endl
+         << "\tHistogram output file: " << OutFileName << endl;
+    TFile *f = TFile::Open(OutFileName.c_str(), "UPDATE");
+    string FCs[] = {"H19", "UFC"};
+    Int_t NumCh[] = {10, 8};
+    for (Int_t i_FC = 1; i_FC < 2; i_FC++) // No H19 results yet!
+    {
+        string FC = FCs[i_FC];
+        for (Int_t ch = 0; ch < NumCh[i_FC]; ch++)
+        {
+            HistoMCNP(InFilePath, FC, ch, f);
+        }
+    }
+    f->Save();
+    f->Close();
+}
+
 void nELBEsim()
 {
-//    GetCorrLoss("~/TrackLength/G4UFCvsH19_1E8_hist.root", "UFC", 0, 1);
-
     string File1 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E9_hist";
     string File2 = "/home/hoffma93/TrackLength/G4UFCvsH19_23082016_hist_repr";
-    string File3 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E6_fast_Phi";
-    string File4 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E6_fast_Theta";
-    CompareWeighting(File1);
+    string File3 = "/home/hoffma93/TrackLength/G4UFCvsH19_v10.2_hist";
+    string File4 = "/home/hoffma93/TrackLength/G4UFCvsH19_";
+    DoCorrectionH(File1);
 //    avWeight(StrFileInPath);
 //    scriptW(File1+"_result.root");
 //    scriptH(File1+"_result.root");
-//    CompareWeighting(File2);
-//    CorrectionRefH19(File2);
+//    DoCorrectionH(File2);
 //    scriptH(File2+"_result.root");
+
+//    ReadMCNP();
 }

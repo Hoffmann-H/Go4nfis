@@ -27,7 +27,7 @@ Int_t Right(string FC)
 Int_t Tail(string FC)
 {
     if (!strcmp(FC.c_str(), "PuFC"))
-        return 35;
+        return 40;
     else // UFC
         return 50;
 }

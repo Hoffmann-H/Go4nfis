@@ -301,217 +301,23 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 
 void MCNPtoROOT()
 {
+    /// Filled geometry
     Geant4toROOT("PuFC_real_c_5E7_v2.root", "NIF", "real");
-//    Geant4toROOT("PuFC_ideal_c_FG+BG.root", "PuFC", "ideal");
-//    Geant4toROOT("PuFC_ideal_c_FG.root", "PuFC", "ideal_dir");
-//    Geant4toROOT("UFC_real_c_5E7.root", "UFC_NIF", "real");
-//    Geant4toROOT("UFC_ideal_c_FG+BG.root", "UFC", "ideal");
-//    Geant4toROOT("UFC_ideal_c_FG.root", "UFC", "ideal_dir");
+    Geant4toROOT("UFC_real_c_5E7.root", "UFC_NIF", "real");
+    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
+    MCNPtoROOT(1, "UFC_NIF", "real", "FCscat_PTB_UFC_weight/tally/FCscat_a");
+    /// Shadow bar
 //    Geant4toROOT("UFC_SB_5E7.root", "UFC_SB", "SB");
-//    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
-//    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
-//    MCNPtoROOT(1, "UFC_NIF", "real", "FCscat_PTB_UFC_weight/tally/FCscat_a");
-//    MCNPtoROOT(1, "UFC", "ideal_dir", "FCscat_PTB_UFC_weight_void_dir/tally/FCscat_a");
+
+    /// Void geometry, direct TARGET spectrum
+    Geant4toROOT("PuFC_ideal_c_FG.root", "PuFC", "ideal");
+    Geant4toROOT("UFC_ideal_c_FG.root", "UFC", "ideal");
+    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
+    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void_dir/tally/FCscat_a");
+
+    /// Void geometry, total TARGET spectrum
+//    Geant4toROOT("PuFC_ideal_c_FG+BG.root", "PuFC", "ideal");
+//    Geant4toROOT("UFC_ideal_c_FG+BG.root", "UFC", "ideal");
 //    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void/tally/FCscat_a");
-
-
-//    Geant4toROOT("PuFC_real_VII.0.root", "NIF", "real");
-}
-
-void unused_functions()
-{
-//string NameTag(string result_key = "2")
-//{
-//    if (result_key == "2")
-//        return "";
-//    if (result_key == "1")
-//        return "Sc_";
-//    if (result_key == "0")
-//        return "Dir_";
-//    cout << "Unknown result key " << result_key << endl;
-//    return 0;
-//}
-
-//string PathTag(string result_key = "2")
-//{
-//    if (result_key == "2")
-//        return "";
-//    if (result_key == "1")
-//        return "Scattered/";
-//    if (result_key == "0")
-//        return "Direct/";
-//    cout << "Unknown result key " << result_key << endl;
-//    return 0;
-//}
-
-//TGraphErrors* GetEmitMCNP(Double_t SimulatedN, string FC = "PuFC")
-//{
-//    Double_t SourceMaxAngle = atan(12.7/150);
-//    TGraphErrors *ge = new TGraphErrors(8);
-//    ge->SetTitle("Projectiles; Deposit; Neutrons");
-//    for (Int_t i = 0; i < 8; i++)
-//    {
-//        Double_t SimulatedDistance = Distance(i, FC) - 2.0; //
-//        Double_t DepositAngle = atan(DepositRadius(i, FC) / SimulatedDistance);
-//        Double_t Emit = SolidAngle(DepositAngle) / SolidAngle(SourceMaxAngle);
-//        Double_t DEmit = sqrt(Emit / SimulatedN);
-//        ge->SetPoint(i, i+1, Emit);
-//        ge->SetPointError(i, 0, DEmit);
-////        cout << Emit << "+-" << DEmit << endl;
-//    }
-//    return ge;
-//}
-
-//void TraLenMCNPtoROOT(string result_key = "2", Bool_t save = 1, Bool_t draw = 0, string FC = "PuFC", Long_t SimulatedN = 60000000000)
-//{ // Convert Track Length MCNP results to root
-//    char name[128] = "";
-//    string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_PTB/tally";
-//    TH2D *h[8];
-
-//    TFile *fAna;
-//    if (save)
-//        fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-
-//    TCanvas *c1;
-//    if (draw)
-//    {
-//        c1 = new TCanvas();
-//        c1->Divide(4, 2);
-//    }
-
-//    // Loop over files
-//    for (Int_t i = 0; i < 8; i++)
-//    {
-//        sprintf(name, "%s/FCscat_g_tally-2%i4_xyz_0_%s.dmp", DirName.c_str(), 8 - i, result_key.c_str());
-
-//        // Create 2D histogram
-//        h[i] = MakeEvsT(name, 0, FC, result_key, i);
-//        // Track length estimator gives neutrons per started neutron and cm^2
-//        Double_t DepositArea = TMath::Pi() * pow(3.7, 2);
-//        h[i]->Scale(DepositArea);
-
-//        if (save)
-//        {
-////            cout << "Saving " << "Simulation/MCNP/ToFvsEkin/"<<PathTag(result_key) << endl;
-//            Save(fAna, "Simulation/MCNP/ToFvsEkin/"+PathTag(result_key), h[i]);
-//        }
-//        if (draw)
-//        {
-//            c1->cd(i + 1);
-////            gPad->SetLogz(1);
-//            h[i]->SetStats(0);
-////            h[i]->GetXaxis()->SetRangeUser(0, 100);
-//            h[i]->Draw("colz");
-//        }
-//    }
-//    if (draw)
-//    {
-//        c1->Modified();
-//        c1->Update();
-//    }
-//    if (save)
-//    {
-//        TGraphErrors *geEmit = GetEmitMCNP(SimulatedN, FC);
-//        Save(fAna, "Simulation/MCNP/Correction", geEmit, "Emit");
-//        fAna->Save();
-//        fAna->Close();
-//    }
-//}
-
-//void SimpleMCNPtoROOT(string result_key = "2", Bool_t save = 1, Bool_t draw = 0, string FC = "PuFC", Long_t SimulatedN = 6000000000)
-//{ // Convert simple MCNP results to root
-//    char name[128] = "";
-//    string DirName = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_PTB/tally";
-//    TH2D *h[8];
-
-//    TFile *fAna;
-//    if (save)
-//        fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-
-
-//    TCanvas *c1;
-//    if (draw)
-//    {
-//        c1 = new TCanvas();
-//        c1->Divide(4, 2);
-//    }
-
-//    // Loop over files
-//    for (Int_t i = 0; i < 8; i++)
-//    {
-//        sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_%s.dmp", DirName.c_str(), 8 - i, result_key.c_str());
-//        string front_key, back_key;
-
-//        // Create 2D histogram
-//        if (result_key == "2")
-//        { // total
-//            front_key = "9";
-//            back_key = "8";
-//        }
-//        if (result_key == "1")
-//        { // scattered
-//            front_key = "5";
-//            back_key = "4";
-//        }
-//        if (result_key == "0")
-//        { // direct
-//            front_key = "1";
-//            back_key = "0";
-//        }
-//        // Open 2D front
-//        sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_%s.dmp", DirName.c_str(), 8-i, front_key.c_str());
-//        TH2D *pH2front = MakeEvsT(name, 0, FC, result_key, i, 0);
-//        // Change name to prevent overwriting
-//        sprintf(name, "%s_EvsT_front_%i", FC.c_str(), i+1);
-//        pH2front->SetName(name);
-//        // Open 2D back
-//        sprintf(name, "%s/FCscat_b_tally-2%i1_xyz_0_%s.dmp", DirName.c_str(), 8-i, back_key.c_str());
-//        h[i] = MakeEvsT(name, 0, FC, result_key, i, 0);
-//        // Add front and back
-//        h[i]->Add(pH2front);
-
-//        if (save)
-//        {
-////            cout << "Saving " << "Simulation/MCNP_simple/ToFvsEkin/"<<PathTag(result_key) << endl;
-//            Save(fAna, "Simulation/MCNP_simple/ToFvsEkin/"+PathTag(result_key), h[i]);
-//        }
-//        if (draw)
-//        {
-//            c1->cd(i + 1);
-//            h[i]->SetStats(0);
-//            h[i]->GetXaxis()->SetRangeUser(0, 100);
-//            h[i]->Draw("colz");
-//        }
-//    }
-
-//    if (draw)
-//    {
-//        c1->Modified();
-//        c1->Update();
-//    }
-//    if (save)
-//    {
-//        TGraphErrors *geEmit = GetEmitMCNP(SimulatedN, FC);
-//        Save(fAna, "Simulation/MCNP_simple/Correction", geEmit, "Emit");
-//        fAna->Save();
-//        fAna->Close();
-//    }
-//}//*/
-
-//TH2D* TH2FtoTH2D(TH2F *h1, string FC, string key, Int_t ch)
-//{
-//    const char *name = h1->GetName();
-//    const char *title = h1->GetTitle();
-//    string replace_name = FC+"_"+key+"_"+to_string(ch+1);
-//    h1->SetName(replace_name.c_str());
-//    if (h1->GetNbinsX() != 2000)
-//        cout << replace_name << " bad binning " << h1->GetNbinsX() << endl;
-//    if (h1->GetNbinsY() != 1600)
-//        cout << replace_name << " bad binning " << h1->GetNbinsY() << endl;
-//    TH2D *h2 = new TH2D(name, title, 2000, 0, 200, 1600, 0, 16);
-//    h2->GetXaxis()->SetTitle(h1->GetXaxis()->GetTitle());
-//    h2->GetYaxis()->SetTitle(h1->GetYaxis()->GetTitle());
-//    h2->Add(h1);
-//    return h2;
-//}
+// /net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_void/tally/FCscat_c_tally_2*4_xyz_0.dmp
 }
