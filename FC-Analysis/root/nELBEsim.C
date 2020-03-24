@@ -481,49 +481,43 @@ TH1F* GetCorrLoss(string StrSimuFile, string StrFC, uint ch, Bool_t Draw = 0)
 */
 
 
-void CorrectionRefH19(TFile *f, Bool_t w = 0)
+void CorrectionRefH19(TFile *f)
 {
     string Name = "";
     TH1F *pH1_H19[10], *pH1_sumH19, *pH1_UFC[8], *pH1_Ref[8];
     for (Int_t channel = 0; channel < 10; channel++)
     {
-        if (w) Name = "TrackLength/Correction/W_C_H19_"+std::to_string(channel+1);
-        else   Name = "Hit/Correction/H_C_H19_"+std::to_string(channel+1);
+        Name = "H19/Correction/C_H19_"+std::to_string(channel+1);
         pH1_H19[channel] = (TH1F*)f->Get(Name.c_str());
         if (!pH1_H19[channel]) cout << "Could not get " << Name << endl;
         if (channel==0) {
-            pH1_sumH19 = (TH1F*)pH1_H19[0]->Clone(w?"W_C_H19":"H_C_H19");
+            pH1_sumH19 = (TH1F*)pH1_H19[0]->Clone("C_H19");
             if (!pH1_sumH19) cout << "Could not get " << Name << endl;
             pH1_sumH19->SetDirectory(0);
         } else
             pH1_sumH19->Add(pH1_H19[channel], 1.0);
     }
     pH1_sumH19->Scale(0.1);
-    if (w) Name = "TrackLength/Correction";
-    else   Name = "Hit/Correction";
+    Name = "H19/Correction";
     SaveToFile(f, Name.c_str(), pH1_sumH19);
     for (Int_t channel = 0; channel < 8; channel++)
     {
-        if (w) Name = "TrackLength/Correction/W_C_UFC_"+std::to_string(channel+1);
-        else   Name = "Hit/Correction/H_C_UFC_"+std::to_string(channel+1);
+        Name = "UFC/Correction/C_UFC_"+std::to_string(channel+1);
         pH1_UFC[channel] = (TH1F*)f->Get(Name.c_str());
         if (!pH1_UFC[channel]) cout << "Could not get " << Name << endl;
-        if (w) Name = "W_C_UFC_RefH19_"+std::to_string(channel+1);
-        else   Name = "H_C_UFC_RefH19_"+std::to_string(channel+1);
+        Name = "C_UFC_RefH19_"+std::to_string(channel+1);
         pH1_Ref[channel] = (TH1F*)pH1_UFC[channel]->Clone(Name.c_str());
         pH1_Ref[channel]->SetDirectory(0);
         pH1_Ref[channel]->Divide(pH1_UFC[channel], pH1_sumH19, 1.0, 1.0);
         if (!pH1_Ref[channel]) cout << "Could not get " << Name << endl;
-        if (w) Name = "TrackLength/Correction/RefH19";
-        else   Name = "Hit/Correction/RefH19";
-        SaveToFile(f, Name.c_str(), pH1_Ref[channel]);
+        SaveToFile(f, "UFC_RefH19", pH1_Ref[channel]);
     }
 }
 
-void DoCorrectionH(string StrHistoFileName)
+void DoCorrection(string StrHistoFileName)
 { // file name without .root ending
-    TFile *fH = TFile::Open((StrHistoFileName+".root").c_str(), "READ"); // histogrammed simulation data, without track length weighting
-    TFile *fout = TFile::Open((StrHistoFileName+"_result.root").c_str(), "UPDATE");
+    TFile *f = TFile::Open((StrHistoFileName+".root").c_str(), "UPDATE"); // histogrammed simulation data
+    if (!f) cout << "Could not open " << StrHistoFileName << ".root" << endl;
 
     string FCs[] = {"H19", "UFC"};
     Int_t NumCh[] = {10, 8};
@@ -539,18 +533,18 @@ void DoCorrectionH(string StrHistoFileName)
 //            TH1F *pT_H = GetTransm((StrHistoFileName+".root").c_str(), FC, channel);
 //            pT_H->SetName(("H_T_"+FC+"_"+std::to_string(channel+1)).c_str());
 //            SaveToFile(f, "Hit/Transmission", pT_H);
-            TH1F *pC_H = GetCorrection(fH, FC, channel, pGrXS);
-            pC_H->SetDirectory(0);
-            pC_H->SetName(("H_C_"+FC+"_"+std::to_string(channel+1)).c_str());
-            SaveToFile(fout, "Hit/Correction", pC_H);
+            TH1F *pC = GetCorrection(f, FC, channel, pGrXS);
+            pC->SetDirectory(0);
+            pC->SetName(("C_"+FC+"_"+std::to_string(channel+1)).c_str());
+            SaveToFile(f, FC+"/Correction", pC);
         }
     }
-    fH->Close();
-    CorrectionRefH19(fout, 0);
-    fout->Save();
-    fout->Close();
+    f->Save();
+    CorrectionRefH19(f);
+    f->Save();
+    f->Close();
 }
-
+/*
 void DoCorrectionW(string StrHistoFileName)
 { // file name without _w.root ending
     TFile *fW = TFile::Open((StrHistoFileName+"_w.root").c_str(), "READ"); // histogrammed simulation data, with track length weighting
@@ -579,7 +573,7 @@ void DoCorrectionW(string StrHistoFileName)
     CorrectionRefH19(fout, 1);
     fout->Save();
     fout->Close();
-}
+}//*/
 
 /*void avWeight(string StrHistoFileName)
 {
@@ -826,7 +820,7 @@ void HistoMCNP(string in_file_path, string FC, Int_t channel, TFile* f)
     Int_t binT, binE;
     for (Int_t i = 0; i < N; i++)
     {
-        gTE->GetPoint(i, T, E);
+        gTE->GetPoint(i, T, E); // unit [T]: 10 ns
         T *= 10; // unit: 1 ns
         C = gTE->GetErrorX(i);
         DC = gTE->GetErrorY(i);
@@ -896,20 +890,17 @@ void HistoMCNP(string in_file_path, string FC, Int_t channel, TFile* f)
             }
         }
 //    cout << "hTvsE: " << hTvsE->Integral() << endl;
-    string Path = FC+"/ToFvsEkin/";
+    string Path = FC+"/ToFvsEkin";
     SaveToFile(f, Path, hTvsE);
-    Path = FC+"/EToFvsEkin/";
+    Path = FC+"/EToFvsEkin";
     SaveToFile(f, Path, hEvsE);
 //    hEvsE->Draw("colz");
 }
 
-void ReadMCNP()
+void ReadMCNP(string InFilePath, string OutFileName)
 {
-    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_c_tally-2";
-//    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_b_tally-2";
-    string OutFileName = "/gpfs/home/hoffma93/TrackLength/MCNP_hist_w.root";
     cout << "Reading MCNP results from .dmp files" << endl
-         << "\tInput path: " << InFilePath << endl
+         << "\tInput paths: " << InFilePath << "*" << "4_xyz_0.dmp" << endl
          << "\tHistogram output file: " << OutFileName << endl;
     TFile *f = TFile::Open(OutFileName.c_str(), "UPDATE");
     string FCs[] = {"H19", "UFC"};
@@ -928,16 +919,24 @@ void ReadMCNP()
 
 void nELBEsim()
 {
-    string File1 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E9_hist";
+    string File1 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E7_hist";
     string File2 = "/home/hoffma93/TrackLength/G4UFCvsH19_23082016_hist_repr";
     string File3 = "/home/hoffma93/TrackLength/G4UFCvsH19_v10.2_hist";
     string File4 = "/home/hoffma93/TrackLength/G4UFCvsH19_";
-    DoCorrectionH(File1);
+    DoCorrection(File1);
 //    avWeight(StrFileInPath);
 //    scriptW(File1+"_result.root");
 //    scriptH(File1+"_result.root");
 //    DoCorrectionH(File2);
 //    scriptH(File2+"_result.root");
 
-//    ReadMCNP();
+//    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_b_tally-2";
+//    string OutFileName = "/gpfs/home/hoffma93/TrackLength/MCNP_0213_filled.root";
+//    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_void/tally/FCscat_c_tally-2";
+//    string OutFileName = "/gpfs/home/hoffma93/TrackLength/MCNP_0213_void.root";
+//    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_c_tally-2";
+//    string OutFileName = "/gpfs/home/hoffma93/TrackLength/MCNP_0313_filled.root";
+//    string InFilePath = "/net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_void/tally/FCscat_d_tally-2";
+//    string OutFileName = "/gpfs/home/hoffma93/TrackLength/MCNP_0313_void.root";
+//    ReadMCNP(InFilePath, OutFileName);
 }
