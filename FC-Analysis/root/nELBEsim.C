@@ -105,6 +105,76 @@ void GetJEFF()
     WeightCrossSectionUFC(StrFileOutPath, "JEFF_3.3");
 }
 
+void WeightG4withXS(string FileName, string StrEval = "JEFF_3.3")
+{
+    char name[64] = "";
+    TFile *fSpec = TFile::Open(FileName.c_str(), "UPDATE");
+    if (!fSpec) cout << "Could not get " << FileName << endl;
+    TH1F *pH1src = (TH1F*) fSpec->Get("Source/nEnergy/Source_Ekin");
+    TFile *fXS = TFile::Open("~/TrackLength/FissionXS.root", "READ");
+    if (!fXS) cout << "Could not get " << "Fission cross section data" << endl;
+    string FCs[] = {"UFC", "H19"};
+    Int_t NumCh[] = {8, 10};
+    for (Int_t iFC = 0; iFC < 2; iFC++)
+    {
+	string FC = FCs[iFC];
+	TGraphErrors *pGrXS;
+	sprintf(name, "%s/%sTarget", StrEval.c_str(), FC.c_str());
+        fXS->GetObject(name, pGrXS);
+        if (!pGrXS) cout << "Could not get " << name << endl;
+	for (Int_t i = 0; i < NumCh[iFC]; i++)
+	{
+            sprintf(name, "%s/EToFvsEkin/%s_EToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+	    TH2D *pH2In = (TH2D*)fSpec->Get(name); if (!pH2In) cout << "Could not get " << name << endl;
+
+	    //////////////////////////////
+            cout << "Weight " << name << " by " << pGrXS->GetName() << endl;
+	    TH2F *pH2 = (TH2F*)pH2In->Clone();
+            sprintf(name, "%s_EToFvsEkin_wXS_Ch.%i", FC.c_str(), i+1);
+            pH2->SetName(name);
+            pH2->SetDirectory(0);
+	    Int_t NumBinX = pH2In->GetNbinsX();       //E(t) bins
+            Int_t NumBinY = pH2In->GetNbinsY();       //Ekin bins
+            Double_t Ekin, XS, Content, EContent;
+            for (int y_i=1; y_i<=NumBinY; y_i++)
+            {   //get neutron kinetic energy of corresponding bin y_i
+                Ekin    = pH2In->GetYaxis()->GetBinCenter(y_i);
+                //get cross section @ E=Ekin
+                XS      = pGrXS->Eval(Ekin);
+                //loop over all Time-of-Flight bins
+                for (int x_i=1; x_i<=NumBinX; x_i++)
+                {   //multiply bin content with xs section to get fission rate
+                    Content = pH2In->GetBinContent(x_i, y_i) * XS;
+                    EContent= pH2In->GetBinError(x_i, y_i) * XS;
+                    pH2->SetBinContent(x_i, y_i, Content);
+                    pH2->SetBinError(x_i, y_i, EContent);
+                }
+            }
+            SaveToFile(fSpec, FC + "/EToFvsEkin_wXS", pH2);
+	    //////////////////////////////
+	}
+	cout << "Weight " << pH1src->GetName() << " by " << pGrXS->GetName() << endl;
+	TH1F *pH1vac = (TH1F*) pH1src->Clone();
+	sprintf(name, "%s_Ekin", FC.c_str());
+	pH1vac->SetName(name);
+	pH1vac->SetDirectory(0);
+	NumBinX = pH1src->GetNbinsX();
+	for (int x_i = 1; x_i < NumBinX; x_i++)
+        {
+            Ekin = pH1src->GetBinContent(x_i);
+	    XS = pGrXS->Eval(Ekin);
+	    Content = pH1src->GetBinContent(x_i) * XS;
+            EContent = pH1src->GetBinError(x_i) * XS;
+            pH1vac->SetBinContent(x_i, Content);
+	    pH1vac->SetBinError(x_i, EContent);
+	}
+	SaveToFile(fSpec, "Source/nfEnergy", pH1vac);
+//	fSpec->Save();
+    }
+    fSpec->Save();
+    fSpec->Close();
+}
+
 TH2F* GetGeant4Data(TFile *f, string FC, bool scat, Int_t Channel)
 {   //function to get E_ToF vs. Ekin correlation histograms from a G4 simulation
     string InputPath;
@@ -919,11 +989,12 @@ void ReadMCNP(string InFilePath, string OutFileName)
 
 void nELBEsim()
 {
-    string File1 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E7_hist";
+    string File1 = "/home/hoffma93/TrackLength/G4UFCvsH19_1E7_hist.root";
     string File2 = "/home/hoffma93/TrackLength/G4UFCvsH19_23082016_hist_repr";
     string File3 = "/home/hoffma93/TrackLength/G4UFCvsH19_v10.2_hist";
-    string File4 = "/home/hoffma93/TrackLength/G4UFCvsH19_";
-    DoCorrection(File1);
+    string File4 = "/home/hoffma93/TrackLength/G4UFCvsH19_w";
+    WeightG4withXS(File1);
+//    DoCorrection(File1);
 //    avWeight(StrFileInPath);
 //    scriptW(File1+"_result.root");
 //    scriptH(File1+"_result.root");
