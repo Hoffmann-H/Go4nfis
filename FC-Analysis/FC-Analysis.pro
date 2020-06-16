@@ -68,7 +68,8 @@ SOURCES += \
     root/Stability.C \
     root/Target.C \
     root/ToF.C \
-    root/VglSim.C
+    root/VglSim.C \
+    root/Transmission.C
 
 !exists ($(ROOTSYS)/include/rootcintrule.pri):message ("The rootcintrules.pri was not found")
 exists ($(ROOTSYS)/include/rootcintrule.pri) {
