@@ -238,7 +238,7 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
     // Emitted neutrons
     TH1F *pHemit = (TH1F*)fG4->Get("Source/Source_Theta");
     Double_t maxRad = 0.08446522295019329;
-    Double_t maxTheta = maxRad * 180 / TMath::Pi();
+    Double_t maxTheta = maxRad * 180. / TMath::Pi();
     Int_t lastBin = pHemit->FindBin(maxTheta);
     Double_t WeightLastBin = (maxTheta - pHemit->GetBinLowEdge(lastBin)) / pHemit->GetBinWidth(lastBin);
     Double_t nEmit = pHemit->Integral(0, lastBin - 1) + WeightLastBin * pHemit->GetBinContent(lastBin);
@@ -268,6 +268,15 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
         TH1D *hProj = TimeProjection(pH2Tot, i, FC, key);
         Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/EffToF", hProj);
 
+        sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+        TH2D *pH2Sc = (TH2D*)fG4->Get(name);
+        sprintf(name, "%s_ToFvsEkin_%s_Sc_Ch.%i", FC.c_str(), key.c_str(), i+1);
+        pH2Sc->SetName(name);
+        pH2Sc->Scale(1.0 / norm);
+
+        TH1D *hProjSc = TimeProjection(pH2Sc, i, FC, key + "_Sc");
+        Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/EffToF/Scattered/", hProjSc);
+
         if (!strcmp(key.c_str(), "real") || !strcmp(key.c_str(), "SB")) {
             // for geometrical(non-vac) FG and SB runs:
             //// Fit peak form ///////////////////////////////////////
@@ -294,6 +303,7 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
             Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin/Scattered", pH2Sc);
         }
         Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin", pH2Tot);
+        Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin/Scattered", pH2Sc);
     }
     fAna->Save();
     fAna->Close();
@@ -304,16 +314,16 @@ void MCNPtoROOT()
     /// Filled geometry
     Geant4toROOT("PuFC_real_c_5E7_v2.root", "NIF", "real");
     Geant4toROOT("UFC_real_c_5E7.root", "UFC_NIF", "real");
-    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
-    MCNPtoROOT(1, "UFC_NIF", "real", "FCscat_PTB_UFC_weight/tally/FCscat_a");
+//    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
+//    MCNPtoROOT(1, "UFC_NIF", "real", "FCscat_PTB_UFC_weight/tally/FCscat_a");
     /// Shadow bar
 //    Geant4toROOT("UFC_SB_5E7.root", "UFC_SB", "SB");
 
     /// Void geometry, direct TARGET spectrum
-    Geant4toROOT("PuFC_ideal_c_FG.root", "PuFC", "ideal");
-    Geant4toROOT("UFC_ideal_c_FG.root", "UFC", "ideal");
-    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
-    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void_dir/tally/FCscat_a");
+//    Geant4toROOT("PuFC_ideal_c_FG.root", "PuFC", "ideal");
+//    Geant4toROOT("UFC_ideal_c_FG.root", "UFC", "ideal");
+//    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
+//    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void_dir/tally/FCscat_a");
 
     /// Void geometry, total TARGET spectrum
 //    Geant4toROOT("PuFC_ideal_c_FG+BG.root", "PuFC", "ideal");

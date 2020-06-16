@@ -191,31 +191,31 @@ void IndFisStabilityPu(TFile *fAna)
         geCnf->SetTitle(name);
         Double_t Y, DY;
         IndFisYield(fAna, "PuFC_FG_MS4", i, Y, DY);
-        geCnf->SetPoint(0, 1, Y);
+        geCnf->SetPoint(0, 8, Y);
         geCnf->SetPointError(0, 0, DY);
         IndFisYield(fAna, "PuFC_FG_MS5", i, Y, DY);
-        geCnf->SetPoint(1, 2, Y);
+        geCnf->SetPoint(1, 9, Y);
         geCnf->SetPointError(1, 0, DY);
         IndFisYield(fAna, "PuFC_FG_MS6", i, Y, DY);
-        geCnf->SetPoint(2, 3, Y);
+        geCnf->SetPoint(2, 10, Y);
         geCnf->SetPointError(2, 0, DY);
         IndFisYield(fAna, "PuFC_FG_MS7", i, Y, DY);
-        geCnf->SetPoint(3, 4, Y);
+        geCnf->SetPoint(3, 11, Y);
         geCnf->SetPointError(3, 0, DY);
         IndFisYield(fAna, "PuFC_BG_MS9", i, Y, DY);
-        geCnf->SetPoint(4, 5, Y);
+        geCnf->SetPoint(4, 12, Y);
         geCnf->SetPointError(4, 0, DY);
         IndFisYield(fAna, "PuFC_BG_MS10", i, Y, DY);
-        geCnf->SetPoint(5, 6, Y);
+        geCnf->SetPoint(5, 13, Y);
         geCnf->SetPointError(5, 0, DY);
         IndFisYield(fAna, "PuFC_BG_MS11", i, Y, DY);
-        geCnf->SetPoint(6, 7, Y);
+        geCnf->SetPoint(6, 14, Y);
         geCnf->SetPointError(6, 0, DY);
         Save(fAna, "PuFC/Stability", geCnf);
 
-        TF1 *fFG = Statistics(geCnf, 0.0, 4.5);
+        TF1 *fFG = Statistics(geCnf, 7.5, 11.5);
         Save(fAna, "PuFC/Stability/FG", fFG);
-        TF1 *fBG = Statistics(geCnf, 4.5);
+        TF1 *fBG = Statistics(geCnf, 11.5, 14.5);
         Save(fAna, "PuFC/Stability/BG", fBG);
     }
 }

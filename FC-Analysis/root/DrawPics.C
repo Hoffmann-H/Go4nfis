@@ -289,8 +289,11 @@ void DrawUscattering(TFile *f)
 {
 	char name[64] = "";
     TGraphErrors *geExp = (TGraphErrors*)f->Get("UFC/Correction/ExpS");
+        if (!geExp) cout << "Could not get " << "UFC/Correction/ExpS" << endl;
     TGraphErrors *geSim = (TGraphErrors*)f->Get("Simulation/Geant4/UFC_Open/Correction/S");
+        if (!geSim) cout << "Could not get " << "Simulation/Geant4/UFC_Open/Correction/S" << endl;
     TGraphErrors *geSimSB = (TGraphErrors*)f->Get("UFC/Correction/SimS");
+        if (!geSimSB) cout << "Could not get " << "UFC/Correction/SimS" << endl;
     BiasX(geExp, -0.05);
     geExp->SetLineColor(1);
     geExp->SetMarkerColor(1);
@@ -402,11 +405,11 @@ void DrawMonitorRate()
     gPu->SetMarkerStyle(5);
     TMultiGraph *mg = new TMultiGraph();
     mg->Add(gU);
-    mg->Add(gPu);
+//    mg->Add(gPu);
     mg->GetXaxis()->SetTimeDisplay(1);
     mg->GetXaxis()->SetTimeFormat("#splitline{%d.%m.}{%H:%M} %F1970-01-01");
     mg->GetXaxis()->SetTitle("#font[12]{t}");
-    mg->GetYaxis()->SetTitle("Ereignisse / s");
+    mg->GetYaxis()->SetTitle("Monitor rate / s^{-1}");
     mg->GetXaxis()->SetLabelSize(0.06);
     mg->GetXaxis()->SetLabelOffset(0.05);
     mg->GetXaxis()->SetTitleSize(0.07);
@@ -416,10 +419,10 @@ void DrawMonitorRate()
     mg->GetYaxis()->SetTitleSize(0.07);
     mg->GetYaxis()->SetTitleOffset(0.8);
     mg->GetYaxis()->SetRangeUser(800, 1800);
-    TLegend *l = new TLegend(0.4, 0.2, 0.6, 0.3);
+    TLegend *l = new TLegend(0.35, 0.2, 0.7, 0.35);
     l->SetTextFont(132);
-    l->AddEntry(gU, "KW 21");
-    l->AddEntry(gPu, "KW 22");
+    l->AddEntry(gU, "Calendar week 21");
+//    l->AddEntry(gPu, "Calendar week 22");
     TCanvas *c1 = new TCanvas("name", "title", 1, 1, 1200, 500);
     gPad->SetTicks(1, 1);
     mg->Draw("AP");
@@ -433,7 +436,8 @@ void DrawMonitorRate()
 
 Int_t Color(Int_t i)
 {
-    Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
+    Int_t color[] = {600,632,418,867,887,820,616,807,432,1};
+//    Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
     return color[i];
 }
 
@@ -446,7 +450,7 @@ void DrawPeakWidth(TFile *f, string FC = "PuFC")
         cout << "Could not open " << name << endl;
     TGraphErrors *gePeak[8];
     TMultiGraph *mg = new TMultiGraph();
-    sprintf(name, "%s Deposit", FC.c_str());
+    sprintf(name, "%s deposit", FC.c_str());
     TLegend *l = new TLegend(0.3, 0.2, 0.9, 0.35, name);//0.5, 0.15, 0.85, 0.4, name); l->SetTextFont(132);
     l->SetNColumns(9);
     for (Int_t i = 0; i < 8; i++)
@@ -467,12 +471,12 @@ void DrawPeakWidth(TFile *f, string FC = "PuFC")
     geAv->SetMarkerStyle(20);
     geAv->SetMarkerSize(2);
     mg->Add(geAv);
-    l->AddEntry(geAv, "Mittel", "PE");
+    l->AddEntry(geAv, "mean", "PE");
     l->SetTextFont(132);
     mg->GetXaxis()->SetRangeUser(0, 120);
-    mg->SetTitle("Integrationsgrenzen");
-    mg->GetXaxis()->SetTitle("Gate-Ende / ns");
-    mg->GetYaxis()->SetTitle("Ereignisse");
+    mg->SetTitle("Peak intervals");
+    mg->GetXaxis()->SetTitle("gate length / ns");
+    mg->GetYaxis()->SetTitle("events");
     mg->GetXaxis()->SetLabelSize(0.06);
     mg->GetXaxis()->SetTitleSize(0.07);
     mg->GetXaxis()->SetTitleOffset(0.8);
@@ -850,6 +854,7 @@ void DrawEnELBE()
 
 void DrawTargetE(TFile *f, string Subfolder, Int_t Population)
 {
+    if (Population != 1.E8) cout << "Warning: Hard-coded population 1.E8 !" << endl;
     char name[64] = "";
     sprintf(name, "Simulation/Target/%sE_Dir", Subfolder.c_str());
     TH1D *pDir = (TH1D*)f->Get(name);
@@ -859,22 +864,24 @@ void DrawTargetE(TFile *f, string Subfolder, Int_t Population)
     TH1D *pSc = (TH1D*)f->Get(name);
     sprintf(name, "Simulation/Target/%sE_Tot", Subfolder.c_str());
     TH1D *pTot = (TH1D*)f->Get(name);
-    pDir->Scale(1.0/pTot->Integral());
-    pSc->Scale(1.0/pTot->Integral());
-    pTot->Scale(1.0/pTot->Integral());
+    pDir->Scale(Population/pTot->Integral());
+    pSc->Scale(Population/pTot->Integral());
+    pTot->Scale(Population/pTot->Integral());
     pDir->SetLineColor(kRed);
     pSc->SetLineColor(kBlue);
 //    pTot->SetLineColor(kWhite);
+    pDir->SetLineWidth(lw);
+    pSc->SetLineWidth(lw);
     pTot->SetLineWidth(0);
     pTot->SetLineColor(kBlack);
     pTot->SetTitle("; #font[12]{E}_{n} / MeV; #font[12]{N} / 10keV");
 
-    sprintf(name, "%i simulierte Ionen", Population);
+    sprintf(name, "1 #upoint 10^{8} simulated ions");
     gStyle->SetLegendFont(132);
-    TLegend *l = new TLegend(0.2, 0.7, 0.7, 0.9, name);
-    sprintf(name, "%.2f%% direkte Neutronen", 100 * pDir->Integral() / pTot->Integral());
+    TLegend *l = new TLegend(0.2, 0.72, 0.7, 0.9, name);
+    sprintf(name, "%.2f%% direct neutrons", 100 * pDir->Integral() / pTot->Integral());
     l->AddEntry(pDir, name);
-    sprintf(name, "%.2f%% indirekte Neutronen", 100 * pSc->Integral() / pTot->Integral());
+    sprintf(name, "%.2f%% indirect neutrons", 100 * pSc->Integral() / pTot->Integral());
     l->AddEntry(pSc, name);
     SetSize(pTot);
     TCanvas *c = new TCanvas("Target_E", "Target_E", 200, 10, 700, 500);
@@ -1187,17 +1194,18 @@ void DrawQDC(TFile *fAna, string FC, Int_t ch, TFile *f, string Setup = "FG")
 {
     char name[64] = "";
 
-
     sprintf(name, "Histograms/Raw/QDC/low/H1RawQDCl_%i", ch+1);
     TH1I *pH = (TH1I*)f->Get(name);
     pH->SetStats(0);
     SetSize(pH);
     pH->SetLineColor(kBlack);
-    pH->SetTitle("; #font[12]{Q} / Kanal; Ereignisse");
-
+    pH->SetTitle("; #font[12]{Q} / Channel; Counts");
     Double_t xP = pH->GetBinCenter(pH->GetMaximumBin()),
-             x0 = QDCcut(ch, FC),
-             x1 = 4096;
+             x0 = QDCcut(ch, FC);
+    Double_t x1 = 1520;
+    pH->GetXaxis()->SetRangeUser(0, x1);
+    pH->GetYaxis()->SetRangeUser(0.5, 2. * pH->GetMaximum());
+
     TH1I *pHff = (TH1I*)pH->Clone();
     pHff->GetXaxis()->SetRange(x0, x1);
     pHff->SetFillColorAlpha(kBlue, 0.5);
@@ -1237,9 +1245,9 @@ void DrawQDC(TFile *fAna, string FC, Int_t ch, TFile *f, string Setup = "FG")
     g->SetFillColorAlpha(kRed, 0.5);
     g->Draw("same LF");
 
-    pH->GetXaxis()->SetRange(x0, x1);
-    y0 = 2.0 * pH->GetMaximum();
-    pH->GetXaxis()->SetRangeUser(0, 4096);
+    pHt->GetXaxis()->SetRange(x0, x1);
+    y0 = 2.0 * pHt->GetMaximum();
+    pHt->GetXaxis()->SetRange();
     y1 = y0;
 
     TArrow *aFF = new TArrow(x0, y0, x1, y1, 0.02, "<|>");
@@ -1254,18 +1262,18 @@ void DrawQDC(TFile *fAna, string FC, Int_t ch, TFile *f, string Setup = "FG")
 
     TLatex *t1 = new TLatex();
 //    t1->SetTextColor();
-    t1->DrawLatexNDC(0.21, 0.55, "#alpha");
+    t1->DrawLatexNDC(0.17, 0.55, "#alpha's");
     t1->Draw();
 
     TLatex *t2 = new TLatex();
 //    t2->SetTextColor();
-    t2->DrawLatexNDC(0.6, 0.55, "Spaltfragmente");
+    t2->DrawLatexNDC(0.5, 0.45, "fission fragments");
     t2->Draw();
 
     TLatex *t3 = new TLatex();
 //    t3->SetTextColor();
     sprintf(name, "#varepsilon #approx %.0f%%", 100*pH->Integral(pH->FindBin(x0), 4096)/((x0-xP)*y + pH->Integral(pH->FindBin(x0), 4096)));
-    t3->DrawLatexNDC(0.2, 0.24, name);
+    t3->DrawLatexNDC(0.16, 0.18, name);
     t3->Draw();
 }
 
@@ -1662,7 +1670,7 @@ void IndFisSum(TFile *fAna, string FC)
 
 void IndFisStability(TFile *fAna, string FC, Int_t ch)
 {
-    Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
+    Int_t color[]   = {600,632,418,867,887,820,616,807,432,1};
     char name[64] = "";
     // Get plot: Signal vs Run nr
     sprintf(name, "%s/Stability/%s_nf_%i", FC.c_str(), FC.c_str(), ch+1);
@@ -1676,27 +1684,45 @@ void IndFisStability(TFile *fAna, string FC, Int_t ch)
     sprintf(name, "%s Ch. %i; Run number; #font[12]{C}_{(n,f)} / #font[12]{C}_{NM}", FC.c_str(), ch+1);
     gCnf->SetTitle(name);
     SetSize(gCnf);
-    gCnf->SetLineColor(color[ch]);
-    gCnf->SetMarkerColor(color[ch]);
+    gCnf->SetLineColor(1);//Color(ch));
+    gCnf->SetMarkerColor(1);//Color(ch));
     gCnf->SetMarkerStyle(20);
-    gCnf->SetMarkerSize(0.5);
-    fFG->SetLineColor(color[ch]);
-    fBG->SetLineColor(color[ch]);
+    gCnf->SetMarkerSize(1.5);
+    fFG->SetLineColor(1);//Color(ch));
+    fBG->SetLineColor(1);//Color(ch));
 
     // Draw
     gPad->SetTicks(1, 1);
     gPad->SetTopMargin(0.06);
     gCnf->Draw("ap");
-    gCnf->GetYaxis()->SetRangeUser(-0.00002, 0.00004);//0.0, 0.0001); //
+    if (FC == "PuFC")
+    {
+        gCnf->GetYaxis()->SetRangeUser(-0.00002, 0.000045);
+//        Double_t x, y;
+//        for (uint i = 0; i < gCnf->GetN(); i++)
+//        {
+//            gCnf->GetPoint(i, x, y);
+//            gCnf->SetPoint(i, x + 7, y);
+//        }
+    }
+    else
+        gCnf->GetYaxis()->SetRangeUser(0.0, 0.00012);
     gCnf->GetXaxis()->SetNdivisions(110);
     gCnf->GetXaxis()->SetLabelOffset(0.0);
     fFG->Draw("same");
+
+    TLatex LaText;
+    LaText.SetTextSize(0.08);
+    sprintf(name, "%s Ch.%i", FC.c_str(), ch+1);
+//    LaText.SetTextColor(color[ch]);
+    LaText.DrawLatexNDC(.45,.85, name);
+
     TLatex *tFG = new TLatex();
     tFG->SetNDC();
     sprintf(name, "#chi^{2} / #font[12]{dof} = %.2f", fFG->GetChisquare() / fFG->GetNDF());
-    tFG->SetTextColor(color[ch]);
-    tFG->SetTextSize(0.08);
-    tFG->DrawLatex(0.3, 0.5, name);
+//    tFG->SetTextColor(color[ch]);
+    tFG->SetTextSize(0.07);
+    tFG->DrawLatex(0.3, 0.6, name);
 
     fBG->Draw("same");
 //    TLatex *tBG = new TLatex();
@@ -1706,7 +1732,7 @@ void IndFisStability(TFile *fAna, string FC, Int_t ch)
 //    tBG->SetTextSize(0.05);
 //    tBG->DrawLatex(0.75, 0.6, name);
 
-    TLine *line = new TLine(0.72, gPad->GetBottomMargin(), 0.72, 1 - gPad->GetTopMargin());//4.5, -0.00002, 4.5, 0.00004);//
+    TLine *line = new TLine(0.72, gPad->GetBottomMargin(), 0.72, 1 - gPad->GetTopMargin());//0.605, gPad->GetBottomMargin(), 0.605, 1 - gPad->GetTopMargin());//
     line->SetLineStyle(3);
     line->SetNDC();
     line->Draw();
@@ -1716,19 +1742,19 @@ void DrawIndFisStability(TFile *fAna, string FC)
 {
     char name[64] = "";
     sprintf(name, "cST_%s", FC.c_str());
-    TCanvas *cST = new TCanvas(name);
+//    TCanvas *cST = new TCanvas(name);
 //    cST->Divide(2, 2);
-//    for (Int_t i = 0; i < 4; i++)
-    Int_t i = 0;
+    for (Int_t i = 0; i < 8; i++)
+//    Int_t i = 7;
     {
-        cST->cd(i+1);
+//        cST->cd(i+1);
+        sprintf(name, "cST_%s_%i", FC.c_str(), i+1);
+        TCanvas *cST = new TCanvas(name);
         gPad->SetTopMargin(0.06);
-//        sprintf(name, "cST_%s_%i", FC.c_str(), i+1);
-//        TCanvas *cST = new TCanvas(name);
-        IndFisStability(fAna, FC, i+7);
-//        cST->Update();
+        IndFisStability(fAna, FC, i);
+        cST->Update();
     }
-    cST->Update();
+//    cST->Update();
 }
 
 TH1D* SignalStability(string Run, Int_t ch)
@@ -2201,23 +2227,31 @@ void DrawResult(TFile *fAna)
 void DrawCalN(TFile *fAna)
 {
     TGraphErrors *geUo = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_effN"); if (!geUo) cout << "Could not get " << "UFC/nAtoms/UFC_effN" << endl;
-    TGraphErrors *geUn = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_Geant4_calN"); if (!geUn) cout << "Could not get " << "UFC/nAtoms/UFC_Geant4_calN" << endl;
+    TGraphErrors *geUn = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_effN_TL"); if (!geUn) cout << "Could not get " << "UFC/nAtoms/UFC_effN_TL" << endl;
+    TGraphErrors *gePTB = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_Geant4_calN"); if (!gePTB) cout << "Could not get " << "UFC/nAtoms/UFC_Geant4_calN" << endl;
     geUo->SetTitle("; Deposit; #varepsilon#font[12]{N} / 10^{19}");
     BiasX(geUo, -0.1, 1.E-19);
-    BiasX(geUn, +0.1, 1.E-19);
+    BiasX(geUn, 0.0, 1.E-19);
+    BiasX(gePTB, +0.1, 1.E-19);
     geUo->SetLineWidth(2);
     geUo->SetMarkerStyle(20);
     geUo->SetMarkerSize(2);
     geUo->SetMarkerColor(kBlack);
     geUo->SetLineColor(kBlack);
     geUn->SetLineWidth(2);
-    geUn->SetMarkerStyle(21);
+    geUn->SetMarkerStyle(22);
     geUn->SetMarkerSize(2);
-    geUn->SetMarkerColor(kRed);
-    geUn->SetLineColor(kRed);
-    TLegend *lU = new TLegend(0.15, 0.65, 0.4, 0.85, "Kalibrierung");
-    lU->AddEntry(geUo, "#font[12]{n}ELBE, H19");
-    lU->AddEntry(geUn, "PTB, LC1");
+    geUn->SetMarkerColor(kBlue);
+    geUn->SetLineColor(kBlue);
+    gePTB->SetLineWidth(2);
+    gePTB->SetMarkerStyle(21);
+    gePTB->SetMarkerSize(2);
+    gePTB->SetMarkerColor(kRed);
+    gePTB->SetLineColor(kRed);
+    TLegend *lU = new TLegend(0.15, 0.65, 0.4, 0.85, "Calibration");
+    lU->AddEntry(geUo, "UFC vs H19 @ #font[12]{n}ELBE, old result", "pe");
+    lU->AddEntry(geUn, "UFC vs H19 @ #font[12]{n}ELBE, with Track Length", "pe");
+    lU->AddEntry(gePTB, "UFC @ PTB", "pe");
 
     new TCanvas("UFC_calN");
     gPad->SetBottomMargin(0.12);
@@ -2225,8 +2259,10 @@ void DrawCalN(TFile *fAna)
     geUo->Draw("AP");
     SetSize(geUo);
     geUo->GetXaxis()->SetTitleOffset(0.8);
+    geUo->GetXaxis()->SetNdivisions(110);
     geUo->GetYaxis()->SetRangeUser(3.5, 5);
     geUn->Draw("same P");
+    gePTB->Draw("same P");
     lU->Draw();
 
     TGraphErrors *gePu_o = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_effN"); if (!gePu_o) cout << "Could not get " << "UFC/nAtoms/UFC_effN" << endl;
@@ -2660,15 +2696,15 @@ int DrawPics()
 //    TColor::InvertPalette();
 
     TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
-//    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
-//    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
+    TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
+    TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
 
 //    DrawSigma(242);
 //    DrawCrossSectionRuns(fAna);
-//    DrawUscattering(fAna);
+    DrawUscattering(fAna);
 //    DrawPuCorrection(fAna);
-    DrawMonitorRate();
-//    DrawPeakWidth(fAna, "PuFC");
+//    DrawMonitorRate();
+//    DrawPeakWidth(fAna, "UFC");
 //    DrawPeakWidth(fAna, "UFC");
 //    DrawSimPeak(fAna, "UFC_NIF", "real", 1, "Geant4");
 //        DrawSimPeak(fAna, "NIF", "real", i, "Geant4");
@@ -2691,7 +2727,7 @@ int DrawPics()
 //    DrawA2(fAna);
 //    DrawEta(fAna);
 //    DrawInefficiency(fAna);
-//    DrawQDC(fAna, "PuFC", 0, fNIF);
+//    DrawQDC(fAna, "UFC", 0, fUNIF);
 //        DrawDtInt(fAna, "UFC", 0, 15, 40, 0, 0);
 //        DrawDtInt(fAna, "PuFC", 0, 15, 35, 0, 0);
 //    DrawDtChange(fAna, "PuFC");

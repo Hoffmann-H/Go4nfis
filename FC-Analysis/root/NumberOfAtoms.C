@@ -80,27 +80,27 @@ void NumberOfPuAtoms()
     fAna->Close();
 }
 
-TGraphErrors* EffUmA()
+TGraphErrors* EffUmA(string file_name = "/home/hoffma93/Programme/ROOT/Data/effUmA.dat")
 { // return a TGraphErrors with eps_nELBE * m_A from calibration with H19
   // units: mg/cm^2
-    string file_name = "/home/hoffma93/Programme/ROOT/Data/effUmA.dat";
     TGraphErrors *ge = new TGraphErrors(file_name.c_str(), "%lg %lg %lg");
     if (ge == 0)
         cout << "Fehler beim Öffnen von " << file_name << endl;
     return ge;
 }
 
-void NumberOfUAtoms()
+void NumberOfUAtoms(string StrRes = "")
 {
 //    Double_t Deposit_radius = 3.70; // cm
 //    Double_t Deposit_area = TMath::Pi() * pow(Deposit_radius, 2); // cm^2
-    Double_t Deposit_area[] = {42.7736, 41.5982, 43.3861, 43.4792, 43.2923, 43.1283, 42.7877, 43.6696}; // cm^2
-//    Double_t Deposit_area[] = {43, 43, 43, 43, 43, 43, 43, 43};
-    Double_t DeltaDepositArea = 0.7; // cm^2
+//    Double_t Deposit_area[] = {42.7736, 41.5982, 43.3861, 43.4792, 43.2923, 43.1283, 42.7877, 43.6696}; // cm^2
+    Double_t Deposit_area[] = {43, 43, 43, 43, 43, 43, 43, 43};
+    Double_t DeltaDepositArea = 0.7 / sqrt(8); // cm^2
     Double_t MolarMass = 235.3175644086;
     Double_t u = 1.660539E-24; // [g]
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-    TGraphErrors *gEffUmA = EffUmA();
+    string Name = "/home/hoffma93/Programme/ROOT/Data/effUmA" + StrRes + ".dat";
+    TGraphErrors *gEffUmA = EffUmA(Name);
     TGraphErrors *gEffNU = new TGraphErrors(8);
     for (Int_t i = 0; i < 8; i++)
     {
@@ -113,8 +113,10 @@ void NumberOfUAtoms()
         gEffNU->SetPoint(i, i+1, effNU);
         gEffNU->SetPointError(i, 0, DeffNU);
     }
-    Save(fAna, "UFC/nAtoms", gEffUmA, "effUmA");
-    Save(fAna, "UFC/nAtoms", gEffNU, "UFC_effN");
+    Name = "effUmA" + StrRes;
+    Save(fAna, "UFC/nAtoms", gEffUmA, Name);
+    Name = "UFC_effN" + StrRes;
+    Save(fAna, "UFC/nAtoms", gEffNU, Name);
     fAna->Save();
     fAna->Close();
 }
@@ -122,5 +124,5 @@ void NumberOfUAtoms()
 void NumberOfAtoms()
 {
     NumberOfPuAtoms();
-    NumberOfUAtoms();
+    NumberOfUAtoms("");
 }

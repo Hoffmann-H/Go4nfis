@@ -3,6 +3,8 @@
 #include "TTree.h"
 #include "nELBEsim.C"
 #include "TLegend.h"
+#include "TGraphErrors.h"
+#include "TMultiGraph.h"
 //#include "DrawPics.C"
 using namespace std;
 
@@ -143,19 +145,17 @@ void Draw()
     DrawVacuum(f, f, "H19", 0);
 }
 
-void DrawWeight(string StrFileName)
-{
+void DrawWeight(TFile *f, string xvar = "ToF")
+{ // xvar = "ToF", "Ekin"
     LoadStyles();
     gROOT->SetStyle("SinglePadStyle");
     gROOT->ForceStyle(kTRUE);
     gStyle->SetLegendFont(132);
-    TFile *f = TFile::Open(StrFileName.c_str(), "READ");
-    if (!f) cout << "Could not open " << StrFileName << endl;
 
-    string HistName[4] = {"TrackLength/Weight/H19_WvsEToF_Ch.1",
-                          "TrackLength/Weight/Scattered/H19_WvsEToF_sc_Ch.1",
-                          "TrackLength/Weight/UFC_WvsEToF_Ch.1",
-                          "TrackLength/Weight/Scattered/UFC_WvsEToF_sc_Ch.1"};
+    string HistName[4] = {"Weight/H19_Wvs"+xvar+"_Ch.1",
+                          "Weight/Scattered/H19_Wvs"+xvar+"_Sc_Ch.1",
+                          "Weight/UFC_Wvs"+xvar+"_Ch.1",
+                          "Weight/Scattered/UFC_Wvs"+xvar+"_Sc_Ch.1"};
     string Label[4] = {"H19, ch.1, tot.",
                        "H19, ch.1, sc.",
                        "UFC, ch.1, tot.",
@@ -181,7 +181,7 @@ void DrawWeight(string StrFileName)
 
     new TCanvas();
     gPad->SetTicks(1,1);
-//    gPad->SetLogx();
+    gPad->SetLogx();
     h[0]->Draw("");
     h[1]->Draw("same ");
     h[2]->Draw("same ");
@@ -469,17 +469,91 @@ void CompSimRes(TFile *f0, string descr0, TFile *f1, string descr1, string FC, I
     cS->Update();
 }
 
-void CompCF(string FC, Int_t ch, Bool_t weight, TFile *f0, string descr0, TFile *f1, string descr1, TFile *f2 = 0, string descr2 = "")
+void CompProjections(string FC, Int_t ch, Bool_t sc = 0)
+{ /// Compare spectra projections for simulations
+    string Files[] = {"~/TrackLength/G4UFCvsH19_23082016_hist.root",
+                      "~/TrackLength/G4UFCvsH19_v10.2_hist.root",
+                      "~/TrackLength/G4UFCvsH19_v10.2_hist_w.root",
+                      "~/TrackLength/G4UFCvsH19_1E9_hist.root",
+                      "~/TrackLength/G4UFCvsH19_1E9_hist_w.root",
+                      "~/TrackLength/MCNP_0313_filled.root"};
+    string Descr[] = {"G4 2016", "G4 10.2", "G4 10.2 TL", "G4 10.5", "G4 10.5 TL", "MCNP6"};
+    TH2F *h2[6];
+    TH1F *hEToF[6];
+    TGraphErrors *gEToF[6];
+//    TH1D *hEkin[6];
+    uint N = 6;
+    Double_t RebinFactor = 1;
+    char name[64] = "";
+    for (Int_t i = 0; i < N; i++)
+    {
+        TFile *f = TFile::Open(Files[i].c_str());
+        TH1I *hSrc = (TH1I*)f->Get("Source/nEnergy/Source_Ekin");
+        if (sc) sprintf(name, "%s/EToFvsEkin_wXS/Scattered/%s_EToFvsEkin_wXS_Sc_Ch.%i", FC.c_str(), FC.c_str(), ch+1);
+        else    sprintf(name, "%s/EToFvsEkin_wXS/%s_EToFvsEkin_wXS_Ch.%i", FC.c_str(), FC.c_str(), ch+1);
+        h2[i] = (TH2F*) f->Get(name); if (!h2[i]) cout << "Could not get " << name << endl;
+        h2[i]->SetDirectory(0);
+        sprintf(name, "px_%s_%i", FC.c_str(), ch+1);
+        hEToF[i] = (TH1F*)h2[i]->ProjectionX(name, 0, -1, "e");
+        hEToF[i]->Scale(1.0 / hSrc->Integral());
+        hEToF[i]->SetDirectory(0);
+        gEToF[i] = TH1toTGraphError(hEToF[i]);
+    }
+    Double_t A = 43; // [A] = cm^2. UFC.
+    hEToF[0]->Scale(1.0 / A);
+    hEToF[1]->Scale(1.0 / A);
+
+    hEToF[0]->SetStats(0);
+    sprintf(name, "%s, ch.%i%s", FC.c_str(), ch+1, sc?", sc":"");
+    TLegend *l = new TLegend(0.7, 0.6, 0.9, 0.9, name);
+    TCanvas *cS = new TCanvas("cS");
+    for (Int_t i = 0; i < N; i++)
+    {
+        hEToF[i]->SetLineColor(i+2);
+        hEToF[i]->Draw("same hist");
+        l->AddEntry(hEToF[i], Descr[i].c_str());
+        gEToF[i]->SetLineColor(i+2);
+        gEToF[i]->SetFillColorAlpha(i+2, 0.5);
+//        gEToF[i]->Draw("same 3");
+    }
+
+    l->Draw();
+    cS->Update();
+}
+
+void CompGraph(string HistoPath, string HistoName, Int_t N = 2)
 {
-/// Plot correction factor C(E(t)) from histogram restult files *_hist_result.root
+    string Files[] = {"~/TrackLength/G4UFCvsH19_1E7_hist.root",
+                      "~/TrackLength/G4UFCvsH19_1E7_hist_w.root", // vorlaeufig Test mit 1E7
+                      "~/TrackLength/G4UFCvsH19_23082016_hist.root",
+                      "~/TrackLength/G4UFCvsH19_v10.2_hist.root",
+                      "~/TrackLength/G4UFCvsH19_v10.2_hist_w.root",
+                      "~/TrackLength/G4UFCvsH19_1E9_hist.root",
+                      "~/TrackLength/G4UFCvsH19_1E9_hist_w.root",
+                      "~/TrackLength/MCNP_0313_filled.root"};
+    string Descr[] = {"G4 2016", "G4 10.2", "G4 10.2 TL", "G4 10.5", "G4 10.5 TL", "MCNP6"};
+    TCanvas *cGr = new TCanvas("cGr");
+    gPad->SetTicks(1, 1);
+    for (uint i = 0; i < N; i++)
+    {
+        TFile *f = TFile::Open(Files[i].c_str(), "READ"); if (!f) cerr << "Could not open " << Files[i] << endl;
+        string Name = HistoPath + "Graph/Gr_" + HistoName;
+        TGraphErrors *g = (TGraphErrors*) f->Get(Name.c_str()); if (!g) cerr << "Could not get " << Name << endl;
+
+    }
+}
+
+void CompCF(string FC, Int_t ch, TFile *f0, string descr0, TFile *f1, string descr1, TFile *f2 = 0, string descr2 = "")
+{
+/// Plot correction factor C(E(t)) from histogram restult files *_hist.root or *_hist_w.root
 /// FC = "H19", "UFC", "UFC_RefH19"
-    string HistPath, Name;
+    string HistPath, HistName, Name; // Changed from hists to TGraphs!
     if (strcmp(FC.c_str(), "UFC") && strcmp(FC.c_str(), "H19")) {
-        if (weight) HistPath = "TrackLength/Correction/RefH19/W_C_UFC_RefH19_" + std::to_string(ch+1);
-        else        HistPath = "Hit/Correction/RefH19/H_C_UFC_RefH19_" + std::to_string(ch+1);
+        HistPath = "UFC_RefH19/";
+        HistName = "C_UFC_RefH19_" + std::to_string(ch+1);
     } else {
-        if (weight) HistPath = "TrackLength/Correction/W_C_" + FC + "_" + std::to_string(ch+1);
-        else        HistPath = "Hit/Correction/H_C_" + FC + "_" + std::to_string(ch+1);
+        HistPath = FC + "/Correction/";
+        HistName = "G4Correction_" + FC + "_Ch." + std::to_string(ch+1);
     }
     TCanvas *cTL = new TCanvas("cTL");
     gPad->SetLogx();
@@ -487,131 +561,205 @@ void CompCF(string FC, Int_t ch, Bool_t weight, TFile *f0, string descr0, TFile 
     Name = FC + ", ch." + std::to_string(ch+1);
     TLegend *l = new TLegend(0.6, 0.6, 0.9, 0.9, Name.c_str());
 
-    TH1F *h0 = (TH1F*)f0->Get(HistPath.c_str()); if (!h0) cout << "Could not get " << HistPath << " from " << f0->GetName() << endl;
-    h0->SetStats(0);
-    h0->GetYaxis()->SetTitle("correction factor #font[12]{C}");
-    h0->GetXaxis()->SetRangeUser(0.1, 20.0);
-    h0->GetYaxis()->SetRangeUser(0.8, 1.5);
-    h0->SetLineColor(kBlue);
-    l->AddEntry(h0, descr0.c_str());
-    h0->Draw("hist");
+    TMultiGraph *mg = new TMultiGraph();
+    mg->GetXaxis()->SetRangeUser(0.1, 20.0);
+//    mg->GetYaxis()->SetRangeUser(0.8, 1.5);
+    mg->GetYaxis()->SetTitle("correction factor #font[12]{C}");
 
-    TH1F *h1 = (TH1F*)f1->Get(HistPath.c_str()); if (!h1) cout << "Could not get " << HistPath << " from " << f1->GetName() << endl;
-    h1->SetLineColor(kRed);
-    l->AddEntry(h1, descr1.c_str());
-    h1->Draw("same hist");
+    Name = HistPath + HistName;
+    TGraphErrors *g0 = (TGraphErrors*)f0->Get(Name.c_str()); if (!g0) cout << "Could not get " << Name << " from " << f0->GetName() << endl;
+    g0->SetLineColor(kBlue);
+    g0->SetFillColorAlpha(kBlue, 0.5);
+    mg->Add(g0);
+    l->AddEntry(g0, descr0.c_str());
+
+    Name = HistPath + HistName;
+    TGraphErrors *g1 = (TGraphErrors*)f1->Get(Name.c_str()); if (!g1) cout << "Could not get " << Name << " from " << f1->GetName() << endl;
+    g1->SetLineColor(kRed);
+    g1->SetFillColorAlpha(kRed, 0.5);
+    mg->Add(g1);
+    l->AddEntry(g1, descr1.c_str());
 
     if (f2) {
-        TH1F *h2 = (TH1F*)f2->Get(HistPath.c_str()); if (!h2) cout << "Could not get " << HistPath << " from " << f2->GetName() << endl;
-        h2->SetLineColor(kRed);
-        l->AddEntry(h2, descr1.c_str());
-        h2->Draw("same hist");
+        Name = HistPath + HistName;
+        TGraphErrors *g2 = (TGraphErrors*)f2->Get(Name.c_str()); if (!g2) cout << "Could not get " << Name << " from " << f2->GetName() << endl;
+        g2->SetLineColor(kRed);
+        g2->SetFillColorAlpha(kRed, 0.5);
+        mg->Add(g2);
+        l->AddEntry(g2, descr2.c_str());
     }
 
+    mg->Draw("ae0");
     l->Draw();
     cTL->Update();
 }
 
-void CompCF(TFile *f, string FC, Int_t ch)
+void CompCF_UFC_H19(Int_t var, TFile *f0, string descr0, TFile *f1, string descr1, string descrFile = "TL")
 {
-/// Plot correction factor C(E(t)) for one simulation, compare hit to weighted
+/// Plot correction factor C(E(t)) for H19 ch 1 and UFC ch 1 together
     char name[64] = "";
-    sprintf(name, "Hit/Correction/H_C_%s_%i", FC.c_str(), ch+1);
-    TH1F *hH = (TH1F*)f->Get(name); if (!hH) cerr << "Could not get " << name << endl;
-    sprintf(name, "TrackLength/Correction/W_C_%s_%i", FC.c_str(), ch+1);
-    TH1F *hW = (TH1F*)f->Get(name); if (!hW) cerr << "Could not get " << name << endl;
+    string ArrStrVar[] = {"TransMis", "Scattering", "Correction"};
+    string ArrStrVarName[] = {"Transmission factor  #it{T}",
+                            "Correlation factor  #it{k}",
+                            "Correction factor  #it{C}"};
+    string ArrStrSymbol[] = {"T", "k", "C"};
 
-    TFile *g = TFile::Open("~/FC-Analysis/2016.06/results/nfis_2016.06_orig.root", "READ"); if (!g) cout << "Could not open nfis_2016.06.root" << endl;
-    if (!strcmp(FC.c_str(), "UFC"))
-        sprintf(name, "Analysis/Simulation/Geant4/Correction/G4Correction_UFC_Ch.%i", ch+1);
-    else
-        sprintf(name, "Analysis/Simulation/Geant4/Correction/H19/G4Correction_H19_Ch.%i", ch+1);
-    TH1F *hO = (TH1F*)g->Get(name); if (!hO) cout << "Could not get " << name << endl;
+    sprintf(name, "H19/%s/G4%s_H19_Ch.1", ArrStrVar[var].c_str(), ArrStrVar[var].c_str());
+    TGraphErrors *g0H19 = (TGraphErrors*)f0->Get(name); if (!g0H19) cerr << "Could not get " << name << endl;
+    TGraphErrors *g1H19 = (TGraphErrors*)f1->Get(name); if (!g1H19) cerr << "Could not get " << name << endl;
 
-    hH->SetStats(0);
-    hH->GetYaxis()->SetTitle("correction factor #font[12]{C}");
-    hH->GetXaxis()->SetRangeUser(0.1, 20.0);
-    hH->GetYaxis()->SetRangeUser(0.8, 1.5);
-    hH->SetLineColor(kBlue);
-    hW->SetLineColor(kRed);
-    hO->SetLineColor(kOrange);
-    sprintf(name, "%s channel %i", FC.c_str(), ch+1);
-    TLegend *l = new TLegend(0.6, 0.6, 0.9, 0.9, name);
-    l->AddEntry(hO, "2016");
-    l->AddEntry(hH, "2020 Hit Count");
-    l->AddEntry(hW, "2020 Track Length");
+    sprintf(name, "UFC/%s/G4%s_UFC_Ch.1", ArrStrVar[var].c_str(), ArrStrVar[var].c_str());
+    TGraphErrors *g0UFC = (TGraphErrors*)f0->Get(name); if (!g0UFC) cerr << "Could not get " << name << endl;
+    TGraphErrors *g1UFC = (TGraphErrors*)f1->Get(name); if (!g1UFC) cerr << "Could not get " << name << endl;
 
-    TCanvas *cTL = new TCanvas("cTL");
+    g0H19->SetLineWidth(1);
+    g0H19->SetLineColor(kBlack);
+    g0H19->SetMarkerColor(kBlack);
+    g0H19->SetFillColorAlpha(kBlack, 0.2);
+    g1H19->SetLineWidth(1);
+    g1H19->SetLineColor(kRed);
+    g1H19->SetMarkerColor(kRed);
+    g1H19->SetFillColorAlpha(kRed, 0.2);
+    g0UFC->SetLineWidth(1);
+    g0UFC->SetLineColor(kBlue);
+    g0UFC->SetMarkerColor(kBlue);
+    g0UFC->SetFillColorAlpha(kBlue, 0.2);
+    g1UFC->SetLineWidth(1);
+    g1UFC->SetLineColor(kMagenta);
+    g1UFC->SetMarkerColor(kMagenta);
+    g1UFC->SetFillColorAlpha(kMagenta, 0.2);
+
+
+    string Title = "#it{n}ELBE FC Correction";
+    TMultiGraph *pMG = new TMultiGraph(ArrStrVarName[var].c_str(), Title.c_str());
+    pMG->Add(g0H19);
+    pMG->Add(g1H19);
+    pMG->Add(g0UFC);
+    pMG->Add(g1UFC);
+
+
+    TCanvas *cUFCH19 = new TCanvas("cUFCH19", "Canvas displaying the correction factors", 1, 1, 1915, 1120);
     gPad->SetLogx();
-    gPad->SetTicks(1,1);
-    hH->Draw("hist");
-    hW->Draw("same hist");
-    hO->Draw("same hist");
+    pMG->Draw("AL3");
+    pMG->GetXaxis()->SetTitle("#it{E(t)} / MeV");
+    pMG->GetXaxis()->SetRangeUser(0.1, 10.);
+
+    Double_t yRange[3][2] = {{0.5, 1.0}, {0.75, 1.05}, {0.7, 1.4}};
+    pMG->GetYaxis()->SetTitle(ArrStrVarName[var].c_str());
+//    pMG->GetYaxis()->SetTitle(ArrStrVarName[var].c_str());
+    pMG->GetYaxis()->SetRangeUser(yRange[var][0], yRange[var][1]);
+    pMG->GetYaxis()->SetNdivisions(505);
+
+    TLegend *l = new TLegend(0.25, 0.18, 0.85, 0.4);
+    l->SetNColumns(3);
+    l->SetLineColor(kWhite);
+    l->AddEntry((TObject*)0, descr0.c_str(), "");
+    l->AddEntry(g0H19, "H19 channel 1");
+    l->AddEntry(g0UFC, "UFC channel 1");
+    l->AddEntry((TObject*)0, descr1.c_str(), "");
+    l->AddEntry(g1H19, "H19 channel 1");
+    l->AddEntry(g1UFC, "UFC channel 1");
     l->Draw();
-    cTL->Update();
 
-///////////////////////////////////////////
+    cUFCH19->Update();
 
-    TH1F *hDiff = (TH1F*)hH->Clone();
-    hDiff->Divide(hW, hH, 1.0, 1.0);
-    hDiff->SetStats(0);
-    hDiff->GetYaxis()->SetTitle("change in cf #font[12]{C}");
-    hDiff->GetXaxis()->SetRangeUser(0.1, 20.0);
-    hDiff->GetYaxis()->SetRangeUser(0.8, 1.1);
-    hDiff->SetLineColor(kRed);
-    TCanvas *cD = new TCanvas("cD");
-    gPad->SetLogx();
-    gPad->SetTicks(1,1);
-    hDiff->Draw("hist");
+    string Filename = "pic/" + ArrStrSymbol[var] + "_" + descrFile + "_UFCH19.pdf";
+    cUFCH19->SaveAs(Filename.c_str());
 }
 
-void CompAllCF(string FC, Int_t ch = 0)
-{ /// Draw C(E(t)) for UFCvsH19 for different Geant4 versions, with and without track length.
-    string RefH19 = strcmp(FC.c_str(), "UFC_RefH19") ? "" : "RefH19/";
-    char name[64] = "";
-    TFile *fr1 = TFile::Open("~/TrackLength/G4UFCvsH19_23082016_hist_repr_result.root", "READ");
-    TFile *fr2 = TFile::Open("~/TrackLength/G4UFCvsH19_v10.2_hist_result.root", "READ"); // not existing yet
-    TFile *fr3 = TFile::Open("~/TrackLength/G4UFCvsH19_1E9_hist_result_backup.root", "READ");
-//    TFile *fr4 = TFile::Open("~/TrackLength/G4UFCvsH19_MCNP_hist_result.root", "READ"); // not existing yet
-    sprintf(name, "%s, ch.%i", FC.c_str(), ch+1);
-    TLegend *l = new TLegend(0.6, 0.6, 0.9, 0.9, name);
+void CompAllCF(Int_t var, string StrFC, Int_t ch = 0)
+{ /// Draw TGraphErrors for UFCvsH19 for different simulation versions, with and without track length.
+  ///    StrVar: "TransMis", "Scattering", "Correction"
+  ///    StrFC: "UFC", "H19", "RefH19"
+    string StrPath = "~/TrackLength/";
+    string ArrStrFile[] = {"G4UFCvsH19_23082016_hist.root",
+                           "G4UFCvsH19_v10.2_hist.root",
+                           "G4UFCvsH19_v10.2_hist_w.root",
+                           "G4UFCvsH19_1E9_hist.root",
+                           "G4UFCvsH19_1E9_hist_w.root",
+                           "MCNP_0313_filled.root"};
+    string ArrStrName[] = {"G4 10.2, 2016",
+                         "G4 10.2, no TL",
+                         "G4 10.2, with TL",
+                         "G4 10.5, no TL",
+                         "G4 10.5, with TL",
+                         "MCNP6 1.1b"};
+    string ArrStrVar[] = {"TransMis", "Scattering", "Correction"};
+    string ArrStrVarName[] = {"Transmission factor  #it{T}",
+                            "Correlation factor  #it{k}",
+                            "Correction factor  #it{C}"};
+    string ArrStrSymbol[] = {"T", "k", "C"};
+//    uint Select[] = {0, 1, 3}; // version
+//    uint N = 3;
+    uint Select[] = {3, 4}; // TL
+    uint N = 2;
+//    uint Select[] = {1, 2, 4}; // version & TL
+//    uint N = 3;
 
-    sprintf(name, "Hit/Correction/%sH_C_%s_%i", RefH19.c_str(), FC.c_str(), ch+1);
-    TH1F *h1 = (TH1F*) fr1->Get(name); if (!h1) cerr << "Could not get " << name << endl;
-    h1->GetXaxis()->SetRangeUser(0.5, 10);
-//    h1->GetYaxis()->SetRangeUser(1.0, 1.3);
-    h1->GetYaxis()->SetTitle("correction factor #font[12]{C}");
-    h1->SetLineColor(kBlack);
-    l->AddEntry(h1, "G4 v10.2 2016");
+    Int_t Colors[] = {600, 867, 418, 632, 887, 820, 616, 807, 1, 921};
+    TColor *Col_Pantone301C = new TColor (5000, 0,     0.345, 0.612, "Pantone301C");
+    TColor *Col_Pantone717C = new TColor (5001, 0.843, 0.459, 0.251, "Pantone717C");
 
-    sprintf(name, "Hit/Correction/%sH_C_%s_%i", RefH19.c_str(), FC.c_str(), ch+1);
-    TH1F *h2 = (TH1F*) fr2->Get(name); if (!h2) cerr << "Could not get " << name << endl;
-    h2->SetLineColor(kBlue);
-    l->AddEntry(h2, "G4 v10.2 Hit");
-    sprintf(name, "TrackLength/Correction/%sW_C_%s_%i", RefH19.c_str(), FC.c_str(), ch+1);
-    TH1F *h3 = (TH1F*) fr2->Get(name); if (!h3) cerr << "Could not get " << name << endl;
-    h3->SetLineColor(kGreen);
-    l->AddEntry(h3, "G4 v10.2 TL");
+    //define TLegend
+    TLegend *l1 = new TLegend(0.2, 0.15 , 0.9, 0.4);
+    l1->SetTextSize(0.04);
+    l1->SetNColumns(N);
+    l1->SetFillStyle(0);
+    l1->SetLineWidth(0);
+    l1->SetLineColor(kWhite);
 
-    sprintf(name, "Hit/Correction/%sH_C_%s_%i", RefH19.c_str(), FC.c_str(), ch+1);
-    TH1F *h4 = (TH1F*) fr3->Get(name); if (!h4) cerr << "Could not get " << name << endl;
-    h4->SetLineColor(kOrange);
-    l->AddEntry(h4, "G4 v10.5 Hit");
-    sprintf(name, "TrackLength/Correction/%sW_C_%s_%i", RefH19.c_str(), FC.c_str(), ch+1);
-    TH1F *h5 = (TH1F*) fr3->Get(name); if (!h5) cerr << "Could not get " << name << endl;
-    h5->SetLineColor(kRed);
-    l->AddEntry(h5, "G4 v10.5 TL");
+    string Title = "#it{n}ELBE FC " + ArrStrVarName[var];
+    TMultiGraph *pMG = new TMultiGraph(ArrStrVar[var].c_str(), Title.c_str());
 
-    /// MCNP results...
+    string Filename, ObjName;
+    TGraphErrors *pGraph;
+    for (uint j = 0; j < N; j++)
+    {
+        uint i = Select[j];
+        Filename = StrPath + ArrStrFile[i];
+        TFile *f = TFile::Open(Filename.c_str(), "READ"); if (!f) cerr << "Could not open " << Filename << endl;
+        ObjName = StrFC + "/" + ArrStrVar[var] + "/G4" + ArrStrVar[var] + "_" + StrFC + "_Ch." + std::to_string(ch+1);
+        pGraph = (TGraphErrors*) f->Get(ObjName.c_str()); if (!pGraph) cerr << "Could not get " << ObjName << " from " << f->GetName() << endl;
+        pGraph->SetLineWidth(1);
+        pGraph->SetLineColor(Colors[i]);
+        pGraph->SetMarkerColor(Colors[i]);
+        pGraph->SetFillColorAlpha(Colors[i],0.2);
+        pMG->Add(pGraph);//, "L3");
+        l1->AddEntry(pGraph, ArrStrName[i].c_str(), "lf");
 
-    new TCanvas();
-    gPad->SetLogx();
-    h1->Draw("hist");
-    h2->Draw("same hist");
-    h3->Draw("same hist");
-    h4->Draw("same hist");
-    h5->Draw("same hist");
-    l->Draw();
+    }
+    TCanvas *c = new TCanvas("TransMis", "Canvas displaying the correction factors", 1, 1, 1915, 1120);
+    c->cd();
+    c->cd(1)->SetTicks(1,1);
+    pMG->Draw("AL3");
+//    pMG->Draw("AL");
+    pMG->GetXaxis()->SetTitle("#it{E(t)} / MeV");
+    pMG->GetXaxis()->SetRangeUser(0.1, 10.);
+
+    Double_t yRange[3][2] = {{0.5, 1.0}, {0.75, 1.05}, {0.7, 1.4}};
+    pMG->GetYaxis()->SetTitle(ArrStrVarName[var].c_str());
+    pMG->GetYaxis()->SetRangeUser(yRange[var][0], yRange[var][1]);
+    pMG->GetYaxis()->SetNdivisions(505);
+
+    c->SetLogx();
+    c->Modified();
+    c->Update();
+
+    l1->Draw();
+    TLatex latex;
+        latex.SetTextSize(0.07);
+        latex.SetTextAlign(11); //align at top
+        latex.DrawLatexNDC(.825,.9,"#font[32]{#color[5001]{n}}#font[62]{#color[5000]{ELBE}}");
+    TPave *pPave = new TPave(0.945, 0.9, 0.95, 0.91, 4, "NDC");
+        pPave->SetFillColor(5001);
+        pPave->Draw("NDC");
+
+    c->Modified();
+    c->Update();
+//    Filename = "pic/" + ArrStrSymbol[var] + "_v_" + StrFC + "_" + std::to_string(ch+1) + ".pdf";
+    Filename = "pic/" + ArrStrSymbol[var] + "_TL_" + StrFC + "_" + std::to_string(ch+1) + ".pdf";
+//    Filename = "pic/" + ArrStrSymbol[var] + "_" + StrFC + "_" + std::to_string(ch+1) + ".pdf";
+    c->SaveAs(Filename.c_str());
 }
 
 void DrawProjections(TFile *f, string StrFC, Int_t ch)
@@ -682,24 +830,16 @@ void drawTL()
 //    TFile *fs2 = TFile::Open("/home/hoffma93/bigdata/nELBE/G4TransMis/20200131/G4UFCvsH19_31012020.root", "READ");
 //    TFile *fs3 = TFile::Open("/home/hoffma93/bigdata/nELBE/G4TransMis/20200211/results/G4TransMis_11022020.root", "READ");
 //    TFile *fs4 = TFile::Open("/home/hoffma93/bigdata/nELBE/G4TransMis/20200217/results/G4UFCvsH19_17022020.root", "READ");
+//    TFile *fv = TFile::Open("~/TrackLength/G4UFCvsH19_vac_1E7_hist.root");
     /// histogram files
-//    TFile *fh1 = TFile::Open("~/TrackLength/G4UFCvsH19_1E7_hist.root", "READ");
-//    TFile *fh2 = TFile::Open("~/TrackLength/G4UFCvsH19_1E7_hist_w.root", "READ");
-//    TFile *fh3 = TFile::Open("~/TrackLength/G4UFCvsH19_1E8_hist.root", "READ");
-//    TFile *fh4 = TFile::Open("~/TrackLength/G4UFCvsH19_1E8_hist_w.root", "READ");
-//    TFile *fh5 = TFile::Open("~/TrackLength/G4UFCvsH19_1E9_hist.root", "READ");
-//    TFile *fh6 = TFile::Open("~/TrackLength/G4UFCvsH19_1E9_hist_w.root", "READ");
-//    TFile *fh7 = TFile::Open("~/TrackLength/G4UFCvsH19_23082016_hist_orig.root", "READ");
-//    TFile *fh8 = TFile::Open("~/TrackLength/G4UFCvsH19_23082016_hist_repr.root", "READ");
-    /// result files
-//    TFile *fr1 = TFile::Open("~/TrackLength/G4UFCvsH19_23082016_hist_result.root", "READ");
-//    TFile *fr2 = TFile::Open("~/TrackLength/G4UFCvsH19_23082016_hist_repr_result.root", "READ");
-//    TFile *fr3 = TFile::Open("~/TrackLength/G4UFCvsH19_1E7_hist_result.root", "READ");
-//    TFile *fr4 = TFile::Open("~/TrackLength/G4UFCvsH19_1E8_hist_result.root", "READ");
-//    TFile *fr5 = TFile::Open("~/TrackLength/G4UFCvsH19_1E8_hist_result_backup.root", "READ");
-//    TFile *fr6 = TFile::Open("~/TrackLength/G4UFCvsH19_1E9_hist_result_backup.root", "READ");
+    TFile *fh0 = TFile::Open("~/TrackLength/G4UFCvsH19_23082016_hist.root", "READ");
+//    TFile *fh1 = TFile::Open("~/TrackLength/G4UFCvsH19_v10.2_hist.root", "READ");
+//    TFile *fh2 = TFile::Open("~/TrackLength/G4UFCvsH19_v10.2_hist_w.root", "READ");
+    TFile *fh3 = TFile::Open("~/TrackLength/G4UFCvsH19_1E9_hist.root", "READ");
+//    TFile *fh4 = TFile::Open("~/TrackLength/G4UFCvsH19_1E9_hist_w.root", "READ");
+//    TFile *fh5 = TFile::Open("~/TrackLength/MCNP_0313.root", "READ");
 
-//    DrawWeight(File3);
+//    DrawWeight(fh2, "kin");
 //    DrawWspectrum(StrFileInPath, "UFC", 1);
 //    DrawWspectra(StrFileInPath);
 //    DrawRefH19(File3, 7);
@@ -708,10 +848,11 @@ void drawTL()
 
 //    DrawFissionEE(f, "UFC", 0, 2, 0);
 //    DrawFissionEt(f, "UFC", 0, 2, 0);
-//    DrawProjections(f, "UFC", 0);
+//    DrawProjections(fv, "UFC", 7);
 //    DrawCfProjections(f, "UFC", 0);
 //    CompSimRes(fh3, "2020", fh7, "2016", "UFC", 2, "dual", "Ekin", 1);
-//    CompCF(f, "UFC", 7);
-//    CompCF("UFC_RefH19", 7, 0, fr1, "G4 v10.2", fr6, "G4 v10.5");
-    CompAllCF("UFC", 0);
+//    CompProjections("UFC", 0, 0);
+//    CompCF("H19", 7, fh3, "G4 10.5 no TL", fh4, "G4 10.5 with TL");
+    CompCF_UFC_H19(0, fh0, "G4 10.2, 2016:", fh3, "G4 10.5, no TL:", "v");
+//    CompAllCF(2, "H19", 0);
 }
