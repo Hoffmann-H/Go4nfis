@@ -132,24 +132,33 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
     TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     if (!fAna) cout << "Could not open " << "Analysis.root" << endl;
     sprintf(name, "%s/Correction/%s_Target_Gate", FC.c_str(), FC.c_str());
-    TGraphErrors *geT = (TGraphErrors*) fAna->Get(name); if (!geT) cout << "Could not get " << name << endl;
-    // geT unused! Is that N_{FG} / N_{FG+BG} ?
+//    TGraphErrors *geT = (TGraphErrors*) fAna->Get(name); if (!geT) cout << "Could not get " << name << endl;
+//    geT unused! Is that N_{FG} / N_{FG+BG} ?
 
+    TGraphErrors *geK = new TGraphErrors(8);
+    sprintf(name, "%s_%s_%s_k", Simulation.c_str(), FC.c_str(), key.c_str());
+    geK->SetName(name);
+    sprintf(name, "%s, %s, correlation loss; Deposit; #it{k}", FC.c_str(), Simulation.c_str());
+    geK->SetTitle(name);
     TGraphErrors *geC = new TGraphErrors(8);
     sprintf(name, "%s_%s_%s_C", Simulation.c_str(), FC.c_str(), key.c_str());
     geC->SetName(name);
-    sprintf(name, "%s, %s, correction factor; Deposit; C", FC.c_str(), Simulation.c_str());
+    sprintf(name, "%s, %s, correction factor; Deposit; #it{C}", FC.c_str(), Simulation.c_str());
     geC->SetTitle(name);
     TGraphErrors *geG = new TGraphErrors(8);
     sprintf(name, "%s_%s_Gate_%ins", FC.c_str(), Simulation.c_str(), RIGHT); // schema: PuFC_Geant4_Gate_15ns
     geG->SetName(name);
-    sprintf(name, "%s, %s, ToF gating correction; Deposit; G", FC.c_str(), Simulation.c_str());
+    sprintf(name, "%s, %s, ToF gating correction; Deposit; #it{G}", FC.c_str(), Simulation.c_str());
     geG->SetTitle(name);
     for (Int_t i = 0; i < 8; i++)
     {
         // neutron scattering correction factor
         sprintf(name, "Simulation/%s/%s_%s/EffToF/%s_ProjT_%s_%i", Simulation.c_str(), FC.c_str(), key.c_str(), FC.c_str(), key.c_str(), i+1);
         TH1D *hProjReal = (TH1D*)fAna->Get(name); if (!hProjReal) cout << "Could not get " << name << endl;
+
+        sprintf(name, "Simulation/%s/%s_%s/EffToF/Scattered/%s_ProjT_%s_Sc_%i", Simulation.c_str(), FC.c_str(), key.c_str(), FC.c_str(), key.c_str(), i+1);
+        TH1D *hProjScat = (TH1D*)fAna->Get(name); if (!hProjScat) cout << "Could not get " << name << endl;
+
         sprintf(name, "Simulation/%s/%s_ideal/EffToF/%s_ProjT_ideal_%i", Simulation.c_str(), FC.c_str(), FC.c_str(), i+1);
         TH1D *hProjIdeal = (TH1D*)fAna->Get(name); if (!hProjIdeal) cout << "Could not get " << name << endl;
         Int_t tMax = (Int_t)hProjIdeal->GetBinCenter(hProjIdeal->GetMaximumBin());
@@ -161,6 +170,16 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
         geC->SetPoint(i, i+1, hProjIdeal->Integral(bl, br) / hProjReal->Integral(bl, br)); ///
         //////////////////////////////////////////////////////////////////////////////////////
 //        cout << "Channel " << i+1 << " \t" << hProjIdeal->Integral() << " / " << hProjReal->Integral() << " * " << fTarget << " = \t" << hProjIdeal->Integral() / hProjReal->Integral() * fTarget << endl;
+
+        /// Calculate correlation loss
+        Double_t nfTot, nfSc, DnfTot, DnfSc, k, Dk;
+        nfTot = hProjReal->IntegralAndError(bl, br, DnfTot);
+        nfSc = hProjScat->IntegralAndError(bl, br, DnfSc);
+        k = 1. - nfSc / nfTot;
+        Dk = nfSc / nfTot * sqrt(pow(DnfSc / nfSc, 2) + pow(DnfTot / nfTot, 2));
+        geK->SetPoint(i, i+1, k);
+        geK->SetPointError(i, 0, Dk);
+        cout << "Channel " << i+1 << " \t" << nfSc << " (" << DnfSc << ") " << " / " << nfTot << " (" << DnfTot << ") " << " --> \t" << 1. - nfSc / nfTot << " (" << Dk << ") " << endl;
 
         Double_t C = hProjIdeal->Integral(bl, br) / hProjReal->Integral(bl, br);
         Double_t D = sqrt(1.0 / hProjIdeal->GetEntries() + 1.0 / hProjReal->GetEntries());
@@ -180,14 +199,16 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
         } else
             cout << i+1 << "   " << C << " +- " << C*D << endl;
     }
-    if (!strcmp(key.c_str(), "real"))
+    if (!strcmp(key.c_str(), "real")) {
         Save(fAna, FC+"/Correction", geG);
+        Save(fAna, FC+"/Correction", geK);
+    }
     Save(fAna, FC+"/Correction", geC);
     fAna->Save();
     fAna->Close();
 }//*/
 
-void SimSB(string Simulation, string FC = "PuFC")
+void SimSB(string Simulation, string FC = "PuFC", Int_t ch = 0)
 {
     cout << "Analyzing " << Simulation << " " << FC << " Shadow Bar" << endl;
     char name[128] = "";
@@ -203,9 +224,9 @@ void SimSB(string Simulation, string FC = "PuFC")
 
 void AnaSim()
 {
-    MCNPtoROOT();
+//    MCNPtoROOT();
 //    AnaSim("Geant4", "PuFC", "real");
-//    AnaSim("Geant4", "UFC", "real");
+    AnaSim("Geant4", "UFC", "real");
 //    AnaSim("Geant4", "UFC", "SB");
 //    AnaSim("MCNP", "PuFC", "real");
 //    AnaSim("MCNP", "UFC", "real");

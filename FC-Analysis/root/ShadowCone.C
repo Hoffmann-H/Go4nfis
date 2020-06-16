@@ -22,7 +22,7 @@ TGraphErrors* ExpShadowCone(TFile *fAna, string RunFG = "NIF", string RunBG = "S
     TGraphErrors *gS = new TGraphErrors(8);
     sprintf(name, "%s_SB_Exp", FC.c_str());
     gS->SetName(name);
-    gS->SetTitle("Shadow Cone scattered portion, experimental; Deposit; (n,f) #font[12]{C}_{sc} / #font[12]{C}_{tot}");
+    gS->SetTitle("Correlation loss k, experimental shadow cone; Deposit; (n,f) #it{k}");
 
     Double_t x, fisFG, fisBG, fluFG, fluBG, dfisFG, dfisBG, dfluFG, dfluBG, S, dS;
     cout << "ch\t fisFG\t fisBG\t fluFG\t fluBG" << endl;
@@ -39,7 +39,7 @@ TGraphErrors* ExpShadowCone(TFile *fAna, string RunFG = "NIF", string RunBG = "S
         S = fisBG / fisFG * fluFG / fluBG;
         dS = sqrt(pow(dfisFG, 2) + pow(dfisBG, 2) + pow(dfluFG, 2) + pow(dfluBG, 2));
         cout << i+1 << "  \t" << fisFG << "  \t" << fisBG << "  \t" << fluFG << "  \t" << fluBG << "  \t" << S << endl;
-        gS->SetPoint(i, i+1, S);
+        gS->SetPoint(i, i+1, 1. - S);
         gS->SetPointError(i, 0, dS * S);
     }
     return gS;
@@ -47,19 +47,34 @@ TGraphErrors* ExpShadowCone(TFile *fAna, string RunFG = "NIF", string RunBG = "S
 
 TGraphErrors* ExpShadowConeHardCode()
 {
-    char name[64] = "";
     TGraphErrors *gS = new TGraphErrors(8);
     gS->SetName("UFC_SB_Exp");
-    gS->SetTitle("Shadow Cone scattered portion, experimental; Deposit; (n,f)_{sc} / (n,f)_{tot}");
+    gS->SetTitle("Correlation loss k, experimental shadow cone; Deposit; (n,f) #it{k}");
     Double_t S[] = {0.0974296259, 0.1051633466, 0.1202697731, 0.1647621571, 0.142541863, 0.1067283051, 0.0952544876, 0.1264492991};
     Double_t DS[] = {0.0109502724, 0.0131367478, 0.0138942925, 0.014743786, 0.0135914887, 0.0125611275, 0.0128016384, 0.0135880239};
     for (Int_t i = 0; i < 8; i++)
     {
-        gS->SetPoint(i, i+1, S[i]);
+        gS->SetPoint(i, i+1, 1. - S[i]);
         gS->SetPointError(i, 0, DS[i]);
     }
     return gS;
 }
+
+TGraphErrors* SimShadowConeHardCode()
+{
+    TGraphErrors *gS = new TGraphErrors(8);
+    gS->SetName("UFC_SB_Exp");
+    gS->SetTitle("Correlation loss k, experimental shadow cone; Deposit; (n,f) #it{k}");
+    Double_t k[] = {0.874047, 0.878629, 0.882656, 0.888028, 0.892787, 0.896791, 0.901131, 0.906326};
+    Double_t Dk[] = {0.00029015, 0.000267977, 0.00039834, 0.000254956, 0.000249451, 0.000248283, 0.000360273, 0.000323168};
+    for (Int_t i = 0; i < 8; i++)
+    {
+        gS->SetPoint(i, i+1, k[i]);
+        gS->SetPointError(i, 0, Dk[i]);
+    }
+    return gS;
+}
+
 
 TGraphErrors* SimShadowCone(TFile *fAna, string Simulation = "Geant4", string FC = "UFC")
 {
@@ -72,7 +87,7 @@ TGraphErrors* SimShadowCone(TFile *fAna, string Simulation = "Geant4", string FC
     TGraphErrors *gS = new TGraphErrors(8);
     sprintf(name, "%s_SB_Sim", FC.c_str());
     gS->SetName(name);
-    sprintf(name, "Shadow Cone scattered portion, %s; Deposit; (n,f)_{sc} / (n,f)_{tot}", Simulation.c_str());
+    sprintf(name, "Correlation loss k, %s simulated shadow cone; Deposit; #it{k}", Simulation.c_str());
     gS->SetTitle(name);
 
     Double_t x, cFG, cBG, dcFG, dcBG, S, dS;
@@ -82,7 +97,7 @@ TGraphErrors* SimShadowCone(TFile *fAna, string Simulation = "Geant4", string FC
         dcFG = gFG->GetErrorY(i) / cFG;
         gBG->GetPoint(i, x, cBG);
         dcBG = gBG->GetErrorY(i) / cBG;
-        S = cFG / cBG;
+        S = 1. - cFG / cBG;
         dS = sqrt(pow(dcFG, 2) + pow(dcBG, 2));
         cout << i+1 << "  \t" << cFG << "  \t" << cBG << "  \t" << S << endl;
         gS->SetPoint(i, i+1, S);
@@ -97,7 +112,7 @@ TGraphErrors* SimShadowCone2(TFile *fAna, string Simulation = "Geant4", string F
     TGraphErrors *gS = new TGraphErrors(8);
     sprintf(name, "%s_SB_Sim2", FC.c_str());
     gS->SetName(name);
-    sprintf(name, "Shadow Cone scattered portion, %s; Deposit; (n,f)_{sc} / (n,f)_{tot}", Simulation.c_str());
+    sprintf(name, "Correlation loss k, %s simulated shadow cone; Deposit; #it{k}", Simulation.c_str());
     gS->SetTitle(name);
 
     Double_t nFG, nBG, fisFG, dfisFG, fisBG, dfisBG, S, dS;
@@ -113,7 +128,7 @@ TGraphErrors* SimShadowCone2(TFile *fAna, string Simulation = "Geant4", string F
         nBG = hBG->GetEntries();
         fisBG = hBG->Integral();
         dfisBG = 1.0 / sqrt(nBG);
-        S = fisBG / fisFG;
+        S = 1. - fisBG / fisFG;
         dS = sqrt(pow(dfisFG, 2) + pow(dfisBG, 2));
         cout << i+1 << "  \t" << fisFG << "  \t" << fisBG << "  \t" << S << endl;
         gS->SetPoint(i, i+1, S);
@@ -122,33 +137,13 @@ TGraphErrors* SimShadowCone2(TFile *fAna, string Simulation = "Geant4", string F
     return gS;
 }
 
-TGraphErrors* SimScatteredPart(TFile *fAna, string Simulation = "Geant4", string FC = "UFC")
+TGraphErrors* SimCorrLoss(TFile *fAna, string Simulation = "Geant4", string FC = "UFC")
 {
+    // Get correlation loss factor from root file
     char name[128] = "";
-    // Get correction factor
-    sprintf(name, "%s/Correction/%s_%s_real_C", FC.c_str(), Simulation.c_str(), FC.c_str());
-    TGraphErrors *gCf = (TGraphErrors*)fAna->Get(name); if (!gCf) cout << "Could not get " << name << endl;
-
-    // Create scattered portion graph
-    TGraphErrors *gSc = new TGraphErrors(8);
-    sprintf(name, "%s_SB_SimSc", FC.c_str());
-    gSc->SetName(name);
-    sprintf(name, "%s Simulated Scattered Portion; Deposit; (n,f)_{sc} / (n,f)_{tot}", FC.c_str());
-    gSc->SetTitle(name);
-
-    Double_t x, cf, Dcf;
-    // Loop over Deposits
-    for (Int_t i = 0; i < 8; i++)
-    {
-        // Read correction factor
-        gCf->GetPoint(i, x, cf);
-        Dcf = gCf->GetErrorY(i);
-
-        // Write scattered portion to graph
-        gSc->SetPoint(i, i+1, 1.0 - cf);
-        gSc->SetPointError(i, 0, Dcf);
-    }
-    return gSc;
+    sprintf(name, "%s/Correction/%s_%s_real_k", FC.c_str(), Simulation.c_str(), FC.c_str());
+    TGraphErrors *gK = (TGraphErrors*)fAna->Get(name); if (!gK) cout << "Could not get " << name << endl;
+    return gK;
 }
 
 TGraphErrors* AnalyticTransmission(string FC = "PuFC", string file = "TransMis.dat")
@@ -264,7 +259,7 @@ void ShadowCone()
 //    TGraphErrors *gExp = ExpShadowConeHardCode();
     TGraphErrors *gSim = SimShadowCone(fAna, "Geant4", "UFC");
 //    TGraphErrors *gSim2 = SimShadowCone2(fAna, "Geant4", "UFC");
-    TGraphErrors *gSimSc = SimScatteredPart(fAna, "Geant4", "UFC");
+    TGraphErrors *gSimSc = SimCorrLoss(fAna, "Geant4", "UFC");
 
     BiasX(gExp, -0.05);
     BiasX(gSim, +0.05);
@@ -283,14 +278,14 @@ void ShadowCone()
     gSimSc->SetMarkerColor(kBlue);
     gSimSc->SetLineColor(kBlue);
     TLegend *l = new TLegend(0.3, 0.2, 0.8, 0.4);
-    l->AddEntry(gExp, "Messung: SB / offen", "PE");
-    l->AddEntry(gSim, "Simulation: SB / offen", "P");
-    l->AddEntry(gSimSc, "Simulation: offen / Vakuum", "P");
+    l->AddEntry(gExp, "Shadow cone measurement", "PE");
+    l->AddEntry(gSim, "Shadow cone simulation", "P");
+    l->AddEntry(gSimSc, "Direct simulation", "P");
     l->SetTextFont(132);
     new TCanvas();
     gExp->Draw("AP");
-    gExp->GetYaxis()->SetRangeUser(0, 0.14);
-    gExp->GetYaxis()->SetTitle("#font[12]{C}_{sc} / #font[12]{C}_{tot}");
+    gExp->GetYaxis()->SetRangeUser(0.85, 1.0);
+    gExp->GetYaxis()->SetTitle("#it{k}");
     gExp->GetYaxis()->SetNdivisions(505);
     gExp->GetXaxis()->SetNdivisions(110);
     gSim->Draw("same P");
