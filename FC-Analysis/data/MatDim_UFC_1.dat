@@ -1,0 +1,61 @@
+# Defines isotopes and corresponding areal number densities
+# of materials crossed by the neutron beam from source to:
+
+### UFC channel 1 ###
+
+# A_Z_Isotope	Areal number density / b^-1
+
+# Si UFC backings
+14_28_Silicium	1.29E-05
+14_29_Silicium	6.53E-07
+14_30_Silicium	4.34E-07
+
+# Ta window and electrodes
+73_180_Tantalum	1.15E-09
+73_181_Tantalum	9.56E-06
+
+# Ti coating
+22_46_Titanium	7.31E-07
+22_47_Titanium	6.67E-07
+22_48_Titanium	6.74E-06
+22_49_Titanium	5.03E-07
+22_50_Titanium	4.93E-07
+
+# Pt H19 backings
+78_190_Platinum	4.97E-10
+78_192_Platinum	3.24E-08
+78_194_Platinum	1.36E-06
+78_195_Platinum	1.40E-06
+78_196_Platinum	1.04E-06
+78_198_Platinum	3.04E-07
+
+# Steel 304L UFC windows
+24_50_Chromium	1.53E-08
+24_52_Chromium	2.95E-07
+24_53_Chromium	3.35E-08
+24_54_Chromium	8.34E-09
+26_54_Iron	7.16E-08
+26_56_Iron	1.13E-06
+26_57_Iron	2.72E-08
+26_58_Iron	3.46E-09
+28_58_Nickel	1.12E-07
+28_60_Nickel	4.31E-08
+28_61_Nickel	1.87E-09
+28_62_Nickel	5.97E-09
+28_64_Nickel	1.52E-09
+
+# P10
+18_36_Argon	2.06E-06
+18_38_Argon	3.84E-07
+18_40_Argon	0.000610041397392
+6_12_Carbon	2.02E-05
+6_13_Carbon	2.25E-07
+1_1_Hydrogen	6.85E-06
+
+# Air
+7_14_Nitrogen	0.021826198902991
+7_15_Nitrogen	8.10E-05
+8_16_Oxygen	0.0058620050769
+8_17_Oxygen	2.79E-06
+8_18_Oxygen	1.12E-05
+18_40_Argon	0.000131197256483

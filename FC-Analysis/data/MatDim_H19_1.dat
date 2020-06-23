@@ -4,6 +4,23 @@
 ### H19 channel 1 ###
 
 # A_Z_Isotope	Areal number density / b^-1
+
+# Ta window and electrode
 73_180_Tantalum	1.8290679E-10
 73_181_Tantalum	1.52404034321E-06
 
+# P10
+18_36_Argon	1.55023917006E-07
+18_38_Argon	2.88327186E-08
+18_40_Argon	4.58199953085E-05
+6_12_Carbon	1.520829797088E-06
+6_13_Carbon	1.6915194912E-08
+1_1_Hydrogen	5.141834817E-07
+
+# Air
+7_14_Nitrogen	0.021436236442691
+7_15_Nitrogen	7.9505161381E-05
+8_16_Oxygen	0.0057572703069
+8_17_Oxygen	2.741557289E-06
+8_18_Oxygen	1.0966229156E-05
+18_40_Argon	0.000128853192583

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include "TGraphErrors.h"
+#include "TLegend.h"
 #include "SaveToFile.C"
 
 TGraphErrors *GetCrossSection(string File)
@@ -32,86 +33,71 @@ TGraphErrors *GetCrossSection(string File)
 }
 
 TGraphErrors *AddGraphs(TGraphErrors *ge1, TGraphErrors *ge2, Double_t c1 = 1.0, Double_t c2 = 1.0)
-{/// Add graphs' y values, use x values of graph with most points
+{/// Add graphs' y values, use x values of first one
     Double_t x, y;
 
     // handle nullpointers
-    if (!ge1 && !ge2) return 0;
-    if (!ge2) {
-        for (uint i = 0; i < ge1->GetN(); i++)
-        {
-            ge1->GetPoint(i, x, y);
-            ge1->SetPoint(i, x, c1 * y);
-        }
-        return ge1;
-    }
-    if (!ge1) {
-        for (uint i = 0; i < ge1->GetN(); i++)
-        {
-            ge2->GetPoint(i, x, y);
-            ge2->SetPoint(i, x, c2 * y);
-        }
-        return ge2;
-    }
+    if (!ge1) return 0;
 
     // N: maximum number of points
-    Int_t N = ge1->GetN() > ge2->GetN() ? ge1->GetN() : ge2->GetN();
+    Int_t N = ge1->GetN();
 
     TGraphErrors *geSum = new TGraphErrors(N);
 
-    if (ge1->GetN() > ge2->GetN()){
-        // if ge1 has more points than ge2, use ge1 x values
-        for (uint i = 0; i < N; i++)
-        {
-            ge1->GetPoint(i, x, y);
-            y = c1 * y + c2 * ge2->Eval(x);
-            geSum->SetPoint(i, x, y);
-        }
-    } else {
-        // if ge2 has more points than ge1, use ge2 x values
-        N = ge2->GetN();
-        for (uint i = 0; i < N; i++)
-        {
-            ge2->GetPoint(i, x, y);
-            y = c1 * ge1->Eval(x) + c2 * y;
-            geSum->SetPoint(i, x, y);
-        }
+    // use ge1 x values
+    for (uint i = 0; i < N; i++)
+    {
+        ge1->GetPoint(i, x, y);
+        y = c1 * y;
+        if (ge2 != 0)
+            y = y + c2 * ge2->Eval(x);
+        geSum->SetPoint(i, x, y);
     }
+//    } else {
+//        // if ge2 has more points than ge1, use ge2 x values
+//        N = ge2->GetN();
+//        for (uint i = 0; i < N; i++)
+//        {
+//            ge2->GetPoint(i, x, y);
+//            y = c1 * ge1->Eval(x) + c2 * y;
+//            geSum->SetPoint(i, x, y);
+//        }
+//    }
+//    cout << ge1->Eval(1.E6) << " * " << c1 << " + " << ge2->Eval(1.E6) << " * " << c2 << " = " << geSum->Eval(1.E6) << endl;
 
-    cout << ge1->Eval(1.E6) << " * " << c1 << " + " << ge2->Eval(1.E6) << " * " << c2 << " = " << geSum->Eval(1.E6) << endl;
     return geSum;
 }
 
 TGraphErrors *GetTotalCrossSection(string EvalDir, string Isotope)
 { // isotope name format: 94_242_Plutonium
     string Name;
-//    string EvalDir = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0/";
+//    string EvalDir = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0";
 //    cout << Isotope << " total cross section from " << EvalDir << endl;
     TGraphErrors *ge[] = {0, 0, 0, 0, 0};
 
-    Name = EvalDir + "Inelastic/CrossSection/" + Isotope;
+    Name = EvalDir + "/Inelastic/CrossSection/" + Isotope;
     ge[0] = GetCrossSection(Name);
     if (!ge[0]) {
 //        cout << "Inelastic cross section for " << Isotope << " not found. Exit" << endl;
         return 0;
     }
 
-    Name = EvalDir + "Elastic/CrossSection/" + Isotope;
+    Name = EvalDir + "/Elastic/CrossSection/" + Isotope;
     ge[1] = GetCrossSection(Name);
     if (!ge[1]) {
 //        cout << "Elastic cross section for " << Isotope << " not found" << endl;
     }
-    Name = EvalDir + "IsotopeProduction/CrossSection/" + Isotope;
+    Name = EvalDir + "/IsotopeProduction/CrossSection/" + Isotope;
     ge[2] = GetCrossSection(Name);
     if (!ge[2]) {
 //        cout << "IsotopeProduction cross section for " << Isotope << " not found" << endl;
     }
-    Name = EvalDir + "Fission/CrossSection/" + Isotope;
+    Name = EvalDir + "/Fission/CrossSection/" + Isotope;
     ge[3] = GetCrossSection(Name);
     if (!ge[3]) {
 //        cout << "Fission cross section for " << Isotope << " not found" << endl;
     }
-    Name = EvalDir + "Capture/CrossSection/" + Isotope;
+    Name = EvalDir + "/Capture/CrossSection/" + Isotope;
     ge[4] = GetCrossSection(Name);
     if (!ge[4]) {
 //        cout << "Capture cross section for " << Isotope << " not found" << endl;
@@ -158,15 +144,28 @@ TGraphErrors *GetTotalCrossSection(string EvalDir, string Isotope)
     return geTot;
 }
 
-void CompareTransmission(string StrMatDim, string Evaluation1 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0/", string Evaluation2 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VII.1/")
+void CompareTransmission(string StrMatDim   = "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/MatDim_H19_10.dat",
+                         string Evaluation1 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0",
+                         string Evaluation2 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VII.1")
 {
     ifstream ifsMatDim(StrMatDim);
     string line = "";
     string StrIsotope = "";
     Double_t ArealDensity = 0;
 
-    TGraphErrors *geMacroXS_1 = 0;
-    TGraphErrors *geMacroXS_2 = 0;
+    Int_t N = 500;
+    Double_t x0 = 1E5, x1 = 1E7;
+    Double_t x; // energy
+    TGraphErrors *geMacroXS_1 = new TGraphErrors(N);
+    geMacroXS_1->SetName("geMacroXS_1");
+    TGraphErrors *geMacroXS_2 = new TGraphErrors(N);
+    geMacroXS_2->SetName("geMacroXS_2");
+    for (Int_t i = 0; i < N; i++)
+    {
+        x = exp(i / (N - 1.) * (log(x1) - log(x0)) + log(x0));
+        geMacroXS_1->SetPoint(i, x, 0);
+        geMacroXS_2->SetPoint(i, x, 0);
+    }
 
     // Linewise read isotopes and areal number densities
     while(1) {
@@ -188,7 +187,7 @@ void CompareTransmission(string StrMatDim, string Evaluation1 = "/home/hoffma93/
 //        cout << geMacroXS_1->GetN() << " / " << geMacroXS_2->GetN() << endl;
     }
 
-    Double_t x, macroXS, T; // energy, macroscopic cross section, transmission
+    Double_t macroXS, T; // energy, macroscopic cross section, transmission
 
     TGraphErrors *geTransmission1 = new TGraphErrors(geMacroXS_1->GetN());
     for (uint i = 0; i < geMacroXS_1->GetN(); i++)
@@ -205,10 +204,31 @@ void CompareTransmission(string StrMatDim, string Evaluation1 = "/home/hoffma93/
         geTransmission2->SetPoint(i, x, T);
     }
 
+    string EvalName1, EvalName2;
+    // parse evaluation names from path
+//    size_t pos;
+//    pos = Evaluation1.find_last_of("/");
+//    EvalName1 = Evaluation1.substr(pos+1, Evaluation1.size()-pos-1);
+//    pos = Evaluation2.find_last_of("/");
+//    EvalName2 = Evaluation2.substr(pos+1, Evaluation2.size()-pos-1);
+//    cout << EvalName1 << ", " << EvalName2 << endl;
+    EvalName1 = "ENDF/B-VIII.0";
+    EvalName2 = "ENDF/B-VII.1";
+
     TCanvas *c2 = new TCanvas("c2");
+    gPad->SetTicks(1,1);
+    gPad->SetLogx();
+    geTransmission1->SetTitle("Neutron transmission");
     geTransmission1->Draw("APL");
     geTransmission2->SetLineColor(kRed);
     geTransmission2->Draw("sameLP");
+    geTransmission1->GetXaxis()->SetTitle("#it{E} / eV");
+    geTransmission1->GetXaxis()->SetRangeUser(1.E5, 1.E7);
+    geTransmission1->GetYaxis()->SetTitle("#it{T}");
+    TLegend *l = new TLegend(0.3, 0.2, 0.7, 0.4, "H19 channel 1");
+    l->AddEntry(geTransmission1, EvalName1.c_str());
+    l->AddEntry(geTransmission2, EvalName2.c_str());
+    l->Draw();
     c2->Update();
     c2->Draw();
 
@@ -217,22 +237,22 @@ void CompareTransmission(string StrMatDim, string Evaluation1 = "/home/hoffma93/
 void Transmission(string Isotope = "94_242_Plutonium")
 {
     cout << "Transmission..." << endl;
-    string Evaluation1 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0/";
-    string Evaluation2 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VII.1/";
+    CompareTransmission();
 
-    TGraphErrors *pGr = GetTotalCrossSection(Evaluation1, Isotope);
-    TGraphErrors *g = GetTotalCrossSection(Evaluation2, Isotope);
-
-    TCanvas *c1 = new TCanvas("c1");
+//    string Evaluation1 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0";
+//    string Evaluation2 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VII.1";
+//    TGraphErrors *pGr = GetTotalCrossSection(Evaluation1, Isotope);
+//    TGraphErrors *g = GetTotalCrossSection(Evaluation2, Isotope);
+//    TCanvas *c1 = new TCanvas("c1");
 //    pGr->SetMarkerStyle(20);
 //    pGr->SetMarkerSize(2.0);
-    pGr->Draw("AL");
+//    pGr->Draw("AL");
 //    g->SetMarkerStyle(20);
 //    g->SetMarkerSize(2.0);
-    g->SetLineColor(kRed);
-    g->Draw("sameL");
-    c1->Update();
-    c1->Draw();
+//    g->SetLineColor(kRed);
+//    g->Draw("sameL");
+//    c1->Update();
+//    c1->Draw();
 }
 
 
