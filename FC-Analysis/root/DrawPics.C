@@ -833,10 +833,10 @@ void DrawEnELBE()
 {
     TGraph *g = new TGraph("/home/hoffma93/Programme/ROOT/Data/nELBE_E.dat");
 
-    TCanvas *c = new TCanvas("Source_E", "Source_E", 200, 10, 700, 500);
+    TCanvas *c = new TCanvas("E_nELBE", "E_nELBE", 200, 10, 700, 500);
     gPad->SetTicks(1, 1);
     gPad->SetLogx(1);
-    g->SetNameTitle("Source_E", "nELBE Neutron Energy Spectrum");
+    g->SetNameTitle("E_nELBE", "nELBE Neutron Energy Spectrum");
     g->GetXaxis()->SetTitle("#font[12]{E} / MeV");
     g->GetXaxis()->SetTitleSize(0.08);
     g->GetXaxis()->SetLabelSize(0.06);
@@ -1345,6 +1345,8 @@ void DrawDtInt(TFile *fAna, string FC, Int_t ch, Int_t Left = 7, Int_t Right = 7
     TH1I *pHfill = (TH1I*)pH->Clone();
     Double_t Bg = fT->GetParameter(0);
     Double_t DBg = fT->GetParError(0);
+    Double_t chi2 = fT->GetChisquare();
+    Int_t dof = fT->GetNDF();
     Double_t Peak = pH->Integral(Gate_1(ch, FC, Left), Gate_2(ch, FC, Right));
     Double_t DPeak = sqrt(Peak);
     Double_t C = Peak - (Left+Right+1) * Bg;
@@ -1381,27 +1383,32 @@ void DrawDtInt(TFile *fAna, string FC, Int_t ch, Int_t Left = 7, Int_t Right = 7
     pHfill->Draw("same hist");
     gL->Draw("same");
     gR->Draw("same");
-    TLatex *t[4];
+    TLatex *t[5];
     t[0] = new TLatex();
     t[0]->SetTextColor(kRed);
     sprintf(name, "#font[12]{<B>} = %.2f #pm %.2f ns^{-1}", Bg, DBg);
-    t[0]->DrawLatexNDC(x, y + 0.3, name);
+    t[0]->DrawLatexNDC(x, y + 0.32, name);
     t[0]->Draw();
     t[1] = new TLatex();
     t[1]->SetTextColor(kBlue);
     sprintf(name, "#font[12]{C}_{P} = %.0f #pm %.0f", Peak, DPeak);
-    t[1]->DrawLatexNDC(x, y + 0.2, name);
+    t[1]->DrawLatexNDC(x, y + 0.16, name);
     t[1]->Draw();
     t[2] = new TLatex();
-    t[2]->SetTextColor(kBlack);
+    t[2]->SetTextColor(kBlue);
     sprintf(name, "#font[12]{t}_{P} = %i ns", Left+Right+1);
-    t[2]->DrawLatexNDC(x, y + 0.1, name);
+    t[2]->DrawLatexNDC(x, y + 0.08, name);
     t[2]->Draw();
     t[3] = new TLatex();
     t[3]->SetTextColor(kBlack);
-    sprintf(name, "#font[12]{C}_{(n,f)} = %.f #pm %.f", C, DC);
-    t[3]->DrawLatexNDC(x, y + 0.0, name);
+    sprintf(name, "#scale[1.25]{#font[12]{C}_{(n,f)} = %.f #pm %.f}", C, DC);
+    t[3]->DrawLatexNDC(x, y - 0.01, name);
     t[3]->Draw();
+    t[4] = new TLatex();
+    t[4]->SetTextColor(kRed);
+    sprintf(name, "#chi^{2} / #nu = %.2f, #nu = %i", chi2 / dof, dof);
+    t[4]->DrawLatexNDC(x, y + 0.24, name);
+    t[4]->Draw();
     sprintf(name, "/home/hoffma93/Pictures/TimeDiff/%s_Integral_%i.pdf", FC.c_str(), ch+1);
     if (Save)
         cT->SaveAs(name);
@@ -1548,46 +1555,96 @@ void DrawSponFisStability(TFile *fAna, string FC)
     char name[64] = "";
     TH1D *hC[8];
     TF1 *fC[8];
-    Int_t color[] = {kBlue, kRed, kGreen, kCyan, 9, kSpring, kMagenta, kOrange};
-    TLegend *l = new TLegend(0.91, 0.1, 1.0, 0.9);
-    l->SetTextFont(132);
-
-    for (Int_t i = 0; i < 8; i++)
-    {
-        // Get plots Background vs Time
-        sprintf(name, "%s/Stability/SF/%s_%i", FC.c_str(), FC.c_str(), i+1);
-        hC[i] = (TH1D*) fAna->Get(name); if (!hC[i]) cout << "Could not get " << name << endl;
-        sprintf(name, "%s/Stability/SF/%s_%i_fit", FC.c_str(), FC.c_str(), i+1);
-        fC[i] = (TF1*) fAna->Get(name); if (!fC[i]) cout << "Could not get " << name << endl;
-        hC[i]->SetLineColor(color[i]);
-        hC[i]->SetMarkerStyle(20);
-        hC[i]->SetMarkerSize(0.5);
-        hC[i]->SetMarkerColor(color[i]);
-        fC[i]->SetLineColor(color[i]);
-        sprintf(name, " %i", i+1);
-        l->AddEntry(hC[i], name, "PE");
+    Int_t color[] = {600, 632, 418, 867, 887, 820, 616, 807, 1, 921};
+    Double_t t0 = 0, t1 = 0;
+    Double_t y0 = 0, y1 = 0;
+    if (FC == "UFC") {
+        t0 = 1.40058E9; t1 = 1.40072E9;
+    } else {
+        t0 = 1.4011E9; t1 = 1.4017E9;
     }
 
-    // Drawing properties
-    hC[0]->SetStats(0);
-    hC[0]->GetXaxis()->SetNdivisions(604);
-    SetSize(hC[0]);
-    hC[0]->GetXaxis()->SetTimeDisplay(1);
-    hC[0]->GetXaxis()->SetTimeFormat("%d.%m. %H:%M");
+    TLatex LaText, ChiText, NuText;
+    LaText.SetTextSize(0.20);
+    ChiText.SetTextSize(0.12); NuText.SetTextSize(0.12);
+    ChiText.SetTextColor(kBlack); NuText.SetTextColor(kBlack);
+    Double_t chi2 = 0, x, y;
+    Int_t dof = 1;
 
-    // Draw
     sprintf(name, "cST_%s", FC.c_str());
     TCanvas *cST = new TCanvas(name);
-    gPad->SetTicks(1, 1);
-    hC[0]->Draw("P");
-    fC[0]->Draw("same");
-    for (Int_t i = 1; i < 8; i++)
+    cST->Divide(2,4);
+
+    // Load and Draw 8 channels' constance
+    for (Int_t i = 0; i < 8; i++)
     {
-        hC[i]->Draw("same P");
+        // Switch pad
+        cST->cd(i+1)->SetTicks(1, 1);
+
+        // Histogram: Background vs Time
+        sprintf(name, "%s/Stability/SF/%s_%i", FC.c_str(), FC.c_str(), i+1);
+        hC[i] = (TH1D*) fAna->Get(name); if (!hC[i]) cout << "Could not get " << name << endl;
+        hC[i]->SetStats(0);
+        hC[i]->SetMarkerStyle(20);
+        hC[i]->SetMarkerSize(0.5);
+        hC[i]->SetMarkerColorAlpha(color[i], 0.5);
+        hC[i]->SetLineColorAlpha(color[i], 0.5);
+        hC[i]->GetXaxis()->SetTitle("");
+        hC[i]->GetXaxis()->SetRangeUser(t0, t1);
+        hC[i]->GetXaxis()->SetTimeDisplay(1);
+        hC[i]->GetXaxis()->SetTimeFormat("%d.%m.");
+        hC[i]->GetXaxis()->SetNdivisions(606);
+        hC[i]->GetXaxis()->SetTitleSize(0.15);
+        hC[i]->GetXaxis()->SetLabelSize(0.13);
+//        if (i % 2 == 0)
+            hC[i]->GetYaxis()->SetTitle("#it{C}_{BG} / s^{-1}");
+//        else
+//            hC[i]->GetYaxis()->SetTitle("");
+        hC[i]->GetYaxis()->SetTitleSize(0.15);
+        hC[i]->GetYaxis()->SetLabelSize(0.13);
+        hC[i]->GetYaxis()->SetTitleOffset(0.4);
+
+        // Constant fit: Background vs Time
+        sprintf(name, "%s/Stability/SF/%s_%i_fit", FC.c_str(), FC.c_str(), i+1);
+        fC[i] = (TF1*) fAna->Get(name); if (!fC[i]) cout << "Could not get " << name << endl;
+        fC[i]->SetLineColor(color[i]);
+        chi2 = fC[i]->GetChisquare();
+        dof = fC[i]->GetNDF();
+        y0 = fC[i]->GetParameter(0) - fC[i]->GetParError(0);
+        y1 = fC[i]->GetParameter(0) + fC[i]->GetParError(0);
+        hC[i]->GetYaxis()->SetRangeUser(y0, y1);
+
+        hC[i]->Draw("P");
         fC[i]->Draw("same");
+
+        //add text to plot
+        sprintf(name, "%s Ch.%i", FC.c_str(), i+1);
+        LaText.SetTextColor(color[i]);
+        LaText.DrawLatexNDC(.7,.8, name);
+
+        sprintf(name, "#chi^{2}/dof = %.2f", chi2 / dof);
+        ChiText.DrawLatexNDC(.2,.235, name);
+
+        sprintf(name, "dof = %i", dof);
+        NuText.DrawLatexNDC(.8,.235, name);
     }
-    l->Draw();
+
     cST->Update();
+
+    // Drawing properties
+
+//    SetSize(hC[0]);
+
+        // print reduced chi^2
+//        chi2 = fC[i]->GetChisquare();
+//        dof = fC[i]->GetNDF();
+//        cout << "Channel " << i+1 << ": chi^2 = " << chi2 << ", dof = " << dof << endl;
+//        t[i] = new TLatex();
+//        x = hC[i]->GetBinLowEdge(10);
+//        y = fC[i]->GetParameter(0);
+//        t[i]->SetTextColor(color[i]);
+//        sprintf(name, "#chi^{2} / #nu = %.2f", chi2 / dof);
+//        t[i]->DrawLatex(x, y - 0.5, name);
 }
 
 void IndFisSum(TFile *fAna, string FC)
@@ -2701,7 +2758,7 @@ int DrawPics()
 
 //    DrawSigma(242);
 //    DrawCrossSectionRuns(fAna);
-    DrawUscattering(fAna);
+//    DrawUscattering(fAna);
 //    DrawPuCorrection(fAna);
 //    DrawMonitorRate();
 //    DrawPeakWidth(fAna, "UFC");
@@ -2740,7 +2797,7 @@ int DrawPics()
 //    DrawIndFisStability(fAna, "UFC");
 //    IndFisSum(fAna, "UFC");
 //    DrawSponFisStability(fAna, "UFC");
-//    DrawSponFisStability(fAna, "PuFC");
+    DrawSponFisStability(fAna, "PuFC");
 //    DrawSignalStability();
 //    DrawQDCvsTime(0);
 //    DrawTvsE(fAna);
