@@ -32,7 +32,7 @@ TGraphErrors *GetCrossSection(string File)
     return ge;
 }
 
-TGraphErrors *AddGraphs(TGraphErrors *ge1, TGraphErrors *ge2, Double_t c1 = 1.0, Double_t c2 = 1.0)
+void AddGraphs(TGraphErrors *ge1, TGraphErrors *ge2, Double_t c1 = 1.0, Double_t c2 = 1.0)
 {/// Add graphs' y values, use x values of first one
     Double_t x, y;
 
@@ -42,7 +42,7 @@ TGraphErrors *AddGraphs(TGraphErrors *ge1, TGraphErrors *ge2, Double_t c1 = 1.0,
     // N: maximum number of points
     Int_t N = ge1->GetN();
 
-    TGraphErrors *geSum = new TGraphErrors(N);
+//    TGraphErrors *geSum = new TGraphErrors(N);
 
     // use ge1 x values
     for (uint i = 0; i < N; i++)
@@ -51,7 +51,7 @@ TGraphErrors *AddGraphs(TGraphErrors *ge1, TGraphErrors *ge2, Double_t c1 = 1.0,
         y = c1 * y;
         if (ge2 != 0)
             y = y + c2 * ge2->Eval(x);
-        geSum->SetPoint(i, x, y);
+        ge1->SetPoint(i, x, y);
     }
 //    } else {
 //        // if ge2 has more points than ge1, use ge2 x values
@@ -65,7 +65,7 @@ TGraphErrors *AddGraphs(TGraphErrors *ge1, TGraphErrors *ge2, Double_t c1 = 1.0,
 //    }
 //    cout << ge1->Eval(1.E6) << " * " << c1 << " + " << ge2->Eval(1.E6) << " * " << c2 << " = " << geSum->Eval(1.E6) << endl;
 
-    return geSum;
+    return;
 }
 
 TGraphErrors *GetTotalCrossSection(string EvalDir, string Isotope)
@@ -144,9 +144,9 @@ TGraphErrors *GetTotalCrossSection(string EvalDir, string Isotope)
     return geTot;
 }
 
-void CompareTransmission(string StrMatDim   = "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/MatDim_H19_10.dat",
+void CompareTransmission(string StrMatDim   = "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/MatDim_UFC_1.dat",
                          string Evaluation1 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0",
-                         string Evaluation2 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VII.1")
+                         string Evaluation2 = "/home/hoffma93/Programme/Geant4-Work/JEFF-3.2")
 {
     ifstream ifsMatDim(StrMatDim);
     string line = "";
@@ -181,18 +181,18 @@ void CompareTransmission(string StrMatDim   = "/home/hoffma93/Programme/Go4nfis/
 
         // Get total cross section and add it to macroscopic cross sections
         TGraphErrors *geXS_1 = GetTotalCrossSection(Evaluation1, StrIsotope);
-        geMacroXS_1 = AddGraphs(geMacroXS_1, geXS_1, 1.0, ArealDensity);
+        AddGraphs(geMacroXS_1, geXS_1, 1.0, ArealDensity);
         TGraphErrors *geXS_2 = GetTotalCrossSection(Evaluation2, StrIsotope);
-        geMacroXS_2 = AddGraphs(geMacroXS_2, geXS_2, 1.0, ArealDensity);
+        AddGraphs(geMacroXS_2, geXS_2, 1.0, ArealDensity);
 //        cout << geMacroXS_1->GetN() << " / " << geMacroXS_2->GetN() << endl;
     }
 
-    Double_t macroXS, T; // energy, macroscopic cross section, transmission
+    Double_t macroXS, T; // macroscopic cross section, transmission
 
     TGraphErrors *geTransmission1 = new TGraphErrors(geMacroXS_1->GetN());
     for (uint i = 0; i < geMacroXS_1->GetN(); i++)
     {
-        geMacroXS_1->GetPoint(i,  x, macroXS);
+        geMacroXS_1->GetPoint(i, x, macroXS);
         T = exp( - macroXS );
         geTransmission1->SetPoint(i, x, T);
     }
@@ -206,14 +206,14 @@ void CompareTransmission(string StrMatDim   = "/home/hoffma93/Programme/Go4nfis/
 
     string EvalName1, EvalName2;
     // parse evaluation names from path
-//    size_t pos;
-//    pos = Evaluation1.find_last_of("/");
-//    EvalName1 = Evaluation1.substr(pos+1, Evaluation1.size()-pos-1);
-//    pos = Evaluation2.find_last_of("/");
-//    EvalName2 = Evaluation2.substr(pos+1, Evaluation2.size()-pos-1);
-//    cout << EvalName1 << ", " << EvalName2 << endl;
-    EvalName1 = "ENDF/B-VIII.0";
-    EvalName2 = "ENDF/B-VII.1";
+    size_t pos;
+    pos = Evaluation1.find_last_of("/");
+    EvalName1 = Evaluation1.substr(pos+1, Evaluation1.size()-pos-1);
+    pos = Evaluation2.find_last_of("/");
+    EvalName2 = Evaluation2.substr(pos+1, Evaluation2.size()-pos-1);
+    cout << EvalName1 << ", " << EvalName2 << endl;
+//    EvalName1 = "ENDF/B-VIII.0";
+//    EvalName2 = "JEFF-3.2";
 
     TCanvas *c2 = new TCanvas("c2");
     gPad->SetTicks(1,1);
@@ -231,28 +231,91 @@ void CompareTransmission(string StrMatDim   = "/home/hoffma93/Programme/Go4nfis/
     l->Draw();
     c2->Update();
     c2->Draw();
+}
 
+void NeutronTransmission(string StrMatDim  = "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/MatDim_H19_1.dat",
+                         string Evaluation = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0",
+                         string RootData   = "/home/hoffma93/TrackLength/G4UFCvsH19_1E9_hist.root")
+{
+    string GraphDir = "H19/TransMis";
+    string GraphName = "AnaTransMis_H19_1";
+
+    ifstream ifsMatDim(StrMatDim);
+    string line = "";
+    string StrIsotope = "";
+    Double_t ArealDensity = 0;
+
+    Int_t N = 500;
+    Double_t x0 = 1E5, x1 = 1E7;
+    Double_t x; // energy
+    TGraphErrors *geMacroXS = new TGraphErrors(N);
+    geMacroXS->SetName("geMacroXS");
+    for (Int_t i = 0; i < N; i++)
+    {
+        x = exp(i / (N - 1.) * (log(x1) - log(x0)) + log(x0));
+        geMacroXS->SetPoint(i, x, 0);
+    }
+
+    // Linewise read isotopes and areal number densities
+    while(1) {
+        getline(ifsMatDim, line);
+        if (!ifsMatDim) break; // stop at end of file or in case of an error
+        if (line == "") continue; // ignore empty lines
+        if (line.substr(0, 1) == "#") continue; // ignore lines marked with a #
+
+        // convert line string into isotope name and areal number density
+        std::stringstream ss(line);
+        ss >> StrIsotope >> ArealDensity;
+        cout << StrIsotope << " " << ArealDensity << endl;
+
+        // Get total cross section and add it to macroscopic cross sections
+        TGraphErrors *geXS = GetTotalCrossSection(Evaluation, StrIsotope);
+        AddGraphs(geMacroXS, geXS, 1.0, ArealDensity);
+    }
+
+    Double_t macroXS, T; // macroscopic cross section, transmission
+
+    TGraphErrors *geTransmission = new TGraphErrors(geMacroXS->GetN());
+    for (uint i = 0; i < geMacroXS->GetN(); i++)
+    {
+        geMacroXS->GetPoint(i, x, macroXS);
+        T = exp( - macroXS );
+        geTransmission->SetPoint(i, x / 1.E6, T);
+    }
+
+    /// Draw graph
+    TCanvas *c2 = new TCanvas("c2");
+    gPad->SetTicks(1,1);
+    gPad->SetLogx();
+    geTransmission->Draw("APL");
+    geTransmission->GetXaxis()->SetTitle("#it{E} / MeV");
+    geTransmission->GetXaxis()->SetRangeUser(1.E5, 1.E7);
+    geTransmission->GetYaxis()->SetTitle("#it{T}");
+    c2->Update();
+    c2->Draw();
+
+    /// save graph
+    geMacroXS->SetName(GraphName.c_str());
+    TFile *f = TFile::Open(RootData.c_str(), "UPDATE");
+    TDirectory *pDir = f->GetDirectory(GraphDir.c_str());
+    if (!pDir) cout << "Could not get directory " << GraphDir << endl;
+    pDir->cd();
+    geTransmission->Write(GraphName.c_str(), TObject::kOverwrite);
+    f->Save();
+    f->Close();
 }
 
 void Transmission(string Isotope = "94_242_Plutonium")
 {
     cout << "Transmission..." << endl;
-    CompareTransmission();
+//    NeutronTransmission("/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/MatDim_H19_10.dat",
+//                        "/home/hoffma93/Programme/Geant4-Work/JEFF-3.2",
+//                        "/home/hoffma93/TrackLength/G4UFCvsH19_1E9_hist.root");
 
-//    string Evaluation1 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0";
-//    string Evaluation2 = "/home/hoffma93/Programme/Geant4-Work/ENDF-VII.1";
-//    TGraphErrors *pGr = GetTotalCrossSection(Evaluation1, Isotope);
-//    TGraphErrors *g = GetTotalCrossSection(Evaluation2, Isotope);
-//    TCanvas *c1 = new TCanvas("c1");
-//    pGr->SetMarkerStyle(20);
-//    pGr->SetMarkerSize(2.0);
-//    pGr->Draw("AL");
-//    g->SetMarkerStyle(20);
-//    g->SetMarkerSize(2.0);
-//    g->SetLineColor(kRed);
-//    g->Draw("sameL");
-//    c1->Update();
-//    c1->Draw();
+    CompareTransmission("/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/MatDim_H19_10.dat",
+                        "/home/hoffma93/Programme/Geant4-Work/ENDF-VIII.0",
+                        "/home/hoffma93/Programme/Geant4-Work/JEFF-3.2");
+
 }
 
 
