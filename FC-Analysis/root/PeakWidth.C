@@ -41,9 +41,9 @@ void PeakWidth(string file_name, string subfolder, string FC, Int_t lStart, Int_
     Double_t avNIF[n];
     Double_t D2avNIF[n];
 
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s", file_name.c_str());
+    sprintf(name, "%s%s", hist_data_path, file_name.c_str());
     TFile *f = TFile::Open(name, "READ");
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     TGraphErrors *ge[8];
     TGraphErrors *geAv = new TGraphErrors(n);
     TMultiGraph *mg = new TMultiGraph("mgPeak", "ToF Peak; Gate[ns]; Peak");
@@ -111,9 +111,7 @@ void SimWidth(string Simulation, string FC, Int_t left, Int_t rStart, Int_t rSto
     Double_t avNIF[n];
     Double_t D2avNIF[n];
 
-//    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s", file_name.c_str());
-//    TFile *f = TFile::Open(name, "READ");
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     TGraphErrors *ge[8];
     TGraphErrors *geAv = new TGraphErrors(n);
     TMultiGraph *mg = new TMultiGraph("mgSim", "ToF Peak; Gate[ns]; Peak");
@@ -212,9 +210,9 @@ void Background(string file_name, string FC, Int_t left, Int_t rStart, Int_t rSt
     Double_t avNIF[n];
     Double_t D2avNIF[n];
 
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s", file_name.c_str());
+    sprintf(name, "%s%s", hist_data_path, file_name.c_str());
     TFile *f = TFile::Open(name, "READ");
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     TGraphErrors *gL[8];
     TGraphErrors *gR[8];
     TMultiGraph *mg = new TMultiGraph("mgBg", "ToF Background; Gate[ns]; Background/ns[1/s]");

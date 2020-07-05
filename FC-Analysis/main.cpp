@@ -28,14 +28,6 @@
 
 using namespace std;
 
-//void ProvideNotebookData()
-//{
-//    // Fit QDC minima
-//    FindPuMinima();
-//    FindUMinima();
-
-//    // Create graphs: Peak content vs Peak width, right background vs Peak width.
-
 
 int main(int argc, char **argv)
 {
@@ -44,60 +36,41 @@ int main(int argc, char **argv)
 
     gROOT->Reset();
 
+    // Determine QDC threshold
     QDCmin();
+
+    // Create plots: Peak content over peak width
     PeakWidth();
+
+    // Get source spectrum and Ti(T) scattering correction
     Target();
+
+    // Convert simulation data
     MCNPtoROOT();
+
+    // Calculate neutron scattering correction factors
     AnaSim();
+
+    // Count (n,f) events in time difference spectrums
     ToF();
-    NumberOfAtoms();
+
+    // Calculate neutron field intensity
     NeutronField();
-    CrossSection();
+
+    // Calculate UFC inefficiency correction
     Carlson();
+
+    // Get UFC@nELBE and PuFC SF calibration
+    NumberOfAtoms();
+
+    // Calculate cross section
+    CrossSection();
+
+    // Apply corrections to CS measurement,
+    // calibrate areal mass densities
     Correction();
-    Runs();
 
-
-
-//    Plot *p = new Plot("UFC", "Open", 0);
-//    p->Source_E();
-
-//    PuFC *fc = new PuFC(1, 0);
-//    fc->GetNatoms();
-//    fc->DrawStability();
-//    fc->CrossSection();
-//    fc->Corrections();
-
-//    UFC *ufc = new UFC(0, 0);
-//    ufc->IsoVec();
-//    ufc->CrossSection();
-//    ufc->Corrections();
-
-//    Xsection *xs = new Xsection();
-//    xs->RelativeCS();
-
-//    fc->CompareTransmission();
-
-//    cout << "t_live(FG) = " << ufc->pHFG->t_live << endl;
-//    cout << "t_live(BG) = " << ufc->pHBG->t_live << endl;
-//    fc->AnalyzeDt();
-//    fc->CrossSection();
-//    ufc->CrossSection();
-//    fc->Corrections();
-//    ufc->Corrections();
-//    fc->CompareShadowCone();
-//    ufc->CompareTransmission();
-
-//    Sim *sim = new Sim("/home/hoffma93/Programme/Geant4-Work/builds/G4PuFCvsH19/results/4_ene/PuFC_Open_5E7.root", "PuFC", "Open", 1, 0);
-//    sim->Calculate();
-//    sim->SimToF();
-
-//    AnaSim *Pu = new AnaSim("PuFC", 1, 0);
-//    AnaSim *U = new AnaSim("UFC", 1, p);
-//    Pu->Corrections();
-//    U->Corrections();
-
-//    p->SimF(Pu->T, Pu->DT, Pu->S, Pu->DS, Pu->F, Pu->DF, U->T, U->DT, U->S, U->DS, U->F, U->DF);
+//    Runs();
 
     theApp.Run();
 

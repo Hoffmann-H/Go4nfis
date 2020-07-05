@@ -227,13 +227,11 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 {
     string FC = Run[0] == 'U' ? "UFC" : "PuFC";
 //    string key = strcmp(key.c_str(), "real") ? "ideal" : "real";
-    string FilePath = "/home/hoffma93/Programme/Geant4-Work/results";
     char name[128] = "";
-    sprintf(name, "%s/%s", FilePath.c_str(), FileName.c_str());
-    TFile *fG4 = TFile::Open(name, "READ");
+    TFile *fG4 = TFile::Open(FileName.c_str(), "READ");
     if (fG4 == 0)
-        cout << "Could not open " << name << endl;
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+        cout << "Could not open " << FileName << endl;
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
 
     // Emitted neutrons
     TH1F *pHemit = (TH1F*)fG4->Get("Source/Source_Theta");
@@ -311,17 +309,23 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 
 void MCNPtoROOT()
 {
+    string PuFC_RealSim = "/home/hoffma93/Programme/Geant4-Work/results/PuFC_real_c_5E7_v2.root";
+    string UFC_RealSim = "/home/hoffma93/Programme/Geant4-Work/results/UFC_real_c_5E7.root";
+    string UFC_ShadowBarSim = "/home/hoffma93/Programme/Geant4-Work/results/UFC_SB_5E7.root";
+    string PuFC_VacSimFG = "/home/hoffma93/Programme/Geant4-Work/results/PuFC_ideal_c_FG.root";
+    string UFC_VacSimFG = "/home/hoffma93/Programme/Geant4-Work/results/UFC_ideal_c_FG.root";
+
     /// Filled geometry
-    Geant4toROOT("PuFC_real_c_5E7_v2.root", "NIF", "real");
-    Geant4toROOT("UFC_real_c_5E7.root", "UFC_NIF", "real");
+    Geant4toROOT(PuFC_RealSim, "NIF", "real");
+    Geant4toROOT(UFC_RealSim, "UFC_NIF", "real");
 //    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
 //    MCNPtoROOT(1, "UFC_NIF", "real", "FCscat_PTB_UFC_weight/tally/FCscat_a");
     /// Shadow bar
-//    Geant4toROOT("UFC_SB_5E7.root", "UFC_SB", "SB");
+    Geant4toROOT(UFC_ShadowBarSim, "UFC_SB", "SB");
 
     /// Void geometry, direct TARGET spectrum
-//    Geant4toROOT("PuFC_ideal_c_FG.root", "PuFC", "ideal");
-//    Geant4toROOT("UFC_ideal_c_FG.root", "UFC", "ideal");
+    Geant4toROOT(PuFC_VacSimFG, "PuFC", "ideal");
+    Geant4toROOT(UFC_VacSimFG, "UFC", "ideal");
 //    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
 //    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void_dir/tally/FCscat_a");
 

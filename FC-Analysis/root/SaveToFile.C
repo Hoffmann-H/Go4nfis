@@ -1,6 +1,12 @@
 #ifndef SAVE_TO_FILE
 #define SAVE_TO_FILE
 
+/// Define where to find the go4 analyzed histogram files
+#define hist_data_path "/home/hoffma93/Programme/Go4nfis/offline/results/"
+
+/// Define where to save results
+#define results_file "/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root"
+
 #include "TFile.h"
 #include "TGraph.h"
 #include "TH1.h"

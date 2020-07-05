@@ -4,10 +4,16 @@
 void NumberOfPuAtoms()
 {
     Double_t eff = 0.986;
+    Double_t Deposit_area[] = {43, 43, 43, 43, 43, 43, 43, 43};
+    Double_t DeltaDepositArea = 0.7 / sqrt(8); // cm^2
+    Double_t MolarMass = 242.058089519385;
+    Double_t u = 1.660539E-24; // [g]
+
     char name[128] = "";
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-    TFile *fSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "READ");
-    if (!fSF) cout << "Could not open " << "/home/homma93/Programme/Go4nfis/offline/results/SF.root" << endl;
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
+    sprintf(name, "%s/SF.root", hist_data_path);
+    TFile *fSF = TFile::Open(name, "READ");
+    if (!fSF) cout << "Could not open " << name << endl;
     Double_t PuSFT2 = 6.76E10 * 365.24*24*60*60;
     Double_t DPuSFT2 = 7E8 * 365.24*24*60*60;
     Double_t rSF_06[] = {4.3275, 3.8991, 3.4868, 3.3583, 3.5389, 3.5293, 3.2918, 4.2490};
@@ -21,6 +27,7 @@ void NumberOfPuAtoms()
     TGraphErrors *geFisBg = new TGraphErrors(8);
     TGraphErrors *geBgRate = new TGraphErrors(8);
     TGraphErrors *geAtoms = new TGraphErrors(8);
+    TGraphErrors *gemA = new TGraphErrors(8);
     sprintf(name, "PuFC/ToF/Background/NIF/BackgroundRate");
     TGraphErrors *geNIF = (TGraphErrors*)fAna->Get(name);
     if (!geNIF) cout << "Could not get " << name << endl;
@@ -72,25 +79,33 @@ void NumberOfPuAtoms()
         cout << i+1 << " & " << name << " \\\\" << endl;
         geAtoms->SetPoint(i, i+1, nAtoms);
         geAtoms->SetPointError(i, 0, DnAtoms);
+
+        Double_t mA = BgRate * PuSFT2 / log(2.0) * MolarMass * u / Deposit_area[i] * 1000; // g/cm^2 -> mg/cm^2
+        Double_t DmA = mA * sqrt( pow(DBgRate / BgRate, 2) +
+                                  pow(DeltaDepositArea / Deposit_area[i], 2) );
+        gemA->SetPoint(i, i+1, mA);
+        gemA->SetPointError(i, 0, DmA);
     }
     Save(fAna, "PuFC/nAtoms/SF", geFisBg, "FissionBackground");
     Save(fAna, "PuFC/nAtoms/SF", geBgRate, "BackgroundRate");
-    Save(fAna, "PuFC/nAtoms", geAtoms, "PuFC_effN");
+    Save(fAna, "PuFC/nAtoms", geAtoms, "PuFC_eN");
+    Save(fAna, "PuFC/nAtoms", gemA, "PuFC_emA");
     fAna->Save();
     fAna->Close();
 }
 
-TGraphErrors* EffUmA(string file_name = "/home/hoffma93/Programme/ROOT/Data/effUmA.dat")
+TGraphErrors* EffUmA(string file_name)
 { // return a TGraphErrors with eps_nELBE * m_A from calibration with H19
   // units: mg/cm^2
     TGraphErrors *ge = new TGraphErrors(file_name.c_str(), "%lg %lg %lg");
     if (ge == 0)
-        cout << "Fehler beim Öffnen von " << file_name << endl;
+        cout << "Error opening " << file_name << endl;
     return ge;
 }
 
-void NumberOfUAtoms(string StrRes = "")
+void NumberOfUAtoms(string mA_nELBE, string descr = "")
 {
+    string Name = "";
 //    Double_t Deposit_radius = 3.70; // cm
 //    Double_t Deposit_area = TMath::Pi() * pow(Deposit_radius, 2); // cm^2
 //    Double_t Deposit_area[] = {42.7736, 41.5982, 43.3861, 43.4792, 43.2923, 43.1283, 42.7877, 43.6696}; // cm^2
@@ -98,9 +113,8 @@ void NumberOfUAtoms(string StrRes = "")
     Double_t DeltaDepositArea = 0.7 / sqrt(8); // cm^2
     Double_t MolarMass = 235.3175644086;
     Double_t u = 1.660539E-24; // [g]
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
-    string Name = "/home/hoffma93/Programme/ROOT/Data/effUmA" + StrRes + ".dat";
-    TGraphErrors *gEffUmA = EffUmA(Name);
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
+    TGraphErrors *gEffUmA = EffUmA(mA_nELBE);
     TGraphErrors *gEffNU = new TGraphErrors(8);
     for (Int_t i = 0; i < 8; i++)
     {
@@ -113,9 +127,9 @@ void NumberOfUAtoms(string StrRes = "")
         gEffNU->SetPoint(i, i+1, effNU);
         gEffNU->SetPointError(i, 0, DeffNU);
     }
-    Name = "effUmA" + StrRes;
+    Name = "UFC_emA" + descr;
     Save(fAna, "UFC/nAtoms", gEffUmA, Name);
-    Name = "UFC_effN" + StrRes;
+    Name = "UFC_eN" + descr;
     Save(fAna, "UFC/nAtoms", gEffNU, Name);
     fAna->Save();
     fAna->Close();
@@ -124,5 +138,6 @@ void NumberOfUAtoms(string StrRes = "")
 void NumberOfAtoms()
 {
     NumberOfPuAtoms();
-    NumberOfUAtoms("");
+    NumberOfUAtoms("/home/hoffma93/Programme/ROOT/Data/effUmA.dat");
+    NumberOfUAtoms("/home/hoffma93/Programme/ROOT/Data/effUmA_TL.dat", "_TL");
 }

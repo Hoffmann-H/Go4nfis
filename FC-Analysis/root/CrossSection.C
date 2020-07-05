@@ -107,7 +107,7 @@ void CrossSection()
     DoCrossSection("PuFC");
     DoCrossSection("PuFC_FG");
     DoCrossSection("PuFC_BG");
-    cout << CrossSectionRun("NIF") << endl;
+    CrossSectionRun("NIF");
     CrossSectionRun("SB");
 }
 

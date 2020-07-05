@@ -50,10 +50,18 @@ TF1* FindMin(TH1I *pH, Int_t xmin, Int_t xmax)
 
 void FindPuMinima()
 {
-    TFile *fPuNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root", "READ");
-    TFile *fPuSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SB.root", "READ");
-    TFile *fPuSF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/SF.root", "READ");
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    char name[128] = "";
+    sprintf(name, "%sNIF.root", hist_data_path);
+    TFile *fPuNIF = TFile::Open(name, "READ");
+
+    sprintf(name, "%sSB.root", hist_data_path);
+    TFile *fPuSB = TFile::Open(name, "READ");
+
+    sprintf(name, "%sSF.root", hist_data_path);
+    TFile *fPuSF = TFile::Open(name, "READ");
+
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
+
     Int_t x[] = {950, 900, 950, 900, 1050, 950, 950, 900}; // rough minimum positions
     Int_t xmin, xmax;
     Double_t mFG, mBG, mSF, mAv, mSum;
@@ -67,7 +75,7 @@ void FindPuMinima()
     gSF->SetName("gSF");
     gAv->SetName("gAv");
     gSum->SetName("gSum");
-    char name[64] = "";
+
     cout << endl << "PuFC QDC min" << endl
          << "Ch   FG fit   BG fit   SF fit   average   sum fit" << endl;
     for (Int_t i = 0; i < 8; i++)
@@ -134,9 +142,15 @@ void FindPuMinima()
 
 void FindUMinima()
 {
-    TFile *fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root", "READ");
-    TFile *fUSB = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_SB.root", "READ");
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    char name[128] = "";
+    sprintf(name, "%sUFC_NIF.root", hist_data_path);
+    TFile *fUNIF = TFile::Open(name, "READ");
+
+    sprintf(name, "%sUFC_SB.root", hist_data_path);
+    TFile *fUSB = TFile::Open(name, "READ");
+
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
+
     Int_t xmin[] = {150, 350, 150, 150, 100, 100, 100, 50}; // rough minimum ranges
     Int_t xmax[] = {400, 900, 400, 400, 400, 350, 350, 300};
     Double_t mFG, mBG, mAv, mSum;
@@ -148,7 +162,7 @@ void FindUMinima()
     gBG->SetName("gBG");
     gAv->SetName("gAv");
     gSum->SetName("gSum");
-    char name[64] = "";
+
     cout << endl << "UFC QDC min" << endl
          << "Ch   FG fit   BG fit   average   sum fit" << endl;
     for (Int_t i = 0; i < 8; i++)
@@ -231,10 +245,9 @@ void CheckIntegral(TFile *f, string FC, Int_t ch)
 //    hQDCg->Draw("same");
 }
 
-void CheckIntegrals()
+void CheckIntegrals(string file)
 {
-//    TFile *f = TFile::Open("~/Programme/Go4nfis/offline/results/Backup/backupNIF.root");
-    TFile *f = TFile::Open("~/Programme/Go4nfis/offline/results/UFC_NIF.root");
+    TFile *f = TFile::Open(file.c_str());
     for (Int_t i = 0; i < 8; i++)
         CheckIntegral(f, "PuFC", i);
 }
@@ -243,5 +256,6 @@ void QDCmin()
 {
     FindPuMinima();
     FindUMinima();
-//    CheckIntegrals();
+
+//    CheckIntegrals("~/Programme/Go4nfis/offline/results/UFC_NIF.root");
 }

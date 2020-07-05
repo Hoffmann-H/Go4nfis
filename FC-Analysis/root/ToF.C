@@ -95,9 +95,9 @@ TF1* FitTotal(TH1F *pH, Int_t i, string FC, string Run)
 string SubtractBackground(string Run, Bool_t print = 0)
 {
     string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     char name[128] = "";
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    sprintf(name, "%s/%s.root", hist_data_path, Run.c_str());
     TFile *f = TFile::Open(name, "READ"); if (!f) cout << "Error opening " << name << endl;
 
     // live time

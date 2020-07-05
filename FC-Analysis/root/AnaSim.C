@@ -129,9 +129,9 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
 { // SimToF == 0: force SimToF recalculation. 1: Use SimToF if possible. 2: Use FitToF if possible. Otherwise create it.
     cout << "Analyzing " << Simulation << " " << FC << " " << key << " simulation results" << endl;
     char name[128] = "";
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     if (!fAna) cout << "Could not open " << "Analysis.root" << endl;
-    sprintf(name, "%s/Correction/%s_Target_Gate", FC.c_str(), FC.c_str());
+//    sprintf(name, "%s/Correction/%s_Target_Gate", FC.c_str(), FC.c_str());
 //    TGraphErrors *geT = (TGraphErrors*) fAna->Get(name); if (!geT) cout << "Could not get " << name << endl;
 //    geT unused! Is that N_{FG} / N_{FG+BG} ?
 
@@ -212,7 +212,7 @@ void SimSB(string Simulation, string FC = "PuFC", Int_t ch = 0)
 {
     cout << "Analyzing " << Simulation << " " << FC << " Shadow Bar" << endl;
     char name[128] = "";
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     if (!fAna) cout << "Could not open " << "Analysis.root" << endl;
 
     sprintf(name, "Simulation/%s/%s_SB/EffToF/%s_ProjT_SB_%i", Simulation.c_str(), FC.c_str(), FC.c_str(), ch + 1);
@@ -225,9 +225,9 @@ void SimSB(string Simulation, string FC = "PuFC", Int_t ch = 0)
 void AnaSim()
 {
 //    MCNPtoROOT();
-//    AnaSim("Geant4", "PuFC", "real");
+    AnaSim("Geant4", "PuFC", "real");
     AnaSim("Geant4", "UFC", "real");
-//    AnaSim("Geant4", "UFC", "SB");
+    AnaSim("Geant4", "UFC", "SB");
 //    AnaSim("MCNP", "PuFC", "real");
 //    AnaSim("MCNP", "UFC", "real");
 

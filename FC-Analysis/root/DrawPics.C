@@ -10,7 +10,7 @@
 #include "FC.C"
 #include "Runs.C"
 #include "MCNPtoROOT.C"
-#include "/gpfs/home/hoffma93/StyleSheets/StyleSheet.C"
+#include "/home/hoffma93/StyleSheets/StyleSheet.C"
 #include "TStyle.h"
 #define lw 2
 //#define a 0.25 // alpha
@@ -1566,7 +1566,7 @@ void DrawSponFisStability(TFile *fAna, string FC)
 
     TLatex LaText, ChiText, NuText;
     LaText.SetTextSize(0.20);
-    ChiText.SetTextSize(0.12); NuText.SetTextSize(0.12);
+    ChiText.SetTextSize(0.20); NuText.SetTextSize(0.20);
     ChiText.SetTextColor(kBlack); NuText.SetTextColor(kBlack);
     Double_t chi2 = 0, x, y;
     Int_t dof = 1;
@@ -1594,15 +1594,16 @@ void DrawSponFisStability(TFile *fAna, string FC)
         hC[i]->GetXaxis()->SetTimeDisplay(1);
         hC[i]->GetXaxis()->SetTimeFormat("%d.%m.");
         hC[i]->GetXaxis()->SetNdivisions(606);
-        hC[i]->GetXaxis()->SetTitleSize(0.15);
-        hC[i]->GetXaxis()->SetLabelSize(0.13);
+        hC[i]->GetXaxis()->SetTitleSize(0.20);
+        hC[i]->GetXaxis()->SetLabelSize(0.15);
+        hC[i]->GetXaxis()->SetLabelOffset(0.03);
 //        if (i % 2 == 0)
-            hC[i]->GetYaxis()->SetTitle("#it{C}_{BG} / s^{-1}");
+            hC[i]->GetYaxis()->SetTitle("#it{#dot{C}}_{BG} / s^{-1}");
 //        else
 //            hC[i]->GetYaxis()->SetTitle("");
-        hC[i]->GetYaxis()->SetTitleSize(0.15);
-        hC[i]->GetYaxis()->SetLabelSize(0.13);
-        hC[i]->GetYaxis()->SetTitleOffset(0.4);
+        hC[i]->GetYaxis()->SetTitleSize(0.20);
+        hC[i]->GetYaxis()->SetLabelSize(0.15);
+        hC[i]->GetYaxis()->SetTitleOffset(0.3);
 
         // Constant fit: Background vs Time
         sprintf(name, "%s/Stability/SF/%s_%i_fit", FC.c_str(), FC.c_str(), i+1);
@@ -1626,7 +1627,7 @@ void DrawSponFisStability(TFile *fAna, string FC)
         ChiText.DrawLatexNDC(.2,.235, name);
 
         sprintf(name, "dof = %i", dof);
-        NuText.DrawLatexNDC(.8,.235, name);
+        NuText.DrawLatexNDC(.75,.235, name);
     }
 
     cST->Update();
@@ -2283,10 +2284,10 @@ void DrawResult(TFile *fAna)
 
 void DrawCalN(TFile *fAna)
 {
-    TGraphErrors *geUo = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_effN"); if (!geUo) cout << "Could not get " << "UFC/nAtoms/UFC_effN" << endl;
-    TGraphErrors *geUn = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_effN_TL"); if (!geUn) cout << "Could not get " << "UFC/nAtoms/UFC_effN_TL" << endl;
-    TGraphErrors *gePTB = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_Geant4_calN"); if (!gePTB) cout << "Could not get " << "UFC/nAtoms/UFC_Geant4_calN" << endl;
-    geUo->SetTitle("; Deposit; #varepsilon#font[12]{N} / 10^{19}");
+    TGraphErrors *geUo = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN"); if (!geUo) cout << "Could not get " << "UFC/nAtoms/UFC_eN" << endl;
+    TGraphErrors *geUn = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN_TL"); if (!geUn) cout << "Could not get " << "UFC/nAtoms/UFC_eN_TL" << endl;
+    TGraphErrors *gePTB = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN_cal_Geant4"); if (!gePTB) cout << "Could not get " << "UFC/nAtoms/UFC_eN_cal_Geant4" << endl;
+    geUo->SetTitle("UFC atom number calibration; Deposit; #varepsilon#font[12]{N}_{U} / 10^{19}");
     BiasX(geUo, -0.1, 1.E-19);
     BiasX(geUn, 0.0, 1.E-19);
     BiasX(gePTB, +0.1, 1.E-19);
@@ -2306,7 +2307,7 @@ void DrawCalN(TFile *fAna)
     gePTB->SetMarkerColor(kRed);
     gePTB->SetLineColor(kRed);
     TLegend *lU = new TLegend(0.15, 0.65, 0.4, 0.85, "Calibration");
-    lU->AddEntry(geUo, "UFC vs H19 @ #font[12]{n}ELBE, old result", "pe");
+    lU->AddEntry(geUo, "UFC vs H19 @ #font[12]{n}ELBE, 2016 result", "pe");
     lU->AddEntry(geUn, "UFC vs H19 @ #font[12]{n}ELBE, with Track Length", "pe");
     lU->AddEntry(gePTB, "UFC @ PTB", "pe");
 
@@ -2322,9 +2323,9 @@ void DrawCalN(TFile *fAna)
     gePTB->Draw("same P");
     lU->Draw();
 
-    TGraphErrors *gePu_o = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_effN"); if (!gePu_o) cout << "Could not get " << "UFC/nAtoms/UFC_effN" << endl;
-    TGraphErrors *gePu_n = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_Geant4_calN"); if (!gePu_n) cout << "Could not get " << "UFC/nAtoms/UFC_Geant4_calN" << endl;
-    gePu_o->SetTitle("; Deposit; #varepsilon#font[12]{N} / 10^{19}");
+    TGraphErrors *gePu_o = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_eN"); if (!gePu_o) cout << "Could not get " << "PuFC/nAtoms/PuFC_eN" << endl;
+    TGraphErrors *gePu_n = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_eN_cal_Geant4"); if (!gePu_n) cout << "Could not get " << "PuFC/nAtoms/PuFC_eN_cal_Geant4" << endl;
+    gePu_o->SetTitle("PuFC atom number calibration; Deposit; #varepsilon#font[12]{N}_{Pu} / 10^{19}");
     BiasX(gePu_o, -0.1, 1.E-19);
     BiasX(gePu_n, +0.1, 1.E-19);
     gePu_o->SetLineWidth(2);
@@ -2337,7 +2338,7 @@ void DrawCalN(TFile *fAna)
     gePu_n->SetMarkerSize(2);
     gePu_n->SetMarkerColor(kRed);
     gePu_n->SetLineColor(kRed);
-    TLegend *lPu = new TLegend(0.15, 0.65, 0.4, 0.85, "Kalibrierung");
+    TLegend *lPu = new TLegend(0.15, 0.65, 0.4, 0.85, "Calibration");
     lPu->AddEntry(gePu_o, "#font[12]{T}_{1/2,SF}", "PE");
     lPu->AddEntry(gePu_n, "PTB, LC1", "PE");
 
@@ -2797,7 +2798,7 @@ int DrawPics()
 //    DrawIndFisStability(fAna, "UFC");
 //    IndFisSum(fAna, "UFC");
 //    DrawSponFisStability(fAna, "UFC");
-    DrawSponFisStability(fAna, "PuFC");
+//    DrawSponFisStability(fAna, "PuFC");
 //    DrawSignalStability();
 //    DrawQDCvsTime(0);
 //    DrawTvsE(fAna);
@@ -2810,7 +2811,7 @@ int DrawPics()
 //    DrawSimNotebook(fAna, 1, 1);
 //    DrawG4vsMCNP(fAna, "PuFC", 0, 0);
 //    DrawResult(fAna);
-//    DrawCalN(fAna);
+    DrawCalN(fAna);
 //    DrawConstantBackground(fAna, "UFC_NIF", 0);
 //    DrawConstantBackground(fAna, "UFC_SB", 0);
 //    DrawConstantBackground(fAna, "NIF", i);

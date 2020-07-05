@@ -79,7 +79,7 @@ TGraphErrors* GetT(Double_t eff = 0.96)
     Double_t M_U = 235.31765;
     Double_t M_O = 15.999;
     cout << endl << "Deposit depth [mg/cm^2]" << endl;
-    TGraphErrors *geEffUmA = EffUmA(); // mg/cm^2
+    TGraphErrors *geEffUmA = EffUmA("/home/hoffma93/Programme/ROOT/Data/effUmA.dat"); // mg/cm^2
     TGraphErrors *geT = new TGraphErrors(8);
     Double_t x, UmA, DUmA, mA, DmA;
     for (Int_t i = 0; i < 8; i++)

@@ -151,13 +151,16 @@ Double_t TargetFactor(TFile *fAna)
 void TargetGateU(Bool_t Draw = 0)
 {
     char name[64] = "";
-    TFile *fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     if (!fAna) cout << "Could not open " << "fAna" << endl;
-    Double_t fTarget = TargetFactor(fAna);
+
     TFile *fFG = TFile::Open("~/Programme/Geant4-Work/results/UFC_ideal_c_FG.root");
     if (!fFG) cout << "Could not open " << "fFG" << endl;
+
     TFile *fTot = TFile::Open("~/Programme/Geant4-Work/results/UFC_ideal_c_FG+BG.root");
     if (!fTot) cout << "Could not open " << "fTot" << endl;
+
+    Double_t fTarget = TargetFactor(fAna);
     TGraphErrors *geU = new TGraphErrors(8);
     geU->SetName("UFC_Target_Gate");
     geU->SetTitle("UFC Target scattering and Gating correction; Deposit; #font[12]{k}_{T}");
@@ -225,13 +228,16 @@ void TargetGateU(Bool_t Draw = 0)
 void TargetGatePu(Bool_t Draw = 0)
 {
     char name[64] = "";
-    TFile *fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     if (!fAna) cout << "Could not open " << "fAna" << endl;
-    Double_t fTarget = TargetFactor(fAna);
+
     TFile *fFG = TFile::Open("~/Programme/Geant4-Work/results/PuFC_ideal_c_FG.root");
     if (!fFG) cout << "Could not open " << "fFG" << endl;
+
     TFile *fTot = TFile::Open("~/Programme/Geant4-Work/results/PuFC_ideal_c_FG+BG.root");
     if (!fTot) cout << "Could not open " << "fTot" << endl;
+
+    Double_t fTarget = TargetFactor(fAna);
     TGraphErrors *gePu = new TGraphErrors(8);
     gePu->SetName("PuFC_Target_Gate");
     gePu->SetTitle("PuFC Target scattering and Gating correction; Deposit; #font[12]{k}_{T}");
@@ -297,16 +303,107 @@ void TargetGatePu(Bool_t Draw = 0)
     fAna->Close();
 }
 
+void TargetGate(string FC, string VacSimFG, string VacSimFGBG, Bool_t Draw = 0)
+{
+    char name[128] = "";
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
+    if (!fAna) cout << "Could not open " << "fAna" << endl;
+
+    TFile *fFG = TFile::Open(VacSimFG.c_str());
+    if (!fFG) cout << "Could not open " << "fFG" << endl;
+
+    TFile *fTot = TFile::Open(VacSimFGBG.c_str());
+    if (!fTot) cout << "Could not open " << "fTot" << endl;
+
+    Double_t fTarget = TargetFactor(fAna);
+
+    TGraphErrors *ge = new TGraphErrors(8);
+    sprintf(name, "%s_Target_Gate", FC.c_str());
+    ge->SetName(name);
+    sprintf(name, "%s Target scattering and Gating correction; Deposit; #font[12]{k}_{T}", FC.c_str());
+    ge->SetTitle(name);
+
+    TGraph *gLim1 = new TGraph(8);
+    sprintf(name, "%s_Geant4_lim1", FC.c_str());
+    gLim1->SetNameTitle(name, "Left ToF gate bin; Deposit; bin nr.");
+    TGraph *gLim2 = new TGraph(8);
+    sprintf(name, "%s_Geant4_lim2", FC.c_str());
+    gLim2->SetNameTitle(name, "Right ToF gate bin; Deposit; bin nr.");
+    for (Int_t i = 0; i < 8; i++)
+    {
+        sprintf(name, "%s/ToF/%s_ToF_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+        TH1F *hFG = (TH1F*) fFG->Get(name); if (!hFG) cout << "Could not get FG " << name << endl;
+        hFG->Scale(fTarget);
+        TH1F *hTot = (TH1F*) fTot->Get(name); if (!hTot) cout << "Could not get Tot " << name << endl;
+        Int_t tMax = (Int_t) hTot->GetBinCenter(hTot->GetMaximumBin());
+        Int_t bl = hTot->FindBin(tMax - Left(FC));
+        Int_t br = hTot->FindBin(tMax + Right(FC) + 1.0) - 1;
+        gLim1->SetPoint(i, i+1, bl / 10);
+        gLim2->SetPoint(i, i+1, br / 10);
+        Double_t k = fTarget;// * hFG->Integral() / hTot->Integral(bl, br);
+        cout << hTot->GetBinWidth(1) << " " << hTot->GetMaximumBin() << " " << tMax << " " << bl << "-" << br << " " << k << endl;
+        ge->SetPoint(i, i+1, k);
+        if (Draw)
+        {
+            sprintf(name, "%s_Tot_%i", FC.c_str(), i+1);
+            hTot->SetName(name);
+            sprintf(name, "%s_FG_%i", FC.c_str(), i+1);
+            hFG->SetName(name);
+            hTot->SetStats(0);
+            SetSize(hTot);
+            hTot->GetYaxis()->SetTitle("#font[12]{N}_{(n,f)} [a.u.]");
+            hTot->SetLineColor(kBlue);
+            hFG->SetLineColor(kGreen);
+            sprintf(name, "%s Ch.%i", FC.c_str(), i+1);
+            TLegend *l = new TLegend(0.6, 0.6, 0.9, 0.9, name);
+            l->AddEntry(hTot, "FG+BG");
+            l->AddEntry(hFG, "FG");
+
+            sprintf(name, "cT_%s_%i", FC.c_str(), i+1);
+            TCanvas *cT = new TCanvas(name);
+            gPad->SetTicks(1, 1);
+//            gPad->SetLogx(1);
+            gPad->SetLogy(1);
+            hTot->Draw("hist");
+            hFG->Draw("same hist");
+            l->Draw();
+            Double_t y0 = cT->GetUymin(), y1 = hTot->GetMaximum();
+            Double_t xval = hTot->GetBinLowEdge(bl);
+            TLine *ll = new TLine(xval, y0, xval, y1);
+            ll->SetLineWidth(2);
+            ll->SetLineStyle(3);
+            ll->Draw("same");
+            xval = hTot->GetBinLowEdge(br);
+            TLine *lr = new TLine(xval, y0, xval, y1);
+            lr->SetLineWidth(2);
+            lr->SetLineStyle(3);
+            lr->Draw("same");
+        }
+    }
+    Save(fAna, FC + "/Correction", ge);
+    Save(fAna, "Simulation/Geant4", gLim1);
+    Save(fAna, "Simulation/Geant4", gLim2);
+    fAna->Save();
+    fAna->Close();
+}
+
 void Target()
 {
     LoadStyles();
     gROOT->SetStyle("SinglePadStyle");
     gROOT->ForceStyle(kTRUE);
     gStyle->SetLegendFont(132);
+
     TargetE("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_ENE", "", 100000000);
     TargetToF("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_TOF", "");
-    TargetGateU(1);
-    TargetGatePu(0);
+
+    string UFC_VacSimFG = "~/Programme/Geant4-Work/results/UFC_ideal_c_FG.root";
+    string UFC_VacSimFGBG = "~/Programme/Geant4-Work/results/UFC_ideal_c_FG+BG.root";
+    TargetGate("UFC", UFC_VacSimFG, UFC_VacSimFGBG, 0);
+
+    string PuFC_VacSimFG = "~/Programme/Geant4-Work/results/PuFC_ideal_c_FG.root";
+    string PuFC_VacSimFGBG = "~/Programme/Geant4-Work/results/PuFC_ideal_c_FG+BG.root";
+    TargetGate("PuFC", PuFC_VacSimFG, PuFC_VacSimFGBG, 0);
 
 //    TargetE("/home/hoffma93/Programme/TARGET/Results/Variation/Double_Distance/FC_STARGET_15MEENE", "3.3m", 100000000);
 

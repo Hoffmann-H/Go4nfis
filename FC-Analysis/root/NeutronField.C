@@ -3,7 +3,7 @@
 #include "SaveToFile.C"
 #include "Runs.C"
 #include "FC.C"
-#include "/gpfs/home/hoffma93/StyleSheets/StyleSheet.C"
+#include "/home/hoffma93/StyleSheets/StyleSheet.C"
 #include "TGraphErrors.h"
 #include <fstream>
 
@@ -117,7 +117,7 @@ string NeutronFieldRun(string Run)
 { // Find 1 run's neutron flux. Return output string
     TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
     Double_t Yield = 2.217E4;
-    Double_t DYield = 0.003 * Yield; //543.3;
+    Double_t DYield = 240;// 0.003 * Yield;
     char name[64] = "";
 
     // choose fission chamber
