@@ -7,6 +7,8 @@
 #include "TGraphErrors.h"
 #include <fstream>
 
+#define neutron_field_data "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/runs.txt"
+
 void Freifeld(Bool_t Draw = 1)
 {
     Int_t nFreifeld = 11;
@@ -89,10 +91,10 @@ void Freifeld(Bool_t Draw = 1)
 Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &t_real)
 {
     // Open txt tabular, break if not successful
-    std::ifstream input("/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/runs.txt");
+    std::ifstream input(neutron_field_data);
     if (!input.is_open())
     {
-        cout << "Could not open " << "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/runs.txt" << endl;
+        cout << "Could not open " << neutron_field_data << endl;
         return 0;
     }
     string Run = "", lastRun;
@@ -115,7 +117,7 @@ Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &
 
 string NeutronFieldRun(string Run)
 { // Find 1 run's neutron flux. Return output string
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
     Double_t Yield = 2.217E4;
     Double_t DYield = 240;// 0.003 * Yield;
     char name[64] = "";
