@@ -138,6 +138,6 @@ void NumberOfUAtoms(string mA_nELBE, string descr = "")
 void NumberOfAtoms()
 {
     NumberOfPuAtoms();
-    NumberOfUAtoms("/home/hoffma93/Programme/ROOT/Data/effUmA.dat");
-    NumberOfUAtoms("/home/hoffma93/Programme/ROOT/Data/effUmA_TL.dat", "_TL");
+//    NumberOfUAtoms("/home/hoffma93/Programme/ROOT/Data/effUmA.dat", "_noTL");
+    NumberOfUAtoms("/home/hoffma93/Programme/ROOT/Data/effUmA_TL.dat", "");
 }

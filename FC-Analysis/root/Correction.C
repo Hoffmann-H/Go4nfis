@@ -165,13 +165,14 @@ void ApplyCorrectionsU(string Simulation = "Geant4", Int_t Gate = 15)
     if (!geFlux) cout << "Could not get " << name << endl;
 
     // Get TARGET ToF-gate correction factor
-    sprintf(name, "UFC/Correction/UFC_Target_Gate");
+    sprintf(name, "UFC/Correction/UFC_Target_Gate"); // for vacuum simulation with total source spectrum
+//    sprintf(name, "UFC/Correction/UFC_Target"); // for vacuum simulation with direct source spectrum only
     TGraphErrors *gT = (TGraphErrors*)fAna->Get(name); if (!gT) cout << "Could not get " << name << endl;
 //    sprintf(name, "UFC/Correction/UFC_%s_Gate_%ins", Simulation.c_str(), Gate);
 //    TGraphErrors *gG = (TGraphErrors*)fAna->Get(name); if (!gG) cout << "Could not get " << name << endl;
 
     // Get simulated correction for neutron scattering
-    sprintf(name, "UFC/Correction/%s_UFC_real_C", Simulation.c_str());
+    sprintf(name, "UFC/Correction/UFC_%s_real_C", Simulation.c_str());
     TGraphErrors *gC = (TGraphErrors*)fAna->Get(name); if (!gC) cout << "Could not get " << name << endl;
 
     // Get Inefficiency correction ("Carlson-Faktor")
@@ -187,13 +188,13 @@ void ApplyCorrectionsU(string Simulation = "Geant4", Int_t Gate = 15)
     TGraphErrors *gN = new TGraphErrors(8);
     sprintf(name, "UFC_eN_cal_%s", Simulation.c_str());
     gN->SetName(name);
-    gN->SetTitle("U Calibration; Deposit; #font[12]{N}_{U}");
+    gN->SetTitle("U Calibration; Deposit; #varepsilon_{#it{n}ELBE}#it{N}_{U}");
 
     // Create areal mass density calibration graph
     TGraphErrors *gmA = new TGraphErrors(8);
     sprintf(name, "UFC_emA_cal_%s", Simulation.c_str());
     gmA->SetName(name);
-    gmA->SetTitle("U areal mass density; Deposit; #varepsilon#it{m}_{A} / mg cm^{-2}");
+    gmA->SetTitle("U areal mass density; Deposit; #varepsilon_{#it{n}ELBE}#it{m}_{A} / mg cm^{-2}");
 
     // Raw cross section parameters
     Double_t FissionRate[8], DFissionRate[8];
@@ -249,14 +250,14 @@ void ApplyCorrectionsU(string Simulation = "Geant4", Int_t Gate = 15)
         gCorr->SetPointError(i, 0, DSigma[i]);
 
         /// Calibrate atom number using evaluated cross section ///////////////////////////////////
-        N[i] = I * T[i] * C[i] / eff * FissionRate[i] / evalCS / Flux[i] * 1.E22;
+        N[i] = I * T[i] * C[i] * Carlson[i] * FissionRate[i] / evalCS / Flux[i] * 1.E22;
         ///////////////////////////////////////////////////////////////////////////////////////////
 
         DN[i] = N[i] * sqrt( pow(DC[i] / C[i], 2) +
                              pow(DFissionRate[i] / FissionRate[i], 2) +
                              pow(DFlux[i] / Flux[i], 2) );
-        gN->SetPoint(i, i+1, N[i] * eff);
-        gN->SetPointError(i, 0, DN[i] * eff);
+        gN->SetPoint(i, i+1, N[i]);
+        gN->SetPointError(i, 0, DN[i]);
         cout << " " << i+1 << " " << nELBEmA[i] << "+-" << DnELBEmA[i] << "  " << N[i] << "+-" << DN[i] << "  " << Sigma[i] << "+-" << DSigma[i] << endl;
 
         /// Calibrate areal mass density using evaluated cross section ////////////////////////////
@@ -291,7 +292,7 @@ void ApplyCorrectionsU(string Simulation = "Geant4", Int_t Gate = 15)
     output.close();
 }
 
-void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
+void ApplyCorrectionsPu(string Simulation = "Geant4")
 {
     Double_t evalCS = 2.1026472;
     Double_t eff = 0.988;
@@ -318,14 +319,18 @@ void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
     if (!geFlux) cout << "Could not get " << name << endl;
 
     // Get TARGET ToF-gate correction factor
-    sprintf(name, "PuFC/Correction/PuFC_Target_Gate");
+//    sprintf(name, "PuFC/Correction/PuFC_Target_Gate"); // for vacuum simulation with total source spectrum
+    sprintf(name, "PuFC/Correction/PuFC_Target"); // for vacuum simulation with direct source spectrum only
     TGraphErrors *gT = (TGraphErrors*)fAna->Get(name); if (!gT) cout << "Could not get " << name << endl;
-//    sprintf(name, "PuFC/Correction/PuFC_%s_Gate_%ins", Simulation.c_str(), Gate);
+//    sprintf(name, "PuFC/Correction/PuFC_%s_Gate_%ins", Simulation.c_str(), Right("PuFC"));
 //    TGraphErrors *gG = (TGraphErrors*)fAna->Get(name); if (!gG) cout << "Could not get " << name << endl;
 
     // Get simulated correction for neutron scattering
-    sprintf(name, "PuFC/Correction/%s_PuFC_real_C", Simulation.c_str());
+    sprintf(name, "PuFC/Correction/PuFC_%s_real_C", Simulation.c_str());
     TGraphErrors *gC = (TGraphErrors*)fAna->Get(name); if (!gC) cout << "Could not open " << name << endl;
+
+    /// note: For the PuFC, SF and (n,f) detection efficiencies are assumed equal.
+    /// Carlson correction k_epsilon = 1
 
     // Create corrected cross section graph
     TGraphErrors *gCorr = new TGraphErrors(8);
@@ -336,7 +341,7 @@ void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
     TGraphErrors *gN = new TGraphErrors(8);
     sprintf(name, "PuFC_eN_cal_%s", Simulation.c_str());
     gN->SetName(name);
-    gN->SetTitle("Pu Calibration; Deposit; #font[12]{N}_{Pu}");
+    gN->SetTitle("Pu Calibration; Deposit; #varepsilon#it{N}_{Pu}");
 
     // Create areal mass density calibration graph
     TGraphErrors *gmA = new TGraphErrors(8);
@@ -395,7 +400,7 @@ void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
         gCorr->SetPointError(i, 0, DSigma[i]);
 
         /// Calibrate atom number using evaluated cross section ///////////////////////////////////
-        N[i] = I * T[i] * C[i] / eff * FissionRate[i] / evalCS / Flux[i] * 1.E22;
+        N[i] = I * T[i] * C[i] * FissionRate[i] / evalCS / Flux[i] * 1.E22;
         ///////////////////////////////////////////////////////////////////////////////////////////
 
         DN[i] = N[i] * sqrt( pow(DC[i] / C[i], 2) +
@@ -436,11 +441,11 @@ void ApplyCorrectionsPu(string Simulation = "Geant4", Int_t Gate = 15)
 void Correction()
 {
 //    ScatteringUFC();
-    ApplyCorrectionsU("Geant4", RIGHT);
-//    ApplyCorrectionsU("MCNP", RIGHT);
+    ApplyCorrectionsU("Geant4");
+//    ApplyCorrectionsU("MCNP");
 
-    ApplyCorrectionsPu("Geant4", RIGHT);
-//    ApplyCorrectionsPu("MCNP", RIGHT);
+    ApplyCorrectionsPu("Geant4");
+//    ApplyCorrectionsPu("MCNP");
 }
 
 #endif

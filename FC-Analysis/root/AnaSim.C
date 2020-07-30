@@ -126,7 +126,7 @@ Double_t GatingCorrection(TH1D *pH1Real, TH1D *pH1Peak, Int_t ch, string FC = "P
 }
 
 void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
-{ // SimToF == 0: force SimToF recalculation. 1: Use SimToF if possible. 2: Use FitToF if possible. Otherwise create it.
+{
     cout << "Analyzing " << Simulation << " " << FC << " " << key << " simulation results" << endl;
     char name[128] = "";
     TFile *fAna = TFile::Open(results_file, "UPDATE");
@@ -136,17 +136,17 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
 //    geT unused! Is that N_{FG} / N_{FG+BG} ?
 
     TGraphErrors *geK = new TGraphErrors(8);
-    sprintf(name, "%s_%s_%s_k", Simulation.c_str(), FC.c_str(), key.c_str());
+    sprintf(name, "%s_%s_%s_k", FC.c_str(), Simulation.c_str(), key.c_str());
     geK->SetName(name);
     sprintf(name, "%s, %s, correlation loss; Deposit; #it{k}", FC.c_str(), Simulation.c_str());
     geK->SetTitle(name);
     TGraphErrors *geC = new TGraphErrors(8);
-    sprintf(name, "%s_%s_%s_C", Simulation.c_str(), FC.c_str(), key.c_str());
+    sprintf(name, "%s_%s_%s_C", FC.c_str(), Simulation.c_str(), key.c_str());
     geC->SetName(name);
     sprintf(name, "%s, %s, correction factor; Deposit; #it{C}", FC.c_str(), Simulation.c_str());
     geC->SetTitle(name);
     TGraphErrors *geG = new TGraphErrors(8);
-    sprintf(name, "%s_%s_Gate_%ins", FC.c_str(), Simulation.c_str(), RIGHT); // schema: PuFC_Geant4_Gate_15ns
+    sprintf(name, "%s_%s_Gate_%ins", FC.c_str(), Simulation.c_str(), Right(FC)); // schema: PuFC_Geant4_Gate_15ns
     geG->SetName(name);
     sprintf(name, "%s, %s, ToF gating correction; Deposit; #it{G}", FC.c_str(), Simulation.c_str());
     geG->SetTitle(name);
@@ -167,7 +167,7 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
 //        cout << bl << " " << br << endl;
 
         /// Calculate correction factor //////////////////////////////////////////////////////
-        geC->SetPoint(i, i+1, hProjIdeal->Integral(bl, br) / hProjReal->Integral(bl, br)); ///
+        geC->SetPoint(i, i+1, hProjIdeal->Integral() / hProjReal->Integral(bl, br)); /////////
         //////////////////////////////////////////////////////////////////////////////////////
 //        cout << "Channel " << i+1 << " \t" << hProjIdeal->Integral() << " / " << hProjReal->Integral() << " * " << fTarget << " = \t" << hProjIdeal->Integral() / hProjReal->Integral() * fTarget << endl;
 
@@ -179,7 +179,7 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
         Dk = nfSc / nfTot * sqrt(pow(DnfSc / nfSc, 2) + pow(DnfTot / nfTot, 2));
         geK->SetPoint(i, i+1, k);
         geK->SetPointError(i, 0, Dk);
-        cout << "Channel " << i+1 << " \t" << nfSc << " (" << DnfSc << ") " << " / " << nfTot << " (" << DnfTot << ") " << " --> \t" << 1. - nfSc / nfTot << " (" << Dk << ") " << endl;
+//        cout << "Channel " << i+1 << " \t" << nfSc << " (" << DnfSc << ") " << " / " << nfTot << " (" << DnfTot << ") " << " --> \t" << 1. - nfSc / nfTot << " (" << Dk << ") " << endl;
 
         Double_t C = hProjIdeal->Integral(bl, br) / hProjReal->Integral(bl, br);
         Double_t D = sqrt(1.0 / hProjIdeal->GetEntries() + 1.0 / hProjReal->GetEntries());
@@ -190,14 +190,15 @@ void AnaSim(string Simulation, string FC = "PuFC", string key = "real")
 //            C /= T;
 //        }
 
+        cout << i+1 << "   " << hProjIdeal->Integral(bl, br) << " / " << hProjReal->Integral(bl, br) << " =\t " << C << " +- " << C*D;
         if (!strcmp(key.c_str(), "real")) {
             sprintf(name, "Simulation/%s/%s_real/FitToF/%s_FitT_real_%i", Simulation.c_str(), FC.c_str(), FC.c_str(), i+1);
             TH1D *hFitReal = (TH1D*)fAna->Get(name); if (!hFitReal) cout << "Could not get " << name << endl;
             Double_t G = GatingCorrection(hProjReal, hFitReal, i, FC);
             geG->SetPoint(i, i+1, G);
-            cout << i+1 << "   " << C << " +- " << C*D << "   " << G << endl;
+            cout << " \t " << G << endl;
         } else
-            cout << i+1 << "   " << C << " +- " << C*D << endl;
+            cout << endl;
     }
     if (!strcmp(key.c_str(), "real")) {
         Save(fAna, FC+"/Correction", geG);
@@ -225,9 +226,9 @@ void SimSB(string Simulation, string FC = "PuFC", Int_t ch = 0)
 void AnaSim()
 {
 //    MCNPtoROOT();
-    AnaSim("Geant4", "PuFC", "real");
+//    AnaSim("Geant4", "PuFC", "real");
     AnaSim("Geant4", "UFC", "real");
-    AnaSim("Geant4", "UFC", "SB");
+//    AnaSim("Geant4", "UFC", "SB");
 //    AnaSim("MCNP", "PuFC", "real");
 //    AnaSim("MCNP", "UFC", "real");
 

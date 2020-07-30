@@ -662,11 +662,11 @@ void VglSim()
 //    VglTrackLength();
 //    TFile *fVac = TFile::Open("/home/hoffma93/Programme/Geant4-Work/results/PuFC_ideal_5E7.root"); if (!fVac) cout << "Could not open " << "fVac" << endl;
 //    VglSolidAngle(fVac);
-//    TFile *fFG = TFile::Open("/home/hoffma93/Programme/Geant4-Work/results/PuFC_real_FG_1E7.root"); if (!fFG) cout << "Could not open " << "fVac" << endl;
-//    TFile *fTot = TFile::Open("/home/hoffma93/Programme/Geant4-Work/results/PuFC_real_1E8.root"); if (!fTot) cout << "Could not open " << "fVac" << endl;
-//    VglSourceSpectrum(fFG, fTot);
+    TFile *fFG = TFile::Open("/home/hoffma93/Programme/Geant4-Work/results/PuFC_real_FG_1E7.root"); if (!fFG) cout << "Could not open " << "fVac" << endl;
+    TFile *fTot = TFile::Open("/home/hoffma93/Programme/Geant4-Work/results/PuFC_real_1E8.root"); if (!fTot) cout << "Could not open " << "fVac" << endl;
+    VglSourceSpectrum(fFG, fTot);
 //    DrawAngular();
-    G4vsMCNP("real");
+//    G4vsMCNP("real");
 }
 
 #endif

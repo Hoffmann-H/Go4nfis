@@ -7,7 +7,7 @@
 #include "TGraphErrors.h"
 #include <fstream>
 
-#define neutron_field_data "/home/hoffma93/Programme/Go4nfis/FC-Analysis/data/runs.txt"
+#define neutron_field_data "../data/runs.txt"
 
 void Freifeld(Bool_t Draw = 1)
 {
@@ -79,7 +79,7 @@ void Freifeld(Bool_t Draw = 1)
         l->Draw();
         c->Update();
     }
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
     Save(fAna, "Freifeld", gQ, "Q");
     Save(fAna, "Freifeld", gHe3, "He3");
     Save(fAna, "Freifeld", gGM, "GM");
@@ -88,7 +88,7 @@ void Freifeld(Bool_t Draw = 1)
     fAna->Close();
 }
 
-Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &t_real)
+Bool_t GetRun(string RunName, Double_t &monitor, Double_t &t_real)
 {
     // Open txt tabular, break if not successful
     std::ifstream input(neutron_field_data);
@@ -98,11 +98,11 @@ Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &
         return 0;
     }
     string Run = "", lastRun;
-    Double_t Monitor, DeltaRel, tReal;
+    Double_t Monitor, tReal;
     do {
         lastRun = Run; // keep last run name
         // Read line
-        input >> Run >> Monitor >> DeltaRel >> tReal;
+        input >> Run >> Monitor >> tReal;
         // Break if last line was reached
         if (!strcmp(Run.c_str(), lastRun.c_str()))
             return 0;
@@ -110,7 +110,6 @@ Bool_t GetRun(string RunName, Double_t &monitor, Double_t &delta_rel, Double_t &
     } while (strcmp(Run.c_str(), RunName.c_str()));
     // Save numbers to reference
     monitor = Monitor;
-    delta_rel = DeltaRel;
     t_real = tReal;
     return 1;
 }
@@ -120,14 +119,17 @@ string NeutronFieldRun(string Run)
     TFile* fAna = TFile::Open(results_file, "UPDATE");
     Double_t Yield = 2.217E4;
     Double_t DYield = 240;// 0.003 * Yield;
-    char name[64] = "";
+    Double_t MonitorScatter = 0.9770;
+    Double_t DeadtimePerCount = 2.9E-06; // unit seconds
 
     // choose fission chamber
     string FC = (Run[0] == 'U') ? "UFC" : "PuFC";
     // Get monitor data
-    Double_t Monitor, DeltaRel, tReal;
-    if (!GetRun(Run, Monitor, DeltaRel, tReal))
+    Double_t MonitorCounts, tReal;
+    if (!GetRun(Run, MonitorCounts, tReal))
         cout << "Could not find run " << Run << endl;
+    Double_t CorrectedCounts = MonitorScatter * MonitorCounts;
+    Double_t tLive = tReal - MonitorCounts * DeadtimePerCount;
 
     // Create graphs
     TGraphErrors *geFluence = new TGraphErrors(8);
@@ -136,22 +138,28 @@ string NeutronFieldRun(string Run)
 
     // Initialize returned string
     std::stringstream line;
-    line << Run << " " << Monitor << " " << DeltaRel * Monitor << " " << Monitor / tReal << " " << DeltaRel * Monitor / tReal;
+    line << Run << " "
+         << CorrectedCounts << " "
+         << CorrectedCounts / sqrt(MonitorCounts) << " "
+         << CorrectedCounts / tLive << " "
+         << CorrectedCounts / tLive / sqrt(MonitorCounts);
+    cout << "Run " << Run << endl
+         << "\tMonitor counts: " << MonitorCounts << endl
+         << "\tMonitor real time: " << tReal << endl
+         << "\tCorrected rate: " << CorrectedCounts / tLive << endl;
 
     // loop over deposits
     for (Int_t i = 0; i < 8; i++)
     {
         Double_t w = SolidAngle(i, FC);
         Double_t area = DepositArea(i, FC);
-        Double_t nFluence = Yield * Monitor * w;
-        Double_t DnFluence = sqrt( /*pow(DYield * Monitor * w, 2) +*/
-                                   pow(Yield * DeltaRel * Monitor * w, 2) +
-                                   pow(Yield * Monitor * 0, 2) );
+        Double_t nFluence = Yield * MonitorCounts * w;
+        Double_t DnFluence = nFluence / sqrt(MonitorCounts);
         Double_t nFlux = nFluence / area;
         Double_t DnFlux = sqrt( pow(DnFluence / area, 2) +
                                 pow(0 * nFluence / (area*area), 2) );
-        Double_t nDensity = nFlux / tReal;
-        Double_t DnDensity = DnFlux / tReal;
+        Double_t nDensity = nFlux / tLive;
+        Double_t DnDensity = DnFlux / tLive;
 
 //        cout << i+1 << " " << Monitor << " " << Yield << " " << w << " " << nFluence << " " << area << " " << nFlux << " " << tReal << " " << nDensity << endl;
 
@@ -176,7 +184,7 @@ string NeutronFieldRun(string Run)
 Double_t GetStartTime(string Run)
 {
     char name[128] = "";
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    sprintf(name, "%s%s.root", hist_data_path, Run.c_str());
     TFile *f = TFile::Open(name);
     TH1D *pH = (TH1D*)f->Get("Histograms/Raw/Scaler/Rates/H1RawRate_48");
     Int_t N = pH->GetNbinsX();
@@ -190,7 +198,7 @@ Double_t GetStartTime(string Run)
 Double_t GetRealTime(string Run)
 {
     char name[  128] = "";
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    sprintf(name, "%s%s.root", hist_data_path, Run.c_str());
     TFile *f = TFile::Open(name);
     if (!f)
         cout << "Could not open " << name << endl;
@@ -214,7 +222,7 @@ void DoNeutronField(string FC)
     }
     output.close();
 
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
     TGraphErrors *gMon = new TGraphErrors(("../results/"+FileName).c_str(), "%lg %*s %*lg %*lg %lg %lg");
     if (!gMon) cout << "Could not create TGraphErrors " << FileName << endl;
     gMon->SetName((FC+"_MonitorRate").c_str());

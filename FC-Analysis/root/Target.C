@@ -74,7 +74,7 @@ void TargetToF(string File, string Subfolder = "")
         hTot->SetBinContent(bin, y);
     }
 //    hToF->Scale(1/hToF->Integral());
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
     Save(fAna, "Simulation/Target/"+Subfolder, hDir);
     Save(fAna, "Simulation/Target/"+Subfolder, hSc);
     Save(fAna, "Simulation/Target/"+Subfolder, hTot);
@@ -117,7 +117,7 @@ void TargetE(string File, string Subfolder = "", Double_t Np = 1)
 
 //    pT->Draw();
 
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
     Save(fAna, "Simulation/Target/"+Subfolder, hDir);
     Save(fAna, "Simulation/Target/"+Subfolder, hSc);
     Save(fAna, "Simulation/Target/"+Subfolder, hTot);
@@ -130,7 +130,7 @@ void TargetAng(string File, string Subfolder = "", Double_t Np = 1)
 { // copy TARGET angular distribution from File into Analysis.root/Subfolder
     TGraph *gAng = new TGraph(File.c_str(), "%lg %lg");
     gAng->SetNameTitle("Angular", "Angular neutron distribution; Angel / deg; #sigma / mb/sr");
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
     Save(fAna, "Simulation/Target/"+Subfolder, gAng);
     fAna->Save();
     fAna->Close();
@@ -152,7 +152,7 @@ void TargetGateU(Bool_t Draw = 0)
 {
     char name[64] = "";
     TFile *fAna = TFile::Open(results_file, "UPDATE");
-    if (!fAna) cout << "Could not open " << "fAna" << endl;
+    if (!fAna) cout << "Could not open " << results_file << endl;
 
     TFile *fFG = TFile::Open("~/Programme/Geant4-Work/results/UFC_ideal_c_FG.root");
     if (!fFG) cout << "Could not open " << "fFG" << endl;
@@ -316,12 +316,19 @@ void TargetGate(string FC, string VacSimFG, string VacSimFGBG, Bool_t Draw = 0)
     if (!fTot) cout << "Could not open " << "fTot" << endl;
 
     Double_t fTarget = TargetFactor(fAna);
+    cout << "f_Target = n_dir / n_tot = " << fTarget << endl;
 
-    TGraphErrors *ge = new TGraphErrors(8);
+    TGraphErrors *geT = new TGraphErrors(8);
     sprintf(name, "%s_Target_Gate", FC.c_str());
-    ge->SetName(name);
+    geT->SetName(name);
     sprintf(name, "%s Target scattering and Gating correction; Deposit; #font[12]{k}_{T}", FC.c_str());
-    ge->SetTitle(name);
+    geT->SetTitle(name);
+
+    TGraphErrors *geF = new TGraphErrors(8);
+    sprintf(name, "%s_Target", FC.c_str());
+    geF->SetName(name);
+    sprintf(name, "%s Target total to direct neutron ratio; Deposit; #font[12]{f}_{T}", FC.c_str());
+    geF->SetTitle(name);
 
     TGraph *gLim1 = new TGraph(8);
     sprintf(name, "%s_Geant4_lim1", FC.c_str());
@@ -333,16 +340,20 @@ void TargetGate(string FC, string VacSimFG, string VacSimFGBG, Bool_t Draw = 0)
     {
         sprintf(name, "%s/ToF/%s_ToF_Ch.%i", FC.c_str(), FC.c_str(), i+1);
         TH1F *hFG = (TH1F*) fFG->Get(name); if (!hFG) cout << "Could not get FG " << name << endl;
-        hFG->Scale(fTarget);
         TH1F *hTot = (TH1F*) fTot->Get(name); if (!hTot) cout << "Could not get Tot " << name << endl;
         Int_t tMax = (Int_t) hTot->GetBinCenter(hTot->GetMaximumBin());
         Int_t bl = hTot->FindBin(tMax - Left(FC));
         Int_t br = hTot->FindBin(tMax + Right(FC) + 1.0) - 1;
         gLim1->SetPoint(i, i+1, bl / 10);
         gLim2->SetPoint(i, i+1, br / 10);
-        Double_t k = fTarget;// * hFG->Integral() / hTot->Integral(bl, br);
-        cout << hTot->GetBinWidth(1) << " " << hTot->GetMaximumBin() << " " << tMax << " " << bl << "-" << br << " " << k << endl;
-        ge->SetPoint(i, i+1, k);
+
+        Double_t k = hFG->Integral() / hTot->Integral(bl, br) * fTarget;
+        geT->SetPoint(i, i+1, k);
+
+        geF->SetPoint(i, i+1, fTarget);
+
+//        cout << hTot->GetBinWidth(1) << " " << hTot->GetMaximumBin() << " " << tMax << " " << bl << "-" << br << " " << k << endl;
+        cout << hFG->Integral() << " / " << hTot->Integral(bl, br) << " * " << fTarget << " = " << hFG->Integral() / hTot->Integral(bl, br) * fTarget << endl;
         if (Draw)
         {
             sprintf(name, "%s_Tot_%i", FC.c_str(), i+1);
@@ -380,7 +391,8 @@ void TargetGate(string FC, string VacSimFG, string VacSimFGBG, Bool_t Draw = 0)
             lr->Draw("same");
         }
     }
-    Save(fAna, FC + "/Correction", ge);
+    Save(fAna, FC + "/Correction", geT);
+    Save(fAna, FC + "/Correction", geF);
     Save(fAna, "Simulation/Geant4", gLim1);
     Save(fAna, "Simulation/Geant4", gLim2);
     fAna->Save();
@@ -394,8 +406,8 @@ void Target()
     gROOT->ForceStyle(kTRUE);
     gStyle->SetLegendFont(132);
 
-    TargetE("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_ENE", "", 100000000);
-    TargetToF("/home/hoffma93/Programme/TARGET/Results/Variation/400keV_1E8_TOF", "");
+//    TargetE("~/Programme/TARGET/Results/Variation/400keV_1E8_ENE", "", 100000000);
+//    TargetToF("~/Programme/TARGET/Results/Variation/400keV_1E8_TOF", "");
 
     string UFC_VacSimFG = "~/Programme/Geant4-Work/results/UFC_ideal_c_FG.root";
     string UFC_VacSimFGBG = "~/Programme/Geant4-Work/results/UFC_ideal_c_FG+BG.root";
@@ -405,9 +417,9 @@ void Target()
     string PuFC_VacSimFGBG = "~/Programme/Geant4-Work/results/PuFC_ideal_c_FG+BG.root";
     TargetGate("PuFC", PuFC_VacSimFG, PuFC_VacSimFGBG, 0);
 
-//    TargetE("/home/hoffma93/Programme/TARGET/Results/Variation/Double_Distance/FC_STARGET_15MEENE", "3.3m", 100000000);
+//    TargetE("~/Programme/TARGET/Results/Variation/Double_Distance/FC_STARGET_15MEENE", "3.3m", 100000000);
 
-//    TargetAng("/home/hoffma93/Programme/TARGET/Results/Variation/FC_STARGET_15MEANG", "", 100000000);
+//    TargetAng("~/Programme/TARGET/Results/Variation/FC_STARGET_15MEANG", "", 100000000);
 }
 
 #endif

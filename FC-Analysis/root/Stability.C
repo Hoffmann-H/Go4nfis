@@ -3,6 +3,31 @@
 #include "FC.C"
 #include "Runs.C"
 #include "NeutronField.C"
+#include "SaveToFile.C"
+
+void QDCrates(string StrFile, string FC = "PuFC")
+{
+    char name[64] = "";
+    sprintf(name, "%s%s", hist_data_path, StrFile.c_str());
+    TFile *f = TFile::Open(name, "READ"); if (!f) cout << "Could not open file " << name << endl;
+
+    TFile *fAna = TFile::Open(results_file, "READ"); if (!fAna) cout << "Could not open file " << results_file << endl;
+    sprintf(name, "%s/QDC/Sum", FC.c_str());
+    TGraph *pGrQDCmin = (TGraph*)fAna->Get(name); if (!pGrQDCmin) cout << "Could not get " << name << endl;
+
+    TH1I *h;
+    Double_t x, y;
+    Int_t bin;
+
+    for (uint i = 0; i < 8; i++)
+    {
+        sprintf(name, "Histograms/Analysis/FC/QDC/low/trig/H1AnaQDCl_trig_%i", i+1);
+        h = (TH1I*)f->Get(name); if (!h) cout << "Could not get " << name << endl;
+        pGrQDCmin->GetPoint(i, x, y);
+        bin = h->GetXaxis()->FindBin(y);
+        cout << " " << i+1 << "\t" << h->Integral(bin, -1) << "\t/ " << h->Integral() << "\t= " << h->Integral(bin, -1) / h->Integral() << endl;
+    }
+}
 
 TH1D* RunBackground(string FC_Setup, Int_t nRun, Int_t ch, Int_t r = 1)
 {

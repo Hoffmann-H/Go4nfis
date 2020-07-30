@@ -151,18 +151,18 @@ TGraphErrors* Divide(TGraphErrors *g1, TGraphErrors *g2)
 void Runs(string FC, string Setup = "")
 {
     char name[128] = "";
-    TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile* fAna = TFile::Open(results_file, "UPDATE");
     Int_t nRuns = GetnRuns(FC+Setup);
 
     // treat neutron field data
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/NeutronField_%s%s.txt", FC.c_str(), Setup.c_str());
+    sprintf(name, "../results/NeutronField_%s%s.txt", FC.c_str(), Setup.c_str());
     TGraphErrors *geMonitor = new TGraphErrors(name, Format(0).c_str());
     if (!geMonitor)
         cout << "Could not open " << name << endl;
     sprintf(name, "%s%s_Monitor", FC.c_str(), Setup.c_str());
     geMonitor->SetName(name);
     Save(fAna, FC+"/NeutronField", geMonitor);
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/NeutronField_%s%s.txt", FC.c_str(), Setup.c_str());
+    sprintf(name, "../results/NeutronField_%s%s.txt", FC.c_str(), Setup.c_str());
     TGraphErrors *geMonitorRate = new TGraphErrors(name, Format(1).c_str());
     sprintf(name, "%s%s_MonitorRate", FC.c_str(), Setup.c_str());
     geMonitorRate->SetName(name);
@@ -172,7 +172,7 @@ void Runs(string FC, string Setup = "")
     TGraphErrors *geFlux[8];
     for (Int_t i = 0; i < 8; i++)
     {
-        sprintf(name, "/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/NeutronField_%s%s.txt", FC.c_str(), Setup.c_str());
+        sprintf(name, "../results/NeutronField_%s%s.txt", FC.c_str(), Setup.c_str());
         geFlux[i] = new TGraphErrors(name, Format(i+2).c_str());
 //        cout << "Saving " << FC << "/CrossSection/" << FC << Setup << "_NeutronFlux_" << i+1 << endl;
         Save(fAna, FC+"/NeutronField", geFlux[i], FC+Setup+"_NeutronFlux_"+to_string(i+1));
@@ -184,14 +184,14 @@ void Runs(string FC, string Setup = "")
     TGraphErrors *geRatio[8];
     for (Int_t i = 0; i < 8; i++)
     {
-        sprintf(name, "/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/InducedFission_%s%s.txt", FC.c_str(), Setup.c_str());
+        sprintf(name, "../results/InducedFission_%s%s.txt", FC.c_str(), Setup.c_str());
         geFission[i] = new TGraphErrors(name, Format(2*i).c_str());
         sprintf(name, "%s%s_InducedFission_%i", FC.c_str(), Setup.c_str(), i+1);
         geFission[i]->SetName(name);
 //        cout << "Saving " << FC << "/ToF/Signal/" << name << endl;
         Save(fAna, FC+"/ToF/Signal", geFission[i]);
         
-        sprintf(name, "/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/InducedFission_%s%s.txt", FC.c_str(), Setup.c_str());
+        sprintf(name, "../results/InducedFission_%s%s.txt", FC.c_str(), Setup.c_str());
         geFissionRate[i] = new TGraphErrors(name, Format(2*i+1).c_str());
         sprintf(name, "%s%s_FissionRate_%i", FC.c_str(), Setup.c_str(), i+1);
         geFissionRate[i]->SetName(name);
@@ -209,7 +209,7 @@ void Runs(string FC, string Setup = "")
     TGraphErrors *geCrossSection[8];
     for (Int_t i = 0; i < 8; i++)
     {
-        sprintf(name, "/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/CrossSection_%s%s.txt", FC.c_str(), Setup.c_str());
+        sprintf(name, "../results/CrossSection_%s%s.txt", FC.c_str(), Setup.c_str());
         geCrossSection[i] = new TGraphErrors(name, Format(i).c_str());
         if (!geCrossSection[i])
             cout << "Could not open " << name << endl;

@@ -2,24 +2,23 @@
 #define FC_H
 #include <fstream>
 /// hard coded ToF gates
-//#define GATE 10
 #define LEFT 15
-#define RIGHT 40
-#define TAIL 40
+#define RIGHT 35
+#define TAIL 35
 using namespace std;
 
 Int_t Left(string FC)
 {
     if (!strcmp(FC.c_str(), "PuFC"))
-        return 15;//7;//
+        return LEFT;
     else // UFC
-        return 15;
+        return LEFT;
 }
 
 Int_t Right(string FC)
 {
     if (!strcmp(FC.c_str(), "PuFC"))
-        return 35;//7;//
+        return RIGHT;
     else // UFC
         return 40;
 }
@@ -27,7 +26,7 @@ Int_t Right(string FC)
 Int_t Tail(string FC)
 {
     if (!strcmp(FC.c_str(), "PuFC"))
-        return 40;
+        return TAIL;
     else // UFC
         return 50;
 }
@@ -50,10 +49,10 @@ Double_t PeakCenter(Int_t ch, string FC = "PuFC")
 
 Int_t Gate_0(Int_t ch, string FC = "PuFC")
 {
-    return 62;
+    return 42;
 }
 
-Int_t Gate_a(Int_t ch, string FC = "PuFC", Int_t l = 15)
+Int_t Gate_a(Int_t ch, string FC = "PuFC", Int_t l = 0)
 {
     return (Int_t)(PeakCenter(ch, FC)+0.5) - (l ? l : Left(FC));
 }
@@ -160,11 +159,10 @@ string br(Double_t val, Double_t err)
     return s;
 }
 
-void FC()
+void FC(string FC = "PuFC")
 {
-    string FC = "PuFC";
     for (Int_t i = 0; i < 8; i++)
-        cout << " " << i+1 << "   " << Distance(i, FC) <<  "   " << SolidAngle(i, FC) <<  "   " << Gate_1(i, FC) <<  "   " << Gate_2(i, FC) << endl;
+        cout << " " << i+1 << " \t " << Distance(i, FC) <<  " \t " << SolidAngle(i, FC) <<  " \t " << Gate_0(i, FC) <<  " \t " << Gate_a(i, FC) << " \t " << Gate_1(i, FC) << " \t " << Gate_2(i, FC) << " \t " << Gate_b(i, FC) << " \t " << Gate_3(i, FC) << endl;
 //    cout << br(1.159E+19, 2.7813E+15) << endl;
     cout << Gate_b(0) << endl;
 }

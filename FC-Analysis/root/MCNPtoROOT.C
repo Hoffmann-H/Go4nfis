@@ -5,6 +5,8 @@
 #include "TGraphErrors.h"
 #include "TCanvas.h"
 
+#define CrossSectionDataPath "/home/hoffma93/Programme/ROOT/Data/";
+
 void GetBinning(string file_to_read)
 {
     /// Print binning used in tabular
@@ -125,7 +127,7 @@ TF1* FitPeakForm(TH1D *H, string Run = "NIF", Int_t ch = 0, string Simulation = 
     char name[128] = "";
 
     // Experimental spectrum with Background
-    sprintf(name, "/home/hoffma93/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
+    sprintf(name, "~/Programme/Go4nfis/offline/results/%s.root", Run.c_str());
     TFile *fExp = TFile::Open(name); if (!fExp) cout << "Could not open " << name << endl;
     sprintf(name, "Histograms/Analysis/FC/TimeDiff/PH-Gated/H1AnaHZDRDtG_%i", ch+1);
     TH1D *hExp = (TH1D*)fExp->Get(name); if (!hExp) cout << "Could not get " << name << endl;
@@ -168,7 +170,7 @@ void MCNPtoROOT(Bool_t save, string Run = "NIF", string key = "real", string Pat
     TFile *fAna;
     TCanvas *c1;
     if (save)
-        fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+        fAna = TFile::Open(results_file, "UPDATE");
     else { // draw
         c1 = new TCanvas();
         c1->Divide(4, 2);
@@ -178,6 +180,7 @@ void MCNPtoROOT(Bool_t save, string Run = "NIF", string key = "real", string Pat
     for (Int_t i = 0; i < 8; i++)
     {
         sprintf(name, "%s/%s_tally-2%i4_xyz_0.dmp", DirName.c_str(), Path.c_str(), 8 - i);
+        cout << name << endl;
 
         // Create 2D histogram
         h[i] = MakeEvsT(name, 0, FC, key, i);
@@ -236,12 +239,13 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
     // Emitted neutrons
     TH1F *pHemit = (TH1F*)fG4->Get("Source/Source_Theta");
     Double_t maxRad = 0.08446522295019329;
-    Double_t maxTheta = maxRad * 180. / TMath::Pi();
-    Int_t lastBin = pHemit->FindBin(maxTheta);
-    Double_t WeightLastBin = (maxTheta - pHemit->GetBinLowEdge(lastBin)) / pHemit->GetBinWidth(lastBin);
-    Double_t nEmit = pHemit->Integral(0, lastBin - 1) + WeightLastBin * pHemit->GetBinContent(lastBin);
-    cout << "Smeared angular distribution correction: " << nEmit / pHemit->Integral() << endl;
-    Double_t norm = nEmit / (1.0 - pow(cos(maxRad), 2));
+//    Double_t maxTheta = maxRad * 180. / TMath::Pi();
+//    Int_t lastBin = pHemit->FindBin(maxTheta);
+//    Double_t WeightLastBin = (maxTheta - pHemit->GetBinLowEdge(lastBin)) / pHemit->GetBinWidth(lastBin);
+//    Double_t nEmit = pHemit->Integral(0, lastBin - 1) + WeightLastBin * pHemit->GetBinContent(lastBin);
+//    cout << "Smeared angular distribution correction: " << nEmit / pHemit->Integral() << endl;
+//    Double_t nEmit = pHemit->Integral();
+//    Double_t norm = nEmit / (1.0 - pow(cos(maxRad), 2));
 //    TGraphErrors *geEmit = new TGraphErrors(8);
 //    for (Int_t i = 0; i < 8; i++)
 //    {
@@ -252,6 +256,24 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 //    }
 //    Save(fAna, "Simulation/Geant4/"+FC+"_"+Setup+"/Correction", geEmit, "Emit");
 
+    Double_t isoVec[] = {0.0000011, 0.00459, 0.904, 0.00401, 0.0912, 1.0};
+    string isoCS[] = {"U233_nf_JEFF_3.3.dat", "U234_nf_JEFF_3.3.dat", "U235_nf_standard.dat", "U236_nf_JEFF_3.3.dat", "U238_nf_JEFF_3.3.dat", "Pu242_nf_JEFF_3.3.dat"};
+    TGraph *gIsoCS[6];
+    Int_t iStart = 0, iStop = 0;
+    if (!strcmp(FC.c_str(), "UFC"))
+    { // UFC U isotopes
+        iStart = 0; iStop = 5;
+    } else { // PuFC Pu-242
+        iStart = 5; iStop = 6;
+    }
+
+    for (Int_t isotope = 0; isotope < 6; isotope++)
+    {
+        sprintf(name, "%s%s", CrossSectionDataPath, isoCS[isotope].c_str());
+        gIsoCS[isotope] = new TGraph(name);
+        if (!gIsoCS) cout << "Could not make evaluated cross section graph " << name << endl;
+    }
+
     for (Int_t i = 0; i < 8; i++)
     {
         sprintf(name, "%s/ToFvsEkin/%s_ToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), i+1);
@@ -260,17 +282,43 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
         pH2Tot->SetName(name);
 //        cout << pH2Tot->Integral() << " ";
 //        if (pH2Tot->Integral() > 1)
-            pH2Tot->Scale(1.0 / norm);
+//            pH2Tot->Scale(1.0 / norm);
 //        cout << pH2Tot->Integral() << endl;
-
-        TH1D *hProj = TimeProjection(pH2Tot, i, FC, key);
-        Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/EffToF", hProj);
 
         sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
         TH2D *pH2Sc = (TH2D*)fG4->Get(name);
         sprintf(name, "%s_ToFvsEkin_%s_Sc_Ch.%i", FC.c_str(), key.c_str(), i+1);
         pH2Sc->SetName(name);
-        pH2Sc->Scale(1.0 / norm);
+//        pH2Sc->Scale(1.0 / norm);
+
+        sprintf(name, "%s_ProjT_%s_%i", FC.c_str(), key.c_str(), i + 1);
+        TH1D *hProj = (TH1D*)pH2Tot->ProjectionX(name, 0, 0);
+        sprintf(name, "%s, ToF, %s, ch.%i", FC.c_str(), key.c_str(), i + 1);
+        h->SetTitle(name);
+        h->GetXaxis()->SetTitle("#font[12]{t} / ns");
+        h->GetYaxis()->SetTitle("#font[12]{C}_{(n,f)}");
+
+        sprintf(name, "%s_ProjT_%s_Sc_%i", FC.c_str(), key.c_str(), i + 1);
+        TH1D *hProjSc = (TH1D*)pH2Tot->ProjectionX(name, 0, 0);
+        sprintf(name, "%s, ToF, %s, ch.%i", FC.c_str(), key.c_str(), i + 1);
+        h->SetTitle(name);
+        h->GetXaxis()->SetTitle("#font[12]{t} / ns");
+        h->GetYaxis()->SetTitle("#font[12]{C}_{(n,f)}");
+
+        TH1D *hTmp;
+
+        for (Int_t Ebin = 1; Ebin <= pH2Tot->GetNbinsY(); Ebin++)
+        {
+            Double_t E = pH2Tot->GetYaxis()->GetBinCenter(Ebin);
+            Double_t CS = 0;
+            for (Int_t isotope = iStart; isotope < iStop; isotope++)
+                CS = CS + isoVec[isotope] * gIsoCS[isotope]->Eval(E);
+
+            hTmp = (TH)
+            // TODO
+        }
+        Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/EffToF", hProj);
+
 
         TH1D *hProjSc = TimeProjection(pH2Sc, i, FC, key + "_Sc");
         Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/EffToF/Scattered/", hProjSc);
@@ -297,7 +345,7 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
             sprintf(name, "%s/ToFvsEkin/Scattered/%s_ToFvsEkin_Sc_Ch.%i", FC.c_str(), FC.c_str(), i+1);
             TH2D *pH2Sc = (TH2D*)fG4->Get(name);
 //            if (pH2Sc->Integral() > 1)
-                pH2Sc->Scale(1.0 / norm);
+//                pH2Sc->Scale(1.0 / norm);
             Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin/Scattered", pH2Sc);
         }
         Save(fAna, "Simulation/Geant4/"+FC+"_"+key+"/ToFvsEkin", pH2Tot);
@@ -309,29 +357,32 @@ void Geant4toROOT(string FileName, string Run = "NIF", string key = "real")
 
 void MCNPtoROOT()
 {
-    string PuFC_RealSim = "/home/hoffma93/Programme/Geant4-Work/results/PuFC_real_c_5E7_v2.root";
-    string UFC_RealSim = "/home/hoffma93/Programme/Geant4-Work/results/UFC_real_c_5E7.root";
-    string UFC_ShadowBarSim = "/home/hoffma93/Programme/Geant4-Work/results/UFC_SB_5E7.root";
-    string PuFC_VacSimFG = "/home/hoffma93/Programme/Geant4-Work/results/PuFC_ideal_c_FG.root";
-    string UFC_VacSimFG = "/home/hoffma93/Programme/Geant4-Work/results/UFC_ideal_c_FG.root";
+//    string PuFC_RealSim =     "~/Programme/Geant4-Work/results/PuFC_real_c_5E7_v2.root";
+    string PuFC_RealSim =     "~/Programme/Geant4-Work/results/PuFC_real_FG_TL_1E7.root";
+    string UFC_RealSim =      "~/Programme/Geant4-Work/results/UFC_real_c_5E7.root";
+    string UFC_ShadowBarSim = "~/Programme/Geant4-Work/results/UFC_SB_5E7.root";
+    string PuFC_VacSimFG =    "~/Programme/Geant4-Work/results/PuFC_ideal_c_FG.root";
+    string PuFC_VacSimFGBG =   "~/Programme/Geant4-Work/results/PuFC_ideal_c_FG+BG.root";
+    string UFC_VacSimFG =     "~/Programme/Geant4-Work/results/UFC_ideal_c_FG.root";
+    string UFC_VacSimFGBG =   "~/Programme/Geant4-Work/results/UFC_ideal_c_FG+BG.root";
 
     /// Filled geometry
-    Geant4toROOT(PuFC_RealSim, "NIF", "real");
+//    Geant4toROOT(PuFC_RealSim, "NIF", "real");
     Geant4toROOT(UFC_RealSim, "UFC_NIF", "real");
 //    MCNPtoROOT(1, "NIF", "real", "FCscat_PTB_weight/tally/FCscat_b");
 //    MCNPtoROOT(1, "UFC_NIF", "real", "FCscat_PTB_UFC_weight/tally/FCscat_a");
     /// Shadow bar
-    Geant4toROOT(UFC_ShadowBarSim, "UFC_SB", "SB");
+//    Geant4toROOT(UFC_ShadowBarSim, "UFC_SB", "SB");
 
     /// Void geometry, direct TARGET spectrum
-    Geant4toROOT(PuFC_VacSimFG, "PuFC", "ideal");
+//    Geant4toROOT(PuFC_VacSimFG, "PuFC", "ideal");
     Geant4toROOT(UFC_VacSimFG, "UFC", "ideal");
 //    MCNPtoROOT(1, "PuFC", "ideal", "FCscat_PTB_weight_void/tally/FCscat_d");
 //    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void_dir/tally/FCscat_a");
 
     /// Void geometry, total TARGET spectrum
-//    Geant4toROOT("PuFC_ideal_c_FG+BG.root", "PuFC", "ideal");
-//    Geant4toROOT("UFC_ideal_c_FG+BG.root", "UFC", "ideal");
+//    Geant4toROOT(PuFC_VacSimFGBG, "PuFC", "ideal");
+//    Geant4toROOT(UFC_VacSimFGBG, "UFC", "ideal");
 //    MCNPtoROOT(1, "UFC", "ideal", "FCscat_PTB_UFC_weight_void/tally/FCscat_a");
 // /net/cns/projects/NTOF/Hypnos/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_void/tally/FCscat_c_tally_2*4_xyz_0.dmp
 }

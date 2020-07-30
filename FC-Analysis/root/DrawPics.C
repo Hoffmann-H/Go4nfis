@@ -392,9 +392,8 @@ void DrawPuCorrection(TFile *f)
     c->Update();
 }
 
-void DrawMonitorRate()
+void DrawMonitorRate(TFile* fAna)
 {
-    TFile* fAna = TFile::Open("~/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "READ");
     TGraphErrors *gU = (TGraphErrors*)fAna->Get("UFC/NeutronField/UFC_MonitorRate");
     if (!gU) cout << "Could not get " << "UFC/NeutronField/UFC_MonitorRate" << ", run NeutronField.C" << endl;
     TGraphErrors *gPu = (TGraphErrors*)fAna->Get("PuFC/NeutronField/PuFC_MonitorRate");
@@ -428,10 +427,57 @@ void DrawMonitorRate()
     mg->Draw("AP");
     l->Draw();
     c1->Update();
-    SaveToFile(fAna, "UFC/NeutronField", gU);
-    SaveToFile(fAna, "PuFC/NeutronField", gPu);
-    fAna->Save();
-    fAna->Close();
+}
+
+void DrawFluxDensity(TFile* fAna, Int_t ch = 7)
+{ // Draw neutrun flux rate of direct neutrons through the first deposit (nr. 8) over time.
+    TGraphErrors *gU = (TGraphErrors*)fAna->Get("UFC/NeutronField/UFC_MonitorRate");
+    if (!gU) cout << "Could not get " << "UFC/NeutronField/UFC_MonitorRate" << ", run NeutronField.C" << endl;
+    TGraphErrors *gPu = (TGraphErrors*)fAna->Get("PuFC/NeutronField/PuFC_MonitorRate");
+    if (!gPu) cout << "Could not get " << "PuFC/NeutronField/PuFC_MonitorRate" << ", run NeutronField.C" << endl;
+
+    Double_t Yield = 2.217E4;
+    BiasX(gU, 0, Yield / pow(Distance(ch, "UFC"), 2));
+    BiasX(gPu, 0, Yield / pow(Distance(ch, "PuFC"), 2));
+
+    gU->SetLineWidth(1);
+    gU->SetMarkerStyle(5);
+    gPu->SetLineWidth(1);
+    gPu->SetMarkerStyle(5);
+    TMultiGraph *mg = new TMultiGraph();
+    mg->Add(gU);
+    mg->Add(gPu);
+    mg->GetXaxis()->SetTimeDisplay(1);
+    mg->GetXaxis()->SetTimeFormat("#splitline{%d.%m.}{%H:%M} %F1970-01-01");
+    mg->GetXaxis()->SetTitle("#font[12]{t}");
+    mg->GetYaxis()->SetTitle("#it{#Phi}_{n}^{(8)} / s^{-1} mm^{-2}");
+//    mg->GetXaxis()->SetLabelSize(0.06);
+//    mg->GetXaxis()->SetTitleSize(0.07);
+//    mg->GetXaxis()->SetTitleOffset(0.8);
+//    mg->GetXaxis()->SetNdivisions(608);
+//    mg->GetYaxis()->SetLabelSize(0.06);
+//    mg->GetYaxis()->SetTitleSize(0.07);
+//    mg->GetYaxis()->SetTitleOffset(0.8);
+    TLegend *l = new TLegend(0.6, 0.2, 0.9, 0.4, "Calendar week 21");
+    l->SetTextFont(132);
+    l->AddEntry(gU, "UFC Ch. 8");
+    TCanvas *c1 = new TCanvas("c1", "U", 1, 1, 1200, 500);
+    gPad->SetTicks(1, 1);
+    mg->Draw("AP");
+    l->Draw();
+    mg->GetXaxis()->SetLabelOffset(0.04);
+    mg->GetYaxis()->SetRangeUser(8., 15.5);
+    c1->Update();
+
+    l = new TLegend(0.6, 0.2, 0.9, 0.4, "Calendar week 22");
+    l->AddEntry(gPu, "PuFC Ch. 8");
+    TCanvas *c2 = new TCanvas("c2", "Pu", 1, 1, 1200, 500);
+    gPad->SetTicks(1, 1);
+    mg->Draw("AP");
+    l->Draw();
+    mg->GetXaxis()->SetLabelOffset(0.04);
+    mg->GetYaxis()->SetRangeUser(8., 15.5);
+    c2->Update();
 }
 
 Int_t Color(Int_t i)
@@ -2284,8 +2330,8 @@ void DrawResult(TFile *fAna)
 
 void DrawCalN(TFile *fAna)
 {
-    TGraphErrors *geUo = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN"); if (!geUo) cout << "Could not get " << "UFC/nAtoms/UFC_eN" << endl;
-    TGraphErrors *geUn = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN_TL"); if (!geUn) cout << "Could not get " << "UFC/nAtoms/UFC_eN_TL" << endl;
+    TGraphErrors *geUo = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN_noTL"); if (!geUo) cout << "Could not get " << "UFC/nAtoms/UFC_eN" << endl;
+    TGraphErrors *geUn = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN"); if (!geUn) cout << "Could not get " << "UFC/nAtoms/UFC_eN_TL" << endl;
     TGraphErrors *gePTB = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_eN_cal_Geant4"); if (!gePTB) cout << "Could not get " << "UFC/nAtoms/UFC_eN_cal_Geant4" << endl;
     geUo->SetTitle("UFC atom number calibration; Deposit; #varepsilon#font[12]{N}_{U} / 10^{19}");
     BiasX(geUo, -0.1, 1.E-19);
@@ -2306,7 +2352,7 @@ void DrawCalN(TFile *fAna)
     gePTB->SetMarkerSize(2);
     gePTB->SetMarkerColor(kRed);
     gePTB->SetLineColor(kRed);
-    TLegend *lU = new TLegend(0.15, 0.65, 0.4, 0.85, "Calibration");
+    TLegend *lU = new TLegend(0.3, 0.15, 0.8, 0.4, "UFC Calibration");
     lU->AddEntry(geUo, "UFC vs H19 @ #font[12]{n}ELBE, 2016 result", "pe");
     lU->AddEntry(geUn, "UFC vs H19 @ #font[12]{n}ELBE, with Track Length", "pe");
     lU->AddEntry(gePTB, "UFC @ PTB", "pe");
@@ -2338,7 +2384,7 @@ void DrawCalN(TFile *fAna)
     gePu_n->SetMarkerSize(2);
     gePu_n->SetMarkerColor(kRed);
     gePu_n->SetLineColor(kRed);
-    TLegend *lPu = new TLegend(0.15, 0.65, 0.4, 0.85, "Calibration");
+    TLegend *lPu = new TLegend(0.35, 0.65, 0.6, 0.85, "PuFC Calibration");
     lPu->AddEntry(gePu_o, "#font[12]{T}_{1/2,SF}", "PE");
     lPu->AddEntry(gePu_n, "PTB, LC1", "PE");
 
@@ -2348,7 +2394,88 @@ void DrawCalN(TFile *fAna)
     gePu_o->Draw("AP");
     SetSize(gePu_o);
     gePu_o->GetXaxis()->SetTitleOffset(0.8);
+    gePu_o->GetXaxis()->SetNdivisions(110);
     gePu_o->GetYaxis()->SetRangeUser(0.75, 1.75);
+    gePu_n->Draw("same P");
+    lPu->Draw();
+
+    Double_t x, y, yerr;
+    for (Int_t i = 0; i < 8; i++)
+    {
+        gePu_n->GetPoint(i, x, y);
+        yerr = gePu_n->GetErrorY(i);
+        cout << x+1 << "   " << y << " +- " << yerr << endl;
+    }
+}
+
+void DrawCal_mA(TFile *fAna)
+{
+    TGraphErrors *geUo = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_emA"); if (!geUo) cout << "Could not get " << "UFC/nAtoms/UFC_emA" << endl;
+    TGraphErrors *geUn = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_emA_TL"); if (!geUn) cout << "Could not get " << "UFC/nAtoms/UFC_emA_TL" << endl;
+    TGraphErrors *gePTB = (TGraphErrors*)fAna->Get("UFC/nAtoms/UFC_emA_cal_Geant4"); if (!gePTB) cout << "Could not get " << "UFC/nAtoms/UFC_emA_cal_Geant4" << endl;
+    geUo->SetTitle("UFC areal mass density calibration; Deposit; #varepsilon#it{m}_{A} / (mg cm^{-2})");
+    BiasX(geUo, -0.1, 1.);
+    BiasX(geUn, 0.0, 1.);
+    BiasX(gePTB, +0.1, 1.);
+    geUo->SetLineWidth(2);
+    geUo->SetMarkerStyle(20);
+    geUo->SetMarkerSize(2);
+    geUo->SetMarkerColor(kBlack);
+    geUo->SetLineColor(kBlack);
+    geUn->SetLineWidth(2);
+    geUn->SetMarkerStyle(22);
+    geUn->SetMarkerSize(2);
+    geUn->SetMarkerColor(kBlue);
+    geUn->SetLineColor(kBlue);
+    gePTB->SetLineWidth(2);
+    gePTB->SetMarkerStyle(21);
+    gePTB->SetMarkerSize(2);
+    gePTB->SetMarkerColor(kRed);
+    gePTB->SetLineColor(kRed);
+    TLegend *lU = new TLegend(0.3, 0.15, 0.8, 0.4, "UFC Calibration");
+    lU->AddEntry(geUo, "UFC vs H19 @ #font[12]{n}ELBE, 2016 result", "pe");
+    lU->AddEntry(geUn, "UFC vs H19 @ #font[12]{n}ELBE, with Track Length", "pe");
+    lU->AddEntry(gePTB, "UFC @ PTB", "pe");
+
+    new TCanvas("UFC_cal_mA");
+    gPad->SetBottomMargin(0.12);
+    gPad->SetTicks(1,1);
+    geUo->Draw("AP");
+    SetSize(geUo);
+    geUo->GetXaxis()->SetTitleOffset(0.8);
+    geUo->GetXaxis()->SetNdivisions(110);
+    geUo->GetYaxis()->SetRangeUser(0.3, 0.5);
+    geUn->Draw("same P");
+    gePTB->Draw("same P");
+    lU->Draw();
+
+    TGraphErrors *gePu_o = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_emA"); if (!gePu_o) cout << "Could not get " << "PuFC/nAtoms/PuFC_emA" << endl;
+    TGraphErrors *gePu_n = (TGraphErrors*)fAna->Get("PuFC/nAtoms/PuFC_emA_cal_Geant4"); if (!gePu_n) cout << "Could not get " << "PuFC/nAtoms/PuFC_emA_cal_Geant4" << endl;
+    gePu_o->SetTitle("PuFC areal mass density calibration; Deposit; #varepsilon#it{m}_{A} / (mg cm^{-2})");
+    BiasX(gePu_o, -0.1, 1.);
+    BiasX(gePu_n, +0.1, 1.);
+    gePu_o->SetLineWidth(2);
+    gePu_o->SetMarkerStyle(22);
+    gePu_o->SetMarkerSize(2);
+    gePu_o->SetMarkerColor(kBlue);
+    gePu_o->SetLineColor(kBlue);
+    gePu_n->SetLineWidth(2);
+    gePu_n->SetMarkerStyle(21);
+    gePu_n->SetMarkerSize(2);
+    gePu_n->SetMarkerColor(kRed);
+    gePu_n->SetLineColor(kRed);
+    TLegend *lPu = new TLegend(0.35, 0.65, 0.6, 0.85, "PuFC Calibration");
+    lPu->AddEntry(gePu_o, "#font[12]{T}_{1/2,SF}", "PE");
+    lPu->AddEntry(gePu_n, "PTB, LC1", "PE");
+
+    new TCanvas("PuFC_cal_mA");
+    gPad->SetBottomMargin(0.12);
+    gPad->SetTicks(1,1);
+    gePu_o->Draw("AP");
+    SetSize(gePu_o);
+    gePu_o->GetXaxis()->SetTitleOffset(0.8);
+    gePu_o->GetXaxis()->SetNdivisions(110);
+    gePu_o->GetYaxis()->SetRangeUser(0, 0.2);
     gePu_n->Draw("same P");
     lPu->Draw();
 
@@ -2753,7 +2880,7 @@ int DrawPics()
 //    gStyle->SetPalette(kSunset);
 //    TColor::InvertPalette();
 
-    TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root");
+    TFile* fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis_VacSimFGBG.root");
     TFile* fNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/NIF.root");
     TFile* fUNIF = TFile::Open("/home/hoffma93/Programme/Go4nfis/offline/results/UFC_NIF.root");
 
@@ -2761,7 +2888,8 @@ int DrawPics()
 //    DrawCrossSectionRuns(fAna);
 //    DrawUscattering(fAna);
 //    DrawPuCorrection(fAna);
-//    DrawMonitorRate();
+//    DrawMonitorRate(fAna);
+//    DrawFluxDensity(fAna);
 //    DrawPeakWidth(fAna, "UFC");
 //    DrawPeakWidth(fAna, "UFC");
 //    DrawSimPeak(fAna, "UFC_NIF", "real", 1, "Geant4");
@@ -2786,8 +2914,9 @@ int DrawPics()
 //    DrawEta(fAna);
 //    DrawInefficiency(fAna);
 //    DrawQDC(fAna, "UFC", 0, fUNIF);
-//        DrawDtInt(fAna, "UFC", 0, 15, 40, 0, 0);
-//        DrawDtInt(fAna, "PuFC", 0, 15, 35, 0, 0);
+//    for (Int_t i = 0; i < 8; i++)
+//        DrawDtInt(fAna, "UFC", i, 15, 40, 0, 0);
+//        DrawDtInt(fAna, "PuFC", i, 15, 35, 0, 0);
 //    DrawDtChange(fAna, "PuFC");
 //    for (Int_t i = 0; i < 8; i++)
 //        DrawDtGate(fAna, "UFC", 7, fUNIF);
@@ -2810,8 +2939,9 @@ int DrawPics()
 //        DrawT(fAna, "Geant4", "UFC", 0, 1);
 //    DrawSimNotebook(fAna, 1, 1);
 //    DrawG4vsMCNP(fAna, "PuFC", 0, 0);
-//    DrawResult(fAna);
-    DrawCalN(fAna);
+    DrawResult(fAna);
+//    DrawCalN(fAna);
+//    DrawCal_mA(fAna);
 //    DrawConstantBackground(fAna, "UFC_NIF", 0);
 //    DrawConstantBackground(fAna, "UFC_SB", 0);
 //    DrawConstantBackground(fAna, "NIF", i);

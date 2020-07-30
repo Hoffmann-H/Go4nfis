@@ -318,7 +318,7 @@ void Carlson()
     geUsigma->SetName("sigma_U");
 
     // Save
-    TFile *fAna = TFile::Open("/home/hoffma93/Programme/Go4nfis/FC-Analysis/results/Analysis.root", "UPDATE");
+    TFile *fAna = TFile::Open(results_file, "UPDATE");
     Save(fAna, "Carlson/U235/nELBE", hR[0]);
     Save(fAna, "Carlson/U235/15MeV", hR[1]);
     Save(fAna, "Carlson/U238/nELBE", hR[2]);

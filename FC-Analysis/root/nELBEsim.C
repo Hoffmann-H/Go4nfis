@@ -1110,6 +1110,211 @@ void PrintEE()
     f->Close();
 }
 
+// CompSim("~/Programme/Geant4-Work/results/PuFC_real_FG_1E7.root", "~/Programme/Geant4-Work/results/PuFC_real_FG_TL_1E7.root", "PuFC", 0)
+void CompSim(string StrSimFile1, string StrSimFile2, string FC = "PuFC", Int_t ch = 0)
+{// Compare the ToF spectrum of a deposit for two simulation runs; norm to sum.
+    /// open root files
+    TFile *f1 = TFile::Open(StrSimFile1.c_str(), "READ"); if (!f1) cout << "Could not open " << StrSimFile1 << endl;
+    TFile *f2 = TFile::Open(StrSimFile2.c_str(), "READ"); if (!f2) cout << "Could not open " << StrSimFile2 << endl;
+
+    /// Get histograms
+    char name[128] = "";
+    sprintf(name, "%s/ToF/%s_ToF_Ch.%i", FC.c_str(), FC.c_str(), ch+1);
+    TH1F *h1 = (TH1F*) f1->Get(name); if (!h1) cout << "Could not get " << name << endl;
+    TH1F *h2 = (TH1F*) f2->Get(name); if (!h2) cout << "Could not get " << name << endl;
+
+    /// Normalization
+    Double_t scale = h2->Integral() / h1->Integral();
+    cout << "scale " << h2->Integral() << "\t/ " << h1->Integral() << "\t= " << scale << endl;
+    h1->Scale(scale);
+
+    TCanvas *c = new TCanvas();
+    h1->SetLineColor(kBlue);
+    h1->SetStats(0);
+    h1->Draw("hist");
+    h2->SetLineColor(kRed);
+    h2->Draw("same hist");
+
+    TLegend *l = new TLegend(0.3, 0.3, 0.7, 0.4, "n weight");
+    l->AddEntry(h1, "1/cos(#Theta)");
+    l->AddEntry(h2, "#it{l / V}");
+    l->Draw();
+}
+
+TH2D* GetEvsT(string file_to_read, string FC = "PuFC", Int_t ch = 0)
+{ // Get MCNP 2D histogram
+    char name[64] = "";
+    Int_t N;
+
+        // Open tabular as graph
+        TGraphErrors *gTE = new TGraphErrors(file_to_read.c_str(), "%lg %lg %lg %lg");
+        N = gTE->GetN();
+
+        // Open tabular as filestream
+//        std::ifstream input(file_to_read.c_str());
+//        string line;
+//        for (Int_t i = 0; i < 7; i++)
+//            getline(input, line);
+//        N = 100701;
+
+//    cout << N << " entries" << endl;
+    Double_t Tmin, Tmax, Emin, Emax;
+    Int_t Tbins, Ebins;
+    Tmin = 0.0, Tmax = 1500.0, Emin = 0.0, Emax = 16.0;
+    Tbins = 15000, Ebins = 1600;
+    sprintf(name, "%s_ToFvsEkin_Ch.%i", FC.c_str(), ch + 1);
+    TH2D *pHist = new TH2D(name, name,
+                           Tbins, Tmin, Tmax, Ebins, Emin, Emax);
+    sprintf(name, "%s, ToF vs Ekin, ch.%i", FC.c_str(), ch + 1);
+    pHist->SetTitle(name);
+    pHist->GetXaxis()->SetTitle("#font[12]{t} / ns");
+    pHist->GetYaxis()->SetTitle("#font[12]{E} / MeV");
+
+    Double_t T, E, C, DC;
+    Int_t binT, binE;
+
+    for (Int_t i = 0; i < N; i++)
+    {
+            // read from graph
+            gTE->GetPoint(i, T, E);
+            C = gTE->GetErrorX(i);
+            DC = gTE->GetErrorY(i);
+
+            // read from filestream
+//            input >> T >> E >> C >> DC;
+
+        // skip emty entries
+        if (C == 0.0)
+            continue;
+
+        T *= 10; // unit: 1 ns
+//        if (E > 2.2 && E < 2.4 && T >= 30 && T < 45)
+//            cout << T << "   " << E << "   " << C << "   " << DC << "   " << binT << "   " << binE << endl;
+        binT = pHist->GetXaxis()->FindBin(T - 0.001);
+        binE = pHist->GetYaxis()->FindBin(E - 0.001);
+
+        pHist->SetBinContent(binT, binE, C);
+        pHist->SetBinError(binT, binE, DC * C);
+    }
+//    cout << pHist->Integral() << endl;
+    return pHist;
+}
+
+// /net/cns/projects/NTOF/Hemera/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_void/tally/FCscat_b_tally-2*4_xyz_0.dmp
+// /net/cns/projects/NTOF/Hemera/MCNP/FissionChamberScattering/FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_b_tally-2*4_xyz_0.dmp
+void ConvertMCNP()
+{
+    string FC = "PuFC";
+    string DirName = "/net/cns/projects/NTOF/Hemera/MCNP/FissionChamberScattering";
+//    string Path = "FCscat_H19_realspec_tracklength_void/tally/FCscat_b";
+//    string SimRootFile = "~/TrackLength/MCNP_0724_void.root";
+    string Path = "FCscat_H19_realspec_tracklength_filled_2/tally/FCscat_b";
+    string SimRootFile = "~/TrackLength/MCNP_0724_filled.root";
+
+    char name[128] = "";
+    TH2D *h[8];
+
+    TFile *fSim = TFile::Open(SimRootFile.c_str(), "UPDATE");
+
+    // Loop over files
+    for (Int_t i = 0; i < 8; i++)
+    {
+        sprintf(name, "%s/%s_tally-2%i4_xyz_0.dmp", DirName.c_str(), Path.c_str(), 8 - i);
+        cout << name << endl;
+
+        // Create 2D histogram
+        h[i] = GetEvsT(name, FC, i);
+
+        Save(fSim, FC+"/ToFvsEkin", h[i]);
+//        TH1D *hProj = TimeProjection(h[i], i, FC, key);
+//        Save(fSim, "Simulation/MCNP/"+FC+"_"+key+"/EffToF", hProj);
+
+    }
+    fSim->Save();
+    fSim->Close();
+}
+
+void CorrectionVacuum()
+{
+    string FC = "PuFC";
+    string SimTool = "MCNP";
+    string SimToolShortcut = SimTool;
+    if (!strcmp(SimTool.c_str(), "Geant4")) SimToolShortcut = "G4";
+
+    string VoidSimHistFile = "~/TrackLength/MCNP_0724_void.root";
+    string FilledSimHistFile = "~/TrackLength/MCNP_0724_filled.root";
+//    string FCAnalysisFile = "~/Programme/FC-Analysis/2016.06/nfis_2020.root";
+    string FCAnalysisFile = "~/TrackLength/nfis_2020.root";
+
+    cout << "**** Correction factors using cross-section weighted E-t-histograms" << endl;
+    cout << "\t Fission chamber: " << FC << endl;
+    cout << "\t Simulation: " << SimTool << endl;
+//    cout << "\t Shortcut: " << SimToolShortcut << endl;
+    cout << "\t Void simulation histograms: " << VoidSimHistFile << endl;
+    cout << "\t Filled simulation histograms: " << FilledSimHistFile << endl;
+
+
+    char name[64];
+
+    TH2D *pH2Void;
+    TH2D *pH2Filled;
+    TH1D *pH1Void;
+    TH1D *pH1Filled;
+    TH1D *pH1Correction[8];
+    TGraphErrors *pGrCorrection[8];
+
+    TFile *fVoid = TFile::Open(VoidSimHistFile.c_str(), "READ"); if (!fVoid) cout << "Could not open " << VoidSimHistFile << endl;
+    TFile *fFilled = TFile::Open(FilledSimHistFile.c_str(), "READ"); if (!fFilled) cout << "Could not open " << FilledSimHistFile << endl;
+    TFile *fAna = TFile::Open(FCAnalysisFile.c_str(), "UPDATE"); if (!fAna) cout << "Could not open " << FCAnalysisFile << endl;
+
+    for (Int_t i = 0; i < 1; i++)
+    {
+        // Get E vs t histograms
+        sprintf(name, "%s/ToFvsEkin/%s_ToFvsEkin_Ch.%i", FC.c_str(), FC.c_str(), i+1);
+        pH2Void = (TH2D*) fVoid->Get(name); if (!pH2Void) cout << "Could not get " << name << " from " << fVoid->GetName() << endl;
+        pH2Filled = (TH2D*) fFilled->Get(name); if (!pH2Filled) cout << "Could not get " << name << " from " << fFilled->GetName() << endl;
+
+        // Make projections on the time axis
+        sprintf(name, "%s_Void_ToF_Ch.%i", FC.c_str(), i+1);
+        pH1Void = (TH1D*) pH2Void->ProjectionX(name, 0, -1, "e");
+        sprintf(name, "%s_Filled_ToF_Ch.%i", FC.c_str(), i+1);
+        pH1Filled = (TH1D*) pH2Filled->ProjectionX(name, 0, -1, "e");
+
+//        pH1Void->Rebin(10);
+//        pH1Filled->Rebin(10);
+
+        // Divide projections to get correction factor
+//        pH1Correction[i] = (TH1D*) pH1Void->Clone("Correction");
+//        pH1Correction[i]->Divide(pH1Void, pH1Filled, 1., 1.);
+
+        // Name and format
+//        sprintf(name, "%sCorrection_%s_Ch.%i", SimToolShortcut.c_str(), FC.c_str(), i+1);
+//        pH1Correction[i]->SetName(name);
+        pGrCorrection[i] = new TGraphErrors();
+        sprintf(name, "GrCorrection_%s_Ch.%i", FC.c_str(), i+1);
+        pGrCorrection[i]->SetName(name);
+
+        Int_t nPoint = 0;
+        for (Int_t bin = 1; bin <= pH1Void->GetNbinsX(); bin++)
+        {
+            if (pH1Void->GetBinContent(bin) != 0 && pH1Filled->GetBinContent(bin) != 0)
+                pGrCorrection[i]->SetPoint(nPoint++, pH1Void->GetXaxis()->GetBinCenter(bin), pH1Void->GetBinContent(bin) / pH1Filled->GetBinContent(bin));
+        }
+
+
+        // save
+        sprintf(name, "Analysis/Simulation/%s/Correction/", SimToolShortcut.c_str());
+//        SaveToFile(fAna, name, pH1Correction[i]);
+        SaveToFile(fAna, name, pGrCorrection[i]);
+        fAna->Save();
+
+        delete pH2Void, pH2Filled, pH1Void, pH1Filled;
+    }
+
+//    fAna->Save();
+    fAna->Close();
+}
+
 void nELBEsim(string FileName = "G4UFCvsH19_1E7_hist.root")
 {
 //    string FileName = "G4UFCvsH19_23082016_hist.root"; // 2016 original
